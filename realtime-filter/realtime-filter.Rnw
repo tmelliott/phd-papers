@@ -1,4 +1,5 @@
-\documentclass[draft,a4paper,onecolumn]{IEEEtran}
+\documentclass{IEEEtran}
+%\documentclass[draft,a4paper,onecolumn]{IEEEtran}
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
@@ -36,11 +37,6 @@ Some examples of particle filter usage \ldots
 
 
 
-
-\section{Particle Filtering}
-\label{sec:pf}
-
-
 Theory etc of how the particle filter works.
 
 
@@ -49,9 +45,34 @@ Theory etc of how the particle filter works.
 \section{GTFS Data and Road Segmentation}
 \label{sec:gtfs}
 
-Describe the data (GTFS static and real-time). (Maybe this go in section~\ref{sec:intro}?).
+Our work makes use of publically available GTFS data,
+which consists of the static component (timetables, shapes, etc),
+and the real-time component (vehicle positions and stop time updates).
+In its raw form, we are able to obtain the data,
+model an individual bus, and determine its (unmeasurable) state
+(see section~\ref{sec:transition}).
 
-And the idea behind \emph{segmenting} bus routes between intersections.
+
+However, in order to model the network as a whole, 
+we need to make some modifications to the data to enable us to 
+separate vehicles from routes;
+current methodologies, such as those by \ldots,
+only use trips belonging to the same route.
+In most networks, however,
+there is a degree of overlap between routes,
+and it is our intention to not only detect these overlaps,
+but make full use of them.
+
+
+We therefore need to be able to break routes into a series
+of connecting segments, 
+which can then be common between multiple different routes.
+The simplest way to find all points at which any two routes 
+may converge or diverge is at intersections.
+Presently, we are using traffic light positions 
+(easily obtained from OSM)
+as an approximation for all intersections;
+thus, there are some overlapping segments.
 
 
 
