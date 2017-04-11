@@ -1,11 +1,11 @@
-\documentclass{IEEEtran}
-%\documentclass[draft,a4paper,onecolumn]{IEEEtran}
+%\documentclass{IEEEtran}
+\documentclass[draft,a4paper,onecolumn]{IEEEtran}
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{bm}
 
-\title{Modelling a Public Transport System in Real Time using a Particle Filter}
+\title{Modelling the Real Time State of a Public Transport Road Network}
 \author{Tom~Elliott}
 
 \begin{document}
@@ -21,7 +21,7 @@
 \end{abstract}
 
 \begin{IEEEkeywords}
-  Particle filter, transit, real-time
+  Public transport, real-time, particle filter, kalman filter
 \end{IEEEkeywords}
 
 
@@ -29,21 +29,28 @@
 \label{sec:intro}
 
 
-Basically talk about how the Kalman filter is good, fast, but not as reliable as we want.
-Some faults, namely assumptions of normality, symmetry, and that we have to transform observations
-(rather than transform parameters to match observations).
-Particle filter has been used, and allow us to get around these problems.
-Some examples of particle filter usage \ldots
+Modelling busses in real-time has been done for a while now.
+Modelling the underlying state of the road network in order to improve 
+travel time predictions has not been explored \ldots
+Some looking into complex models for ``future'' travel times \cite{Julio2016}.
+
+
+The basic idea:
+GPS position $\rightarrow$ 
+vehicle state (distance, segment, speed) $\rightarrow$
+road segment state (speed) $\rightarrow$
+travel time predictions
 
 
 
-Theory etc of how the particle filter works.
-
-
-
-
-\section{GTFS Data and Road Segmentation}
+\section{Data Preparation: Road Segmentation}
 \label{sec:gtfs}
+
+Real-time data can be used as-is.
+
+However, the shape data needs modification to become composed of \emph{segments},
+which are shared between multiple (unrelated) routes.
+
 
 Our work makes use of publically available GTFS data,
 which consists of the static component (timetables, shapes, etc),
@@ -110,6 +117,10 @@ How well it performs, etc.
 
 Talk about the good and the bad, and how we hope to use the particle filter in future to make predictions.
 
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{IEEEabrv,../reflist.bib}
 
 
 \end{document}
