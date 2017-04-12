@@ -1,9 +1,15 @@
-%\documentclass{IEEEtran}
-\documentclass[draft,a4paper,onecolumn]{IEEEtran}
+\documentclass{IEEEtran}
+%\documentclass[draftcls,a4paper,onecolumn]{IEEEtran}
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{bm}
+\usepackage{bbm}
+\usepackage{subfig}
+
+\input{../symbols.tex}
+\input{../glossary.tex}
+
 
 \title{Modelling the Real Time State of a Public Transport Road Network}
 \author{Tom~Elliott}
@@ -18,6 +24,9 @@
   Particle filter model for each vehicle (bus),
   using observations of position (GPS coordinates) to infer distance into trip
   and velocity.
+  Then use particle filter estimates of vehicle speed to estimate bus speed along
+  road segments, independently of route.
+  
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -43,79 +52,225 @@ travel time predictions
 
 
 
-\section{Data Preparation: Road Segmentation}
-\label{sec:gtfs}
+\section{The Data: GTFS database and route segmentation}
+\label{sec:data}
 
-Real-time data can be used as-is.
+Transit data has become increasingly accessible over the year.
+Attibuted mostly to Google's \gls{gtfs}.
+Two components to \gls{gtfs}: static and real-time.
 
-However, the shape data needs modification to become composed of \emph{segments},
-which are shared between multiple (unrelated) routes.
+Static contains information about routes, trips (one instance of a route at a scheduled time of day),
+stop positions, stop times, route shapes.
 
+Real-time provides vehicle positions (as GPS coordinates),
+and trip updates (including stop time updates, i.e., arrival and departure times/delays).
+Updated typically every 30~seconds or so.
 
-Our work makes use of publically available GTFS data,
-which consists of the static component (timetables, shapes, etc),
-and the real-time component (vehicle positions and stop time updates).
-In its raw form, we are able to obtain the data,
-model an individual bus, and determine its (unmeasurable) state
-(see section~\ref{sec:transition}).
+Modelling a single trip or route is fairly simple to do with the raw \gls{gtfs} data.
+However, difficult to combine information from different routes traveling along the same road segments.
 
+We define a \emph{road segment} as a stretch of road used in a transit route between two intersections,
+\emph{or} between a start/end stop of a route and an intersection.
 
-However, in order to model the network as a whole, 
-we need to make some modifications to the data to enable us to 
-separate vehicles from routes;
-current methodologies, such as those by \ldots,
-only use trips belonging to the same route.
-In most networks, however,
-there is a degree of overlap between routes,
-and it is our intention to not only detect these overlaps,
-but make full use of them.
+Do this by identifying all intersections
+(approximated by all traffic lights for now, since that's the data we have)
+and segment routes at these points.
+Modify \gls{gtfs} data so \emph{shapes} table becomes
+\texttt{shapes}, \texttt{segments}, and \texttt{segment\_shapes}.
 
-
-We therefore need to be able to break routes into a series
-of connecting segments, 
-which can then be common between multiple different routes.
-The simplest way to find all points at which any two routes 
-may converge or diverge is at intersections.
-Presently, we are using traffic light positions 
-(easily obtained from OSM)
-as an approximation for all intersections;
-thus, there are some overlapping segments.
+Thus as we add new routes, we don't need to create new segments
+(except at start/end\ldots see section~\ref{sec:discussion}).
 
 
+<<route_segmentation,echo=FALSE,out.width='0.5\\linewidth',fig.cap="Simplified unidirectional road network diagram, with (a) overlapping routes, and (b) the segments obtained by splitting the routes at intersections. Route 1 $ = \\{r_1, r_2, r_3\\}$, route 2 $=\\{r_4,r_2,r_5,r_6\\}$, and route 3 $=\\{r_7,r_5,r_8,r_9\\}$.",fig.scap="Simplied diagram of overlapping routes",fig.subcap=c("Routes","Segments")>>=
+par(mar = rep(2.1, 4))
+e <- 0.01
+r1 <- rbind(c(0.5, 1), c(1 - e, 1), c(1 - e, 2), c(1 - e, 2.5))
+r2 <- rbind(c(1 + e, 0.5), c(1 + e, 1), c(1 + e, 2 - e), c(2, 2 - e), c(2.5, 2 - e))
+r3 <- rbind(c(0.5, 2 + e), c(1, 2 + e), c(2 + e, 2 + e), c(2 + e, 1), c(2 + e, 0.5))
+grid <- rbind(c(1, 1), c(1, 2), c(2, 1), c(2, 2))
 
-\section{Transit Vehicle Transition Function}
-\label{sec:transition}
+plot(grid, xlim = c(0.5, 2.5), ylim = c(0.5, 3), type = "n",
+     xaxs = "i", yaxs = "i", bty = "n", xaxt = "n", yaxt = "n",
+     xlab = "", ylab = "", pch = 19, asp = 1)
+pal <- RColorBrewer::brewer.pal(3, "Dark2")
+arrows(1-e, 2, 1-e, 2.5, lwd = 5, col = pal[1], length = 0.15)
+arrows(2, 2-e, 2.5, 2-e, lwd = 5, col = pal[2], length = 0.15)
+arrows(2+e, 1, 2+e, 0.5, lwd = 5, col = pal[3], length = 0.15)
+lines(r1, col = pal[1], lwd = 5)
+lines(r2, col = pal[2], lwd = 5)
+lines(r3, col = pal[3], lwd = 5)
+legend("topright", legend = paste("Route", 1:3),
+       col = pal, bty = "n", lwd = 5, cex = 2)
 
-The logic behind the transition function specific for a transit vehicle
-(in particular, a bus).
+plot(grid, xlim = c(0.5, 2.5), ylim = c(0.5, 3), type = "n",
+     xaxs = "i", yaxs = "i", bty = "n", xaxt = "n", yaxt = "n",
+     xlab = "", ylab = "", pch = 19, asp = 1)
+ea <- 0.06
+arrows(c(0.5, 1, 1,  
+         1, 1+ea, 2+ea,  
+         0.5, 2, 2),
+       c(1, 1+ea, 2+ea,  
+         0.5, 2, 2,  
+         2, 2-ea, 1-ea),
+       c(1-ea, 1, 1,  
+         1, 2-ea, 2.5,  
+         1-ea, 2, 2),
+       c(1, 2-ea, 2.5,  
+         1-ea, 2, 2,  
+         2, 1+ea, 0.5), 
+       code = 2, length = 0.15,
+       lwd = c(2, 4, 2,  2, 4, 2,  2, 2))
+#points(grid, pch = 19, cex = 4, col = "white")
+points(grid, pch = 19, cex = 2, col = "black")
 
-Define all parameters, priors, etc.
+tx <- rbind(c(0.7, 1.1), c(0.9, 1.5), c(0.9, 2.3),
+            c(1.1, 0.7), c(1.5, 2.1), c(2.3, 2.1),
+            c(0.7, 1.9), c(2.1, 1.5), c(2.1, 0.7))
+for (i in 1:nrow(tx)) {
+    text(tx[i,1], tx[i,2], 
+         substitute(r[x], list(x = i)),
+         cex = 3, family="serif", font=3)
+}
+     
+@ 
 
 
 
-\section{Likelihood Function}
-\label{sec:likelihood}
+\section{Real-time vehicle model: particle filter}
+\label{sec:pf}
 
-The somewhat complex likelihood function.
-Basic - distance from observation, \emph{or} proximity to stop/intersection.
+Need to estimate vehicle state at time $t_k$, $\bX_k = [d_k, v_k, \ldots]$, 
+from observations, $\bY_k = [\phi_k, \lambda_k]$.
+Use a transition function to predict,
+likelihood function to weight and update (via weighted resample).
 
-More complex - include stop time updates.
+
+\subsection{Predict: transition function}
+The idea behind using particle filter (as opposed to other models)
+is that it is well suited modelling busses \cite{Hans2015},
+as it has good coverage of the plausible locations and thus overcomes
+many problems associated with modelling transit vehicles,
+such as multimodality (due to loops, traffic lights, and stops).
+
+Also easy to describe the model;
+only have to deal with an individual object (particle) which follows laws of physics.
+Rather than dealing with a state \emph{distribution}.
+
+Downside is computational demand.
+
+Algorithm~1 describes the particle filter transition algorithm that
+describes the motion of a bus between observations.
 
 
 
-\section{Implementation and Results}
+\subsection{Update: weighted resampling}
+
+
+Several pieces of data: position, arrival time, and departure time.
+
+For position, need to allow bus to be ``at stop'' (but not exactly),
+or ``queued up at an intersection''.
+
+For arrival/departure times, when the data is there, it's fairly easy;
+however, if data is \emph{missing}, we don't know whether bus hasn't arrived yet,
+or if bus didn't report arrival.
+Also if bus doesn't report both arrival time and departure time,
+don't know if it simply didn't stop (i.e., arrival = departure),
+or if we missed one of them.
+
+So, depending on the data, we apply different likelihood functions.
+
+
+\subsubsection[L1]{$L_1$: not at a stop or intersection}
+
+In situations where the bus is neither at a bus stop nor at an intersection,
+the likelihood is simply determined from the distance between the particle and 
+vehicle's reported position.
+The particle filter framework makes this easy,
+as each particle has a single value of distance into trip, $d_k^{(i)}$,
+with which we can compute the latitude and longitude values based on 
+the routes shape information, $z_k^{(i)} = h(d_k{(i)})$.
+
+
+\subsubsection[L1b]{$L_1'$: at stop}
+
+If the particle is considered to be at a stop, then we apply the following likelihood.
+Define a parameter $\varepsilon_S$ as a boundary around the stop;
+if observation is within that boundary likelihood is 1, else 0.
+
+
+\subsubsection[L1c]{$L_1''$: at intersection}
+
+If the particle is considered to be at an intersection, we apply the following likelihood.
+Similar to $L_1'$, however need to check observation is heading into the intersection
+(and not out of it) by using two boundaries around the intersection and a point $\varepsilon_I$ away.
+
+
+Then 
+\begin{equation}
+  L_1(\bX_k^{(i)} | \bY_k) =
+  \begin{cases}
+    \frac{1}{2\pi\sigma_y} e^{\frac{\|g(h(d_k^{(i)})|\bY_k)\|^2}{2\sigma_y^2}} & \text{ if particle neither at stop nor intersection } \\
+    \frac{1}{c} \mathbbm{1}_{d(h(S_{s_k{[i]}}^d), Y_k) < \varepsilon_S}    & \text{ if particle at stop } \\
+    \frac{1}{c} \mathbbm{1}_{d(h(R_{r_k{[i]}}^d), Y_k) < \varepsilon_I \cap d(h(R_{r_k{[i]}}^d-\varepsilon_I), Y_k) < \varepsilon_I}    & \text{ if particle at intersection }
+  \end{cases}
+\end{equation}
+
+
+\subsubsection[L2]{$L_2$: not at a stop}
+
+If the particle is not at a stop, we determine a likelihood for the arrival and departure
+times at the last stop, if they are available.
+
+First check that the most recent stop time update agrees with the particle;
+if the stop time update is for stop $j$, and the particles state has $s_k^{(i)} < j$,
+then the particle is not plausible;
+otherwise use normal distribution for arrival and departure times,
+or whichever are available.
+
+
+\subsubsection[L2b]{$L_2'$: at a stop}
+
+If particle is at a stop, again determine whether or not it agrees with data.
+If it does, then check data doesn't imply particle has departed,
+then just use likelihood on arrival time.
+
+
+
+\section{Real-time transport road network model: Kalman filter}
+\label{sec:kf}
+
+Now that each vehicle is modelled by a sample of particles,
+we can use the speed estimates of busses along segments to estimate
+the speed along them, regardless of the route.
+In future we can add correlation structure between adjacent segments.
+
+Use Kalman filter because we have one parameter, speed, 
+which we expect to be unimodal and approximately Gaussian
+(some busses travel faster or slower).
+
+Use weighted speed estimates as data,
+and weighted variance as measurement error.
+
+
+
+\section{Arrival time prediction: application to a small subset of routes}
 \label{sec:results}
 
-Implementation in \texttt{C++} and running in real-time.
-Some pretty pictures of the results of the particle filter? 
-How well it performs, etc.
+
+Compare several methods:
+current delay, current speed, and Kalman filter speed estimates.
+Also include dwell distibutions at stops and intersections.
 
 
 
 \section{Discusion and Future Work}
 \label{sec:discussion}
 
-Talk about the good and the bad, and how we hope to use the particle filter in future to make predictions.
+\begin{itemize}
+\item removing ``partial'' segments at start/end of routes
+\end{itemize}
 
 
 
