@@ -1,4 +1,5 @@
-\documentclass{IEEEtran}\usepackage[]{graphicx}\usepackage[]{color}
+%\documentclass{IEEEtran}
+\documentclass[draftcls,a4paper,onecolumn]{IEEEtran}\usepackage[]{graphicx}\usepackage[]{color}
 %% maxwidth is the original width if it is less than linewidth
 %% otherwise use linewidth (to make sure the graphics do not exceed the margin)
 \makeatletter
@@ -49,7 +50,6 @@
 \newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
 
 \usepackage{alltt}
-%\documentclass[draftcls,a4paper,onecolumn]{IEEEtran}
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
@@ -79,10 +79,11 @@
   
 \end{abstract}
 
+
+
 \begin{IEEEkeywords}
   Public transport, real-time, particle filter, kalman filter
 \end{IEEEkeywords}
-
 
 \section{Introduction}
 \label{sec:intro}
@@ -259,6 +260,38 @@ which we expect to be unimodal and approximately Gaussian
 Use weighted speed estimates as data,
 and weighted variance as measurement error.
 
+
+We run the Kalman filter every time we run the particle filter,
+since it has a low cost, allowing the most recent data to be incorporated.
+We have $N$ weighted particle estimates of vehicle state for each bus,
+with which we can compute the mean distance into trip and velocity for bus $j$,
+\begin{equation}
+  \label{eq:weighted_mean}
+  \bar d_j = \sum_{i=1}^N w_j^{(i)} d_j^{(i)} \quad\text{and}\quad
+  \bar v_j = \sum_{i=1}^N w_j^{(i)} v_j^{(i)},
+\end{equation}
+as well as the weighted sample variance \cite{cn},
+\begin{equation}
+  \label{eq:weighted_variance}
+  \bar S_j^2 = \frac{\sum_{i=1}^N w_j^{(i)} (v_j^{(i)} - \bar v_j)^2}{1 - \sum_{i=1}^N (w_j^{(i)})^2},
+\end{equation}
+since $\sum_{i=1}^N w_j^{(i)} = 1\quad \forall j$.
+
+Using $\bar d_j$, we can find the segment id corresponding to each busses most probable location,
+and then combine all vehicle speed estimates for each segment.
+
+In situations where multiple vehicles are in the same segment $\ell$, 
+we can simply combine the estimates, using $M_\ell = $ number of vehicles in segment $\ell$ 
+\cite{cn}.
+\begin{equation}
+  \label{eq:kf_data_estimates}
+  \bar z_\ell = \frac{1}{M_\ell} \sum_{j = 1}^{M_\ell} \bar v_j \quad\text{and}\quad
+  \hat \bR_{\ell,\ell}^2 = \frac{1}{M_\ell} \sum_{j=1}^{M_\ell} \left(\bar v_j^2 + \bar S_j^2\right) - \hat v_\ell^2
+\end{equation}
+
+Next is just the simple matter of applying the Kalman filter algorithm to the transport road network state,
+using the data $\bz_k$ as the observation and $\bR_k$,
+as the measurement error matrix.
 
 
 \section{Arrival time prediction: application to a small subset of routes}
