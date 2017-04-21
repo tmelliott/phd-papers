@@ -1,5 +1,4 @@
-%\documentclass{IEEEtran}
-\documentclass[draftcls,a4paper,onecolumn]{IEEEtran}\usepackage[]{graphicx}\usepackage[]{color}
+\documentclass[9pt]{IEEEtran}\usepackage[]{graphicx}\usepackage[]{color}
 %% maxwidth is the original width if it is less than linewidth
 %% otherwise use linewidth (to make sure the graphics do not exceed the margin)
 \makeatletter
@@ -50,6 +49,7 @@
 \newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
 
 \usepackage{alltt}
+%\documentclass[draftcls,a4paper,onecolumn]{IEEEtran}
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
@@ -186,11 +186,11 @@ Also if bus doesn't report both arrival time and departure time,
 don't know if it simply didn't stop (i.e., arrival = departure),
 or if we missed one of them.
 
-So, depending on the data, we apply different likelihood functions.
+So, depending on the particles' states, we apply different likelihood functions.
 
-
-\subsubsection[L1]{$L_1$: not at a stop or intersection}
-
+\begin{enumerate}
+%\subsubsection[L1]{$L_1$: not at a stop or intersection}
+\item
 In situations where the bus is neither at a bus stop nor at an intersection,
 the likelihood is simply determined from the distance between the particle and 
 vehicle's reported position.
@@ -199,50 +199,110 @@ as each particle has a single value of distance into trip, $d_k^{(i)}$,
 with which we can compute the latitude and longitude values based on 
 the routes shape information, $z_k^{(i)} = h(d_k{(i)})$.
 
-
-\subsubsection[L1b]{$L_1'$: at stop}
-
-If the particle is considered to be at a stop, then we apply the following likelihood.
-Define a parameter $\varepsilon_S$ as a boundary around the stop;
-if observation is within that boundary likelihood is 1, else 0.
-
-
-\subsubsection[L1c]{$L_1''$: at intersection}
-
-If the particle is considered to be at an intersection, we apply the following likelihood.
-Similar to $L_1'$, however need to check observation is heading into the intersection
-(and not out of it) by using two boundaries around the intersection and a point $\varepsilon_I$ away.
-
-
-Then 
 \begin{equation}
-  L_1(\bX_k^{(i)} | \bY_k) =
-  \begin{cases}
-    \frac{1}{2\pi\sigma_y} e^{\frac{\|g(h(d_k^{(i)})|\bY_k)\|^2}{2\sigma_y^2}} & \text{ if particle neither at stop nor intersection } \\
-    \frac{1}{c} \mathbbm{1}_{d(h(S_{s_k{[i]}}^d), Y_k) < \varepsilon_S}    & \text{ if particle at stop } \\
-    \frac{1}{c} \mathbbm{1}_{d(h(R_{r_k{[i]}}^d), Y_k) < \varepsilon_I \cap d(h(R_{r_k{[i]}}^d-\varepsilon_I), Y_k) < \varepsilon_I}    & \text{ if particle at intersection }
-  \end{cases}
+  \label{eq:l1}
+  \log L_1 (\bX_k^{(i)} | \bY_k) = - \log(2\pi\sigma_y) - \frac{\|g(h(d_k^{(i)})|\bY_k)\|^2}{2\sigma_y^2}
 \end{equation}
 
 
-\subsubsection[L2]{$L_2$: not at a stop}
+%\subsubsection[L1b]{$L_1'$: at stop}
+\item
+If the particle is considered to be at a stop, then we apply the following likelihood.
+Define a parameter $\varepsilon_S$ as a boundary around the stop;
+if observation is within that boundary likelihood is 1, else 0.
+Let $B_s$ be a circle with radius $\varepsilon_S$ and centered at stop $j$, then
 
-If the particle is not at a stop, we determine a likelihood for the arrival and departure
-times at the last stop, if they are available.
+\begin{equation}
+  \label{eq:l1b}
+  \log L_1(\bX_k^{(i)} | \bY_k)=
+  \begin{cases}
+    - \log(\pi \varepsilon_S^2) & \bY_k \in B_s \\
+    - \infty & \text{otherwise}
+  \end{cases}
+\end{equation}
 
-First check that the most recent stop time update agrees with the particle;
-if the stop time update is for stop $j$, and the particles state has $s_k^{(i)} < j$,
-then the particle is not plausible;
-otherwise use normal distribution for arrival and departure times,
-or whichever are available.
+%\subsubsection[L1c]{$L_1''$: at intersection}
+\item
+If the particle is considered to be at an intersection, we apply the following likelihood.
+Similar to $L_1'$, however need to check observation is heading into the intersection
+(and not out of it) by using two boundaries around the intersection and a point $\varepsilon_I$ away.
+Let $B_I^1$ and $B_I^2$ be two circles with radii $\varepsilon_I$,
+the first centered on the intersection and the second centered $\varepsilon_I$ meters before it, then
+
+\begin{equation}
+  \label{eq:l1c}
+  \log L_1 (\bX_k^{(i)} | \bY_k) =
+  \begin{cases}
+    - \log(A) & \bY_k \in B_I^1 \cap B_I^2 \\
+    - \infty & \text{otherwise}
+  \end{cases}
+\end{equation}
+where $A = 2\varepsilon_I^2 \left( \cos^{-1}(\frac{1}{2}) - \frac{\sqrt{3}}{4} \right)$,
+the area of $B_I^1\cap B_I^2$.
+
+\end{enumerate}
+
+%\subsubsection[L2]{$L_2$: not at a stop}
 
 
-\subsubsection[L2b]{$L_2'$: at a stop}
+The second part of the likelihood involves the stop time update,
+and how the likelihood is formed depends on what data is available,
+where $\bT_k = \left[ j, T^a_j , T^d_j \right]^T$ 
+are the stop index, arrival and departure times,
+respectively, either of which can be NA.
 
-If particle is at a stop, again determine whether or not it agrees with data.
-If it does, then check data doesn't imply particle has departed,
-then just use likelihood on arrival time.
+\begin{enumerate}
+\item 
+  If both $T^a_j$ and $T^d_j$ are NA, 
+  then there is no additional likelihood;
+  $ \log L_2  (\bX_k^{(i)} | \bT_k) = 0 $.
 
+\item
+  If departure time, $T^d_j$, is available only, for stop $j$, then we
+  know the bus has at least departed stop $j$; therefore,
+  \begin{equation}
+    \label{eq:l2}
+      \log L_2 (\bX_k^{(i)} | \bT_k) =
+      \begin{cases}
+        - \log(2\pi\sigma_d^2) - \frac{1}{2\sigma_d^2}(T^d_j - D_j^{(i)})^2 \\
+        \hfill\quad \text{if } s_k^{(i)} \geq j \text{ and $D_j^{(i)}$ is set} \\
+        - \infty \\
+        \hfill\quad \text{otherwise}
+      \end{cases}
+  \end{equation}
+  
+\item
+  If arrival time, $T^a_j$, is available only, then similarly
+  \begin{equation}
+    \label{eq:l2b}
+    \log L_2  (\bX_k^{(i)} | \bT_k) =
+    \begin{cases}
+      - \log(2\pi\sigma_d^2) - \frac{(T^a_j - A_j^{(i)})^2}{2\sigma_d^2} & s_k^{(i)} \geq j \\
+      - \infty & \text{otherwise}
+    \end{cases}.
+  \end{equation}
+  Note that this does not assume the particle hasn't yet left the stop;
+  the departure time could simply be missing data.
+  
+\item
+  If both arrival time and departure time are available, then
+  \begin{equation}
+    \label{eq:l2c}
+    \log L_2  (\bX_k^{(i)} | \bT_k) =
+    \begin{cases}
+      \begin{array}
+        - \log(2\pi\sigma_d^2) - \frac{(T^a_j - A_j^{(i)})^2}{2\sigma_d^2} \\
+        + \log(\|\bT_k\|) - \|\bT_k\|
+        (D_k^{(i)} - A_k^{(i)})
+      \end{array} \\
+      \hfill\quad \text{if } s_k^{(i)} \geq j \text{ and $D_j^{(i)}$ is set}  \\
+      - \infty\\
+      \hfill\quad \text{otherwise}
+    \end{cases}
+  \end{equation}
+  which makes use of the observed dwell time at the stop.
+  
+\end{enumerate}
 
 
 \section{Real-time transport road network model: Kalman filter}
