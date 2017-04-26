@@ -370,7 +370,7 @@ with a GPS error of $\sigma_y^2$.
 
 \begin{equation}
   \label{eq:l1}
-  \log L_1 (\bX_k^{(i)} | \bY_k) = - \log(2\pi\sigma_y) - \frac{\|g(h(d_k^{(i)})|\bY_k)\|^2}{2\sigma_y^2}
+  \log L_1 (\bY_k | \bX_k^{(i)}) = - \log(2\pi\sigma_y) - \frac{\|g(h(d_k^{(i)})|\bY_k)\|^2}{2\sigma_y^2}
 \end{equation}
 
 
@@ -383,7 +383,7 @@ Let $B_s$ be a circle with radius $\varepsilon_S$ and centered at stop $j$, then
 
 \begin{equation}
   \label{eq:l1b}
-  \log L_1(\bX_k^{(i)} | \bY_k)=
+  \log L_1(\bY_k | \bX_k^{(i)})=
   \begin{cases}
     - \log(\pi \varepsilon_S^2) & \bY_k \in B_s \\
     - \infty & \text{otherwise}
@@ -400,7 +400,7 @@ the first centered on the intersection and the second centered $\varepsilon_I$ m
 
 \begin{equation}
   \label{eq:l1c}
-  \log L_1 (\bX_k^{(i)} | \bY_k) =
+  \log L_1 (\bY_k | \bX_k^{(i)}) =
   \begin{cases}
     - \log(A) & \bY_k \in B_I^1 \cap B_I^2 \\
     - \infty & \text{otherwise}
@@ -424,47 +424,47 @@ respectively, either of which can be NULL.
 \item 
   If both $T^a_j$ and $T^d_j$ are NULL, 
   then there is no change to the likelihood;
-  $ L_2  (\bX_k^{(i)} | \bT_k) = 1 $.
+  $ L_2  (\bT_k | \bX_k^{(i)}) = 1 $; else
+  
+\item
+  If $s_k^{(i)} \neq j$ (particle's stop index isn't the same as the stop time update's stop sequence),
+  then we check particle is plausible given the data:
+  \begin{equation}
+    \label{eq:l2a}
+    L_2 (\bT_k | \bX_k^{(i)}) =
+    \mathbbm{1}_{s_k^{(i)} > j\ \cap\ A_{s_k}^{(i)} > T_j^a\ \cap\ A_{s_k}^{(i)} > T_j^d},
+  \end{equation}
+  (defining $x > y$ as TRUE if either $x$ or $y$ are NULL to simplify notation); else
+  
 
 \item
   If departure time, $T^d_j$, is available only, for stop $j$, then we
-  know the bus has at least departed stop $j$; therefore,
+  know the bus has departed stop $j$; therefore,
   \begin{equation}
     \label{eq:l2}
-    L_2 (\bX_k^{(i)} | \bT_k) =
-      \begin{cases}
-        f_N(D_j^{(i)} | T_j^d, \sigma_d^2) & s_k^{(i)} \geq j \cap D_j^{(i)} \neq \text{NULL} \\
-        0 & \text{otherwise},
-      \end{cases}
+    L_2 (\bT_k | \bX_k^{(i)}) =
+        f_N(T_j^d | D_j^{(i)}, \sigma_d^2) \mathbbm{1}_{D_j^{(i)}}
   \end{equation}
   where $f_N(x | \mu, \sigma^2)$ is the probability density of a normal distribution
-  with mean $\mu$ and variance $\sigma^2$.
+  with mean $\mu$ and variance $\sigma^2$,
+  and $\mathbbm{1}_Z = 0$ if $Z$ is NULL, and $1$ otherwise; else
   
 \item
   If arrival time, $T^a_j$, is available only, then similarly
   \begin{equation}
     \label{eq:l2b}
-    L_2  (\bX_k^{(i)} | \bT_k) =
-    \begin{cases}
-      f_N(A_j^{(i)} | T_j^a, \sigma_d^2) & s_k^{(i)} \geq j \\
-      0 & \text{otherwise}.
-    \end{cases}
+    L_2  (\bT_k | \bX_k^{(i)}) =
+      f_N(T_j^a | A_j^{(i)}, \sigma_d^2)
   \end{equation}
   Note that this does not assume the particle hasn't yet left the stop;
-  the departure time could simply be missing data.
+  the departure time could simply be missing data; else
   
 \item
   If both arrival time and departure time are available, then
   \begin{equation}
     \label{eq:l2c}
-    L_2  (\bX_k^{(i)} | \bT_k) =
-    \begin{cases}
-      \begin{array}{l}
-        f_N(A_j^{(i)} | T_j^a, \sigma_d^2) f_E(D_k^{(i)} - A_k^{(i)} | T_k^\delta) \quad\\
-        \hfill s_k^{(i)} \geq j \cap D_j^{(i)} \neq \text{NULL} \\[0.5em]
-        0 \qquad\qquad \text{otherwise},
-      \end{array}
-    \end{cases}
+    L_2  (\bT_k | \bX_k^{(i)}) =
+        f_N(T_j^a| A_j^{(i)}, \sigma_d^2) f_E(T_k^\delta | D_k^{(i)} - A_k^{(i)}) \mathbbm{1}_{D_j^{(i)}}
   \end{equation}
   where $T_k^\delta = T_k^d - T_k^a$ is the observed dwell time at the stop,
   and $f_E(x | \lambda)$ is the probability density of an exponential distribution 
@@ -476,12 +476,12 @@ respectively, either of which can be NULL.
 We now determine the likelihood of each particle by combining $L_1$ and $L_2$;
 \begin{equation}
   \label{eq:particle_likelihood}
-  L (\bX_k^{(i)} | \bY_k, \bT_k) = L_1(\bX_k^{(i)}|\bY_k) L_2(\bX_k^{(i)} | \bT_k).
+  L ([\bY_k, \bT_k] | \bX_k^{(i)}) = L_1(\bY_k|\bX_k^{(i)}) L_2(\bT_k | \bX_k^{(i)}).
 \end{equation}
 This is then used to compute the weight of each particle,
 \begin{equation}
   \label{eq:particle_weights}
-  w_i = \frac{L (\bX_k^{(i)} | \bY_k, \bT_k)}{\sum_{j=1}^N L (\bX_k^{(j)} | \bY_k, \bT_k)}.
+  w_i = \frac{L ([\bY_k, \bT_k] | \bX_k^{(i)})}{\sum_{j=1}^N   L ([\bY_k, \bT_k] | \bX_k^{(j)})}.
 \end{equation}
 
 The resampling stage takes place at the beginning of each iteration for computational 
@@ -532,7 +532,7 @@ we can simply combine the estimates, using $M_\ell = $ number of vehicles in seg
 \begin{equation}
   \label{eq:kf_data_estimates}
   \bar z_\ell = \frac{1}{M_\ell} \sum_{j = 1}^{M_\ell} \bar v_j \quad\text{and}\quad
-  \hat \bR_{\ell,\ell}^2 = \frac{1}{M_\ell} \sum_{j=1}^{M_\ell} \left(\bar v_j^2 + \bar S_j^2\right) - \hat v_\ell^2
+  \hat \bR_{\ell,\ell}^2 = \frac{1}{M_\ell} \sum_{j=1}^{M_\ell} \left(\bar v_j^2 + \bar S_j^2\right) - \bar z_\ell^2
 \end{equation}
 
 Next is just the simple matter of applying the Kalman filter algorithm to the transport road network state,
