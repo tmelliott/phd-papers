@@ -525,7 +525,7 @@ with which we can compute the mean distance into trip and velocity for bus $j$,
 as well as the weighted sample variance \cite{cn},
 \begin{equation}
   \label{eq:weighted_variance}
-  \bar S_j^2 = \frac{\sum_{i=1}^N w_j^{(i)} (v_j^{(i)} - \bar v_j)^2}{1 - \sum_{i=1}^N (w_j^{(i)})^2},
+  \bar S_j^2 = \sum_{i=1}^N w_j^{(i)} (v_j^{(i)} - \bar v_j)^2,
 \end{equation}
 since $\sum_{i=1}^N w_j^{(i)} = 1\quad \forall j$.
 
