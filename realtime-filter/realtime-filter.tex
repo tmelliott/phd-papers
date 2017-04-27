@@ -1,4 +1,4 @@
-%\documentclass[9pt]{IEEEtran}
+ke au%\documentclass[9pt]{IEEEtran}
 \documentclass[draftcls,a4paper,onecolumn]{IEEEtran}\usepackage[]{graphicx}\usepackage[]{color}
 %% maxwidth is the original width if it is less than linewidth
 %% otherwise use linewidth (to make sure the graphics do not exceed the margin)
@@ -438,7 +438,8 @@ respectively, either of which can be NULL.
   \begin{equation}
     \label{eq:l2a}
     L_2 (\bT_k | \bX_k^{(i)}) =
-    \mathbbm{1}_{s_k^{(i)} > j\ \cap\ A_{s_k}^{(i)} > T_j^a\ \cap\ A_{s_k}^{(i)} > T_j^d},
+    \mathbbm{1}_{s_k^{(i)} > j\ \cap\ A_{s_k}^{(i)} > T_j^a\ \cap\ A_{s_k}^{(i)} > T_j^d\
+      \cap\ T^a_j > t_k\ \cap\ T^d_j > t_k}
   \end{equation}
   (defining $x > y$ as TRUE if either $x$ or $y$ are NULL to simplify notation); else
   
@@ -557,6 +558,7 @@ Also include dwell distibutions at stops and intersections.
 - mention why weighted estimates stored rather than resampled 
 (i.e., to keep trajectories of disbanded particles for analysis).
 
+- model implemented in C++
 
 
 \section{Discusion and Future Work}
