@@ -10,7 +10,7 @@ TARGET := $(PDF)
 
 
 $(PDF): $(TEX)
-	$(LATEX) -pdf
+	$(LATEX) -pdf -f
 
 $(TEX): $(RNW)
 	R -e "knitr::knit(\"$(RNW)\")"

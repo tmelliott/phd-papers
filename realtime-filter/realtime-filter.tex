@@ -1,4 +1,4 @@
-ke au%\documentclass[9pt]{IEEEtran}
+%\documentclass[9pt]{IEEEtran}
 \documentclass[draftcls,a4paper,onecolumn]{IEEEtran}\usepackage[]{graphicx}\usepackage[]{color}
 %% maxwidth is the original width if it is less than linewidth
 %% otherwise use linewidth (to make sure the graphics do not exceed the margin)
@@ -63,7 +63,7 @@ ke au%\documentclass[9pt]{IEEEtran}
 \input{../glossary.tex}
 
 
-\title{Modelling the Real Time State of a Public Transport Road Network}
+\title{Modelling the real-time state of a public transport road network}
 \author{Tom~Elliott}
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
@@ -72,7 +72,7 @@ ke au%\documentclass[9pt]{IEEEtran}
 
 
 \begin{abstract}
-  Model all vehicles in the public transport system in real time.
+  Model all vehicles in the public transport system in real-time.
   Particle filter model for each vehicle (bus),
   using observations of position (GPS coordinates) to infer distance into trip
   and velocity.
@@ -384,7 +384,7 @@ with a GPS error of $\sigma_y^2$.
 \item
 If the particle is considered to be at a stop, then we apply the following likelihood.
 Define a parameter $\varepsilon_S$ as a boundary around the stop;
-if observation is within that boundary likelihood is 1, else 0.
+if observation is within that boundary likelihood is 1, else 0 (figure~\ref{fig:likelihood_circles}a).
 Let $B_s$ be a circle with radius $\varepsilon_S$ and centered at stop $j$, then
 
 \begin{equation}
@@ -400,7 +400,8 @@ Let $B_s$ be a circle with radius $\varepsilon_S$ and centered at stop $j$, then
 \item
 If the particle is considered to be at an intersection, we apply the following likelihood.
 Similar to $L_1'$, however need to check observation is heading into the intersection
-(and not out of it) by using two boundaries around the intersection and a point $\varepsilon_I$ away.
+(and not out of it) by using two boundaries around the intersection and a point $\varepsilon_I$ away
+(figure~\ref{fig:likelihood_circles}b).
 Let $B_I^1$ and $B_I^2$ be two circles with radii $\varepsilon_I$,
 the first centered on the intersection and the second centered $\varepsilon_I$ meters before it, then
 
@@ -417,7 +418,18 @@ the area of $B_I^1\cap B_I^2$.
 
 \end{enumerate}
 
-%\subsubsection[L2]{$L_2$: not at a stop}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+\subfloat[Stop\label{fig:likelihood_circles1}]{\includegraphics[width=0.5\linewidth]{figure/likelihood_circles-1} }
+\subfloat[Intersection\label{fig:likelihood_circles2}]{\includegraphics[width=0.5\linewidth]{figure/likelihood_circles-2} }\caption[Likelihood functions for particle's at stops and intersections]{Likelihood functions for particle's at stops and intersections. The grey region represents the area where particle's are accepted.}\label{fig:likelihood_circles}
+\end{figure}
+
+
+\end{knitrout}
+
+
+
 
 
 The second part of the likelihood involves the stop time update,
@@ -545,6 +557,27 @@ we can simply combine the estimates, using $M_\ell = $ number of vehicles in seg
 Next is just the simple matter of applying the Kalman filter algorithm to the transport road network state,
 using the data $\bz_k$ as the observation and $\bR_k$,
 as the measurement error matrix.
+
+The transport network state is composed of $L$ segments,
+defined by the mean speed in each segment, 
+\mbox{$\bnu = [\nu_1, \nu_2, \cdots, \nu_L]^T$},
+and the variance of speed within each segment, $\bxi$, 
+a diagonal matrix where the $\xi_{\ell\ell}$ is the variance of the segment $\ell$.
+The Kalman filter predict step is
+\begin{align}
+  \bnu_{k|k-1} &= \bnu_{k-1|k-1} \\
+  \bxi_{k|k-1} &= \bxi_{k-1|k-1} + \bQ_k
+\end{align}
+where $\bQ_k \sim \mathcal{N}(0, \Delta_k\sigma_{\nu}^2I_L)$ and $\sigma_{\nu}^2$ is the system noise parameter
+and $I_n$ is an $n\times n$ identity matrix.
+
+The update equations simplify to
+\begin{align}
+  \bK_k &= \frac{\bxi_{k|k-1}}{\bxi_{k|k-1} + \hat R^2} \\
+  \nu_{k|k} &= \bnu_{k|k-1} + \bK_k(\bar\bz_k - \bnu_{k|k-1}) \\
+  \bxi_{k|k} &= (I_L - \bK_k) \bxi_{k|k-1}
+\end{align}
+which make use of the segment means and variances computed in (\ref{eq:kf_data_estimates}).
 
 
 \section{Arrival time prediction: application to a small subset of routes}
