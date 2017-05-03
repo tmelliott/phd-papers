@@ -59,6 +59,8 @@
 \usepackage{algpseudocode}
 \algblockdefx[Phase]{Phase}{EndPhase}[2]{\textbf{Phase #1:} #2}{\textbf{End Phase}\\}
 
+\usepackage{cite}
+
 \input{../symbols.tex}
 \input{../glossary.tex}
 
@@ -78,7 +80,7 @@
   and velocity.
   Then use particle filter estimates of vehicle speed to estimate bus speed along
   road segments, independently of route.
-  
+ 
 \end{abstract}
 
 
@@ -91,10 +93,12 @@
 \label{sec:intro}
 
 
-Modelling busses in real-time has been done for a while now.
+Modelling busses in real-time has been done for a while now 
+\cite{Cats_2015,Chen_2014,Hans_2015,Jeong_2005,TCRP_2003,Wessel_2016,Xinghao_2013}.
 Modelling the underlying state of the road network in order to improve 
 travel time predictions has not been explored \ldots
-Some looking into complex models for ``future'' travel times \cite{Julio2016}.
+Some looking into complex models for ``future'' travel times 
+\cite{Julio_2016,Xinghao_2013,Yichen_Zheng_2016,Yu_2011}.
 
 
 The basic idea:
@@ -109,7 +113,7 @@ travel time predictions
 \label{sec:data}
 
 Transit data has become increasingly accessible over the year.
-Attibuted mostly to Google's \gls{gtfs}.
+Attibuted mostly to Google's \gls{gtfs} \cite{GoogleDevelopers_2006}.
 Two components to \gls{gtfs}: static and real-time.
 
 Static contains information about routes, trips (one instance of a route at a scheduled time of day),
@@ -121,9 +125,11 @@ Updated typically every 30~seconds or so.
 
 Modelling a single trip or route is fairly simple to do with the raw \gls{gtfs} data.
 However, difficult to combine information from different routes traveling along the same road segments.
+Some attempts \cite{Yu_2011}, but assumes knowledge of converging routes.
 
 We define a \emph{road segment} as a stretch of road used in a transit route between two intersections,
 \emph{or} between a start/end stop of a route and an intersection.
+Add max segment length to attempt to reduce within-segment variability.
 
 Do this by identifying all intersections
 (approximated by all traffic lights for now, since that's the data we have)
@@ -217,7 +223,7 @@ The steps are described below.
 
 \subsection{Predict: transition function}
 The idea behind using particle filter (as opposed to other models)
-is that it is well suited modelling busses \cite{Hans2015},
+is that it is well suited modelling busses \cite{Hans_2015},
 as it has good coverage of the plausible locations and thus overcomes
 many problems associated with modelling transit vehicles,
 such as multimodality (due to loops, traffic lights, and stops).
@@ -367,7 +373,7 @@ The particle filter framework makes this easy,
 as each particle has a single value of distance into trip, $d_k^{(i)}$,
 with which we can compute the latitude and longitude values based on 
 the routes shape information, $z_k^{(i)} = h(d_k^{(i)})$.
-The function $g (\bZ | \bY)$ performs an \emph{equirectangular projection} \cite{Snyder1997}
+The function $g (\bZ | \bY)$ performs an \emph{equirectangular projection} \cite{Snyder_1998}
 of the coordinates $\bX$, centered on $\bY$, 
 onto a flat surface so that the Euclidean distance between points is equivalent
 to the Great Circle distance between their associated coordinates.
