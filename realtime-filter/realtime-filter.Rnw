@@ -7,7 +7,8 @@
 \usepackage{bbm}
 \usepackage{subfig}
 \usepackage{algpseudocode}
-\algblockdefx[Phase]{Phase}{EndPhase}[2]{\textbf{Phase #1:} #2}{\textbf{End Phase}\\}
+\algblockdefx[Phase]{Phase}{EndPhase}[2]{\textbf{Phase #1:} #2}%
+{\textbf{End Phase}\\}
 
 \usepackage{cite}
 
@@ -67,11 +68,13 @@ Attibuted mostly to Google's \gls{gtfs} \cite{GoogleDevelopers_2006}.
 Two components to \gls{gtfs}: real-time and static.
 
 Real-time provides vehicle positions (as GPS coordinates),
-and trip updates (including stop time updates, i.e., arrival and departure times/delays).
+and trip updates (including stop time updates, 
+i.e., arrival and departure times/delays).
 Updated typically every 30~seconds or so,
 and is used by the real-time model (section~\ref{sec:pf}).
 
-Static contains information about routes, trips (one instance of a route at a scheduled time of day),
+Static contains information about routes, 
+trips (one instance of a route at a scheduled time of day),
 stop positions, stop times, route shapes.
 
 Modelling a single trip or route is fairly simple to do with the raw \gls{gtfs} data.
@@ -610,13 +613,36 @@ The update equations simplify to
 which make use of the segment means and variances computed in~(\ref{eq:kf_data_estimates}).
 
 
-\section{Arrival time prediction: application to a small subset of routes}
-\label{sec:results}
+\section{Arrival time prediction}
+\label{sec:arrival_time}
 
 
 Compare several methods:
 current delay, current speed, and Kalman filter speed estimates.
 Also include dwell distibutions at stops and intersections.
+
+
+The final step is to predict the arrival time of every bus 
+at all remaining stops along their respective routes.
+Using the real-time transport network road state, 
+we can predict how long it will take a bus to travel 
+to each stop.
+
+
+For segments \emph{without} stops,
+we simply sample a travel time from the segment's state estimate
+for each particle.
+For segments with stops, however,
+we only want a \emph{partial} travel time.
+Most simply, this is based on proportionally how far into the segment
+the stop is.
+More complex situations could be investigated in the future,
+one example might be to use \emph{sub-segments}.
+
+
+
+\section{Application to Auckland Transport}
+\label{sec:results}
 
 - mention why weighted estimates stored rather than resampled 
 (i.e., to keep trajectories of disbanded particles for analysis).
