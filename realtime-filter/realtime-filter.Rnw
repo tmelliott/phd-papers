@@ -87,18 +87,18 @@ Add max segment length to attempt to reduce within-segment variability on roads 
 (e.g., highways).
 
 Do this by identifying all intersections,
-which can be downloaded from OpenStreetMap \cite{OpenStreetMap_2017}
+which can be downloaded from \gls{osm} \cite{OpenStreetMap_2017}
 and segment routes at these points,
 as shown in figure~\ref{fig:route_segmentation}.
-For now, only using traffic lights as simplification.
-Modify \gls{gtfs} data so \emph{shapes} table becomes
-\texttt{shapes}, \texttt{segments}, and \texttt{segment\_shapes}.
+For now, only using traffic lights and roundabouts 
+(as these are easy to access from \gls{osm}).
+Modify \gls{gtfs} data
+by adding \texttt{intersections}, \texttt{segments}, and \texttt{shape\_segments} tables.
 We assume that if two routes both go through intersections $A$ and $B$,
 they follow the same road to do so
 (once we scale up to all intersections, this will be true almost surely).
-
-Thus as we add new routes, we don't need to create new segments
-(except at start/end\ldots see section~\ref{sec:discussion}).
+We also allow segments to begin or end at a bus stop, 
+which allows routes with the same origin or destination to share segments.
 
 
 <<route_segmentation,echo=FALSE,out.width='0.5\\linewidth',fig.cap="Simplified unidirectional road network diagram, with (a) overlapping routes, and (b) the segments obtained by splitting the routes at intersections. Route 1 $ = \\{r_1, r_2, r_3\\}$, route 2 $=\\{r_4,r_2,r_5,r_6\\}$, and route 3 $=\\{r_7,r_5,r_8,r_9\\}$.",fig.scap="Simplied diagram of overlapping routes",fig.subcap=c("Routes","Segments")>>=
