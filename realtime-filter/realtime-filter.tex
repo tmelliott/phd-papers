@@ -59,6 +59,8 @@
 \usepackage{algpseudocode}
 \algblockdefx[Phase]{Phase}{EndPhase}[2]{\textbf{Phase #1:} #2}%
 {\textbf{End Phase}\\}
+%\usepackage{longtable}
+\usepackage{xtab,booktabs}
 
 \usepackage{cite}
 
@@ -66,7 +68,7 @@
 \input{../glossary.tex}
 
 
-\title{Modelling the real-time state of a public transport road network}
+\title{Real-time modelling of a public transport network to improve arrival-time predictions}
 \author{Tom~Elliott}
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
@@ -95,7 +97,8 @@
 
 
 Modelling busses in real-time has been done for a while now 
-\cite{Cats_2015,Chen_2014,Hans_2015,Jeong_2005,TCRP_2003,Wessel_2016,Xinghao_2013}.
+\cite{Cats_2015,Chen_2014,Hans_2015,Jeong_2005,TCRP_2003,Wessel_2016,
+  Xinghao_2013}.
 Modelling the underlying state of the road network in order to improve 
 travel time predictions has not been explored \ldots
 Some looking into complex models for ``future'' travel times 
@@ -127,14 +130,18 @@ Static contains information about routes,
 trips (one instance of a route at a scheduled time of day),
 stop positions, stop times, route shapes.
 
-Modelling a single trip or route is fairly simple to do with the raw \gls{gtfs} data.
-However, difficult to combine information from different routes traveling along the same road segments.
+Modelling a single trip or route is fairly simple to do with 
+the raw \gls{gtfs} data.
+However, difficult to combine information from different routes 
+traveling along the same road segments.
 Some attempts \cite{Yu_2011}, but assumes knowledge of converging routes.
 
-We define a \emph{road segment} as a stretch of road used in a transit route between two intersections,
-and partial segments between a start/end stop of a route and an intersection.
-Add max segment length to attempt to reduce within-segment variability on roads with few intersections 
-(e.g., highways).
+We define a \emph{road segment} as a stretch of road used 
+in a transit route between two intersections,
+and partial segments between a start/end stop of a route 
+and an intersection.
+Add max segment length to attempt to reduce within-segment variability 
+on roads with few intersections (e.g., highways).
 
 Do this by identifying all intersections,
 which can be downloaded from \gls{osm} \cite{OpenStreetMap_2017}
@@ -151,10 +158,11 @@ We also allow segments to begin or end at a bus stop,
 which allows routes with the same origin or destination to share segments.
 
 
+
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
 \subfloat[Routes\label{fig:route_segmentation1}]{\includegraphics[width=0.5\linewidth]{figure/route_segmentation-1} }
-\subfloat[Segments\label{fig:route_segmentation2}]{\includegraphics[width=0.5\linewidth]{figure/route_segmentation-2} }\caption[Simplied diagram of overlapping routes]{Simplified unidirectional road network diagram, with (a) overlapping routes, and (b) the segments obtained by splitting the routes at intersections. Route 1 $ = \{r_1, r_2, r_3\}$, route 2 $=\{r_4,r_2,r_5,r_6\}$, and route 3 $=\{r_7,r_5,r_8,r_9\}$.}\label{fig:route_segmentation}
+\subfloat[Segments\label{fig:route_segmentation2}]{\includegraphics[width=0.5\linewidth]{figure/route_segmentation-2} }\caption[Simplied diagram of overlapping routes]{Simplified unidirectional road network diagram, with (a) overlapping routes, and (b) the segments obtained by splitting the routes at intersections (solid dots). Route 1 $ = \{R_1, R_2, R_3\}$, route 2 $=\{R_4,R_2,R_5,R_6\}$, and route 3 $=\{R_7,R_5,R_8,R_9\}$.}\label{fig:route_segmentation}
 \end{figure}
 
 
@@ -167,30 +175,49 @@ which allows routes with the same origin or destination to share segments.
 
 The primary goal of the particle filter is to estimate the unobservatble
 vehicle state,
-consisting of distance into trip ($d$), velocity ($v$),
-current stop sequence ($s$), 
-arrival and departure times at the last stop ($A_s$ and $D_s$),
-current segment index ($r$),
-the time spent queuing at the beginning of the current segment ($Q_r$),
-and the time at which the vehicle began traveling along the current segment ($B_r$);
-the vehicle state at time $k$ is denoted
+consisting of distance into trip, $x$, 
+velocity, $\dot x$,
+current stop sequence, $j \in \{1,\ldots,J\}$, 
+arrival and dwell times at each stop, 
+$\mat A = [A_2, \cdots, A_J]^T$ and 
+$\tilde {\mat  D} = [\tilde D_1, \cdots, \tilde D_{J-1}]^T$ respectively
+(note that the first stop doesn't have an arrival time,
+and the last doesn't have a departure),
+current segment index, $\ell$,
+the time spent queuing at the intersection at the beginning
+of each segment,
+$\mat q = [q_2, \cdots, q_L]^T$ (note no queueing time for the first segment),
+and the travel time (less dwell time) along each segment,
+$\mat b = [b_1, \cdots, b_L]^T$.
+The vehicle state at time $k$ is denoted
 \begin{equation}
   \label{eq:vehiclestate}
-  \bX_k = [d_k, v_k, s_k, A_{s_k}, D_{s_k}, r_k, Q_{r_k}, B_{r_k}]^T.
+  \bX_k = 
+  [x_k, \dot x_k, j, \mat A^T, \tilde{\mat D}^T, \ell, \mat q^T, \mat b^T]^T
 \end{equation}
 
 To estimate $\bX_k$, we use the observed data,
-which comes from the realtime GTFS feed;
+which comes from the realtime GTFS feed in two parts:
+the first is vehicle position, 
+$\tilde y_k = [\mathrm{lng}_k, \mathrm{lat}_l]^T = 
+\frac{180}{\pi}[\phi_k, \lambda_k]^T$,
+where $\phi$ and $\lambda$ are the latitude and longitude in radians, 
+respectively;
+the second part is the \emph{stop time updates},
+$\mat T_k = [j_k, T_j^a, T_j^d]^T$,
+which are the current stop sequence (at time $k$), $j_k$,
+the arrival time, $T_j^a$, and departure time, $T_j^d$.
+Thus the data obtained at time $t_k$ can be represented by
 \begin{equation}
   \label{eq:data}
-  \bY_k = [t_k, \phi_k, \lambda_k, j, T_j^a, T_j^d]^T,
+  \bY_k = [t_k, \tilde y_k, \mat T_k]^T.
 \end{equation}
-which is the observation time, latitude, longitude, stop index,
-arrival time, and departure time, respectively.
-The relationship between the GPS position ($\tilde \bY_k = [\phi_k, \lambda_k]^T$)
-is denoted by a \emph{measurment function}, $\tilde\bY_k = h(\bX_k) = h(d_k)$,
+The relationship between the GPS position, $\tilde y$,
+and vehicle's distance into trip, $x$,
+is denoted by a \emph{measurment function}, 
+$\tilde y_k = h(\bX_k) = h(x_k)$,
 which depends only on the distance into trip.
-The \emph{stop time updates}, ($j, T^a_j , T^d_j$),
+The \emph{stop time updates}, $\mat T_k$,
 are recorded when the bus arrives or departs a stop;
 either or both of the arrival or departure times can be missing.
 
@@ -207,34 +234,64 @@ the particle filter becomes a vastly superior model when compared to traditional
 Kalman filter based methods, 
 as it can easily deal with multimodality.
 
-On approach to a stop $j$, the bus will stop with probability $\pi_j$ 
+On approach to the $j$th stop along a route, 
+$s_j = s(j | \text{route})$,
+the bus will stop with probability $\pi_{s_j}$ 
 (i.e., it is a bernoulli trial for each particle).
-If it stops, it will wait a minimum of $\gamma$ seconds while the doors are opened and closed,
-and an additional $\bar t$ seconds as passengers board and disembark.
+If it stops, it will wait a minimum of $\gamma$ seconds 
+while the doors are opened and closed,
+and an additional $u$ seconds as passengers board and disembark.
 $\gamma$ is considered a fixed parameter, across all busses, 
-while $\bar t$ is given an exponential distribution that, for now, has a fixed mean, $\tau$
-(section~\ref{sec:discussion} discusses modifications to this).
+while $u$ is given an exponential distribution with mean $\tau_{s_j}$.
+For now, $\pi_s = \pi$ and $\tau_s = \tau$ $\forall s$
+(i.e., every stop has the same stopping probability and mean dwell time; 
+section~\ref{sec:discussion} discusses modifications to this).
 
 On approach to an intersection (the end of a segment),
 the behaviour is slightly different;
 the vehicle doesn't reach the intersection itself, instead it joins the queue
 (if there is one), and queues until it is able to pass through.
 Similarly to stops, currently this is just modelled using fixed parameter values;
-$\rho$ is the probability of stopping at the intersection
+$\rho_{r_\ell}$ is the probability of stopping at the intersection
 (for example, green vs.\ red traffic lights),
-and $\kappa$ is the average queue time.
+and $\theta_{r_\ell}$ is the average queue time.
+Similiarly to stops, $\rho_r = \rho$ and $\theta_r = \theta$ $\forall r$.
 
 
-To implement the particle filter model (for a single vehicle $c$), 
-we simply initialise $N_c$ particles (using superscript~${(i)}$ to identify an individual particle)
-by sampling distance and velocity, and then determining $s_k$ and $r_k$ from the 
-vectors of stop and segment distances, $\bS^d_r$ and $\bR^d_r$, respectively
-(conditional on the route, $r$).
-The remaining state parameters are NULL.
-Each particle is then passed through the \emph{transition function} independently (the prediction step),
-and then the vehicle state estimate is updated using the data by computing likelihood weights
+To implement the particle filter model (for a single vehicle $v$), 
+we simply initialise $I$ particles 
+(using superscript~${(i)}$ to identify an individual particle)
+by sampling distance and velocity from a prior distribution
+(see section~\ref{sec:results}), 
+and the computing the indices,
+$j = \arg\max_{j:s_j^d \leq x} \{s_j^d\}$ 
+and $\ell = \arg\max_{\ell:r_\ell^d \leq x} \{r_\ell^d\}$ from the 
+vectors of stop and segment distances, $\mat s^d$ and $\mat r^d$, respectively.
+The remaining state parameters are left uninitialized.
+Each particle is then passed through the \emph{transition function}, $f$,
+independently (the prediction step),
+and then the vehicle state estimate is updated 
+using the data by computing likelihood weights
 and resampling the particles with replacement.
 The steps are described below.
+
+THE ABOVE WILL CHANGE:
+\begin{itemize}
+\item project each particle to the end of the route,
+  including queuing and dwell times
+\item update vehicle positions
+\item update trip updates
+\item each time, reweight (and resample?) based on proximity
+\end{itemize}
+
+In our particle filter implementation,
+for a single vehicle $v$ we initialize $I$ particles,
+and using the superscript $(i) : i = 1, \ldots, I$ to denote 
+a value for a single particle.
+Each particle is initialized with a full trajectory (see below),
+from the begining of the route at time $t_o^{(i)}$ (trip start time is unknown),
+until they reach the last stop $s_J$.
+
 
 
 \subsection{Predict: transition function}
@@ -245,22 +302,39 @@ many problems associated with modelling transit vehicles,
 such as multimodality (due to loops, traffic lights, and stops).
 
 Also easy to describe the model;
-only have to deal with an individual object (particle) which follows laws of physics.
+only have to deal with an individual object (particle) which follows 
+laws of physics.
 Rather than dealing with a state \emph{distribution}.
 
 Downside is computational demand.
 
+In our chosen approach, a particle represents a full journey,
+which allows us to estimate travel times for previous segments, 
+as well as produce arrival time predictions in the same step.
+The trajectory, which is demonstrated in figure~\ref{fig:trajectory},
+is computed at each second of the journey, started at $t_0^{(i)}$.
+Each particle is indendently run through a \emph{transition} algorithm,
+outlined in figure~\ref{alg:transition}.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+\includegraphics[width=\linewidth]{figure/trajectory-1} \caption[short desc]{desc}\label{fig:trajectory}
+\end{figure}
+
+
+\end{knitrout}
+
+
+\vspace{1em}\hrule\vspace{1em}
+
 Algorithm~1 describes the particle filter transition algorithm that
 describes the motion of a bus between observations.
 The $k$ subscripts and $(i)$ superscripts have been dropped from the
-vehicle state parameters (e.g., $d \equiv d_k^{(i)}$).
+vehicle state parameters (e.g., $x \equiv x_k^{(i)}$).
 
-The additional parameters are the noise terms, $\sigma_v^2$ and $\sigma_r^2$,
-which represent system noise and between-segment speed variance respectively.
-The former is assumed to be small, and represents the average change in speed
-of a bus per second \emph{within a segment},
-while the latter is the variance in speed \emph{between adjacent segments},
-and allows for the bus to quickly change speed when passing through an intersection.
+The noise parameter, $\sigma_v^2$
+represents system noise, assumed to be small, 
+and represents the average change in speed of a bus per second.
 
 
 \begin{figure}[bt]
@@ -377,20 +451,17 @@ Also if bus doesn't report both arrival time and departure time,
 don't know if it simply didn't stop (i.e., arrival = departure),
 or if we missed one of them.
 
-So, depending on the particles' states, we apply different likelihood functions.
 
-\begin{enumerate}
-%\subsubsection[L1]{$L_1$: not at a stop or intersection}
-\item
-In situations where the bus is neither at a bus stop nor at an intersection,
-the likelihood is simply determined from the distance between the particle and 
+\subsubsection{GTFS vehicle position}
+The likelihood is simply determined from the distance between the particle and 
 vehicle's reported position.
 The particle filter framework makes this easy,
-as each particle has a single value of distance into trip, $d_k^{(i)}$,
+as each particle has a single value of distance into trip, $x_k^{(i)}$,
 with which we can compute the latitude and longitude values based on 
 the routes shape information, $z_k^{(i)} = h(d_k^{(i)})$.
-The function $g (\bZ | \tilde\bY)$ performs an \emph{equirectangular projection} \cite{Snyder_1998}
-of the coordinates $\bX$, centered on $\tilde\bY$, 
+The function $g (z | \tilde y)$ performs an \emph{equirectangular projection} 
+\cite{Snyder_1998}
+of the coordinates $z$, centered on $\tilde y$, 
 onto a flat surface so that the Euclidean distance between points is equivalent
 to the Great Circle distance between their associated coordinates.
 This allows us to use a bivariate normal likelihood on the particles' positions,
@@ -398,119 +469,39 @@ with a GPS error of $\sigma_y^2$.
 
 \begin{equation}
   \label{eq:l1}
-  \log L_1 (\bY_k | \bX_k^{(i)}) = - \log(2\pi\sigma_y) - \frac{\|g(h(d_k^{(i)})|\tilde\bY_k)\|^2}{2\varepsilon_y^2}
+  \log L_1 (\bY_k | \bX_k^{(i)})
+%  = \log L_1 (\tilde y_k | x_k^{(i)})
+  = - \log(2\pi\sigma_y) - \frac{\|g(h(x_k^{(i)})|\tilde y_k)\|^2}{2\sigma_y^2}
 \end{equation}
 
 
-%\subsubsection[L1b]{$L_1'$: at stop}
-\item
-If the particle is considered to be at a stop, then we apply the following likelihood.
-Define a parameter $\varepsilon_S$ as a boundary around the stop;
-if observation is within that boundary likelihood is 1, else 0 (figure~\ref{fig:likelihood_circles}a).
-Let $B_s$ be a circle with radius $\varepsilon_S$ and centered at stop $j$, then
-
-\begin{equation}
-  \label{eq:l1b}
-  \log L_1(\bY_k | \bX_k^{(i)})=
-  \begin{cases}
-    - \log(\pi \varepsilon_S^2) & \tilde\bY_k \in B_s \\
-    - \infty & \text{otherwise}
-  \end{cases}
-\end{equation}
-
-%\subsubsection[L1c]{$L_1''$: at intersection}
-\item
-If the particle is considered to be at an intersection, we apply the following likelihood.
-Similar to $L_1'$, however need to check observation is heading into the intersection
-(and not out of it) by using two boundaries around the intersection and a point $\varepsilon_I$ away
-(figure~\ref{fig:likelihood_circles}b).
-Let $B_I^1$ and $B_I^2$ be two circles with radii $\varepsilon_I$,
-the first centered on the intersection and the second centered $\varepsilon_I$ meters before it, then
-
-\begin{equation}
-  \label{eq:l1c}
-  \log L_1 (\bY_k | \bX_k^{(i)}) =
-  \begin{cases}
-    - \log(A) & \tilde\bY_k \in B_I^1 \cap B_I^2 \\
-    - \infty & \text{otherwise}
-  \end{cases}
-\end{equation}
-where $A = 2\varepsilon_I^2 \left( \cos^{-1}(\frac{1}{2}) - \frac{\sqrt{3}}{4} \right)$,
-the area of $B_I^1\cap B_I^2$.
-
-\end{enumerate}
-
-
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\subfloat[Stop\label{fig:likelihood_circles1}]{\includegraphics[width=0.5\linewidth]{figure/likelihood_circles-1} }
-\subfloat[Intersection\label{fig:likelihood_circles2}]{\includegraphics[width=0.5\linewidth]{figure/likelihood_circles-2} }\caption[Likelihood functions for particle's at stops and intersections]{Likelihood functions for particle's at stops and intersections. The grey region represents the area where particle's are accepted.}\label{fig:likelihood_circles}
-\end{figure}
-
-
-\end{knitrout}
-
-
-
-
-
+\subsubsection{GTFS trip updates}
 The second part of the likelihood involves the stop time update,
 and how the likelihood is formed depends on what data is available,
 where $\bT_k = \left[ j, T^a_j , T^d_j \right]^T$ 
 are the stop index, arrival and departure times,
 respectively, either of which can be NULL.
 
-\begin{enumerate}
-\item 
-  If both $T^a_j$ and $T^d_j$ are NULL, 
-  then there is no change to the likelihood;
-  $ L_2  (\bT_k | \bX_k^{(i)}) = 1 $; else
-  
-\item
-  If $s_k^{(i)} \neq j$ (particle's stop index isn't the same as the stop time update's stop sequence),
-  then we check particle is plausible given the data:
-  \begin{equation}
-    \label{eq:l2a}
-    L_2 (\bT_k | \bX_k^{(i)}) =
-    \mathbbm{1}_{s_k^{(i)} > j\ \cap\ A_{s_k}^{(i)} > \max\{T_j^a,T_j^d\} > t_k}
-  \end{equation}
-  (defining $x > y$ as TRUE if either $x$ or $y$ are NULL to simplify notation); else
-  
-
-\item
-  If departure time, $T^d_j$, is available only, for stop $j$, then we
-  know the bus has departed stop $j$; therefore,
-  \begin{equation}
-    \label{eq:l2}
-    L_2 (\bT_k | \bX_k^{(i)}) =
-        f_N(T_j^d | D_j^{(i)}, \sigma_d^2) \mathbbm{1}_{D_j^{(i)}}
-  \end{equation}
-  where $f_N(x | \mu, \sigma^2)$ is the probability density of a normal distribution
-  with mean $\mu$ and variance $\sigma^2$,
-  and $\mathbbm{1}_Z = 0$ if $Z$ is NULL, and $1$ otherwise; else
-  
-\item
-  If arrival time, $T^a_j$, is available only, then similarly
-  \begin{equation}
-    \label{eq:l2b}
-    L_2  (\bT_k | \bX_k^{(i)}) =
-      f_N(T_j^a | A_j^{(i)}, \sigma_d^2)
-  \end{equation}
-  Note that this does not assume the particle hasn't yet left the stop;
-  the departure time could simply be missing data; else
-  
-\item
-  If both arrival time and departure time are available, then
-  \begin{equation}
-    \label{eq:l2c}
-    L_2  (\bT_k | \bX_k^{(i)}) =
-        f_N(T_j^a| A_j^{(i)}, \sigma_d^2) f_E(T_k^\delta | D_k^{(i)} - A_k^{(i)}) \mathbbm{1}_{D_j^{(i)}}
-  \end{equation}
-  where $T_k^\delta = T_k^d - T_k^a$ is the observed dwell time at the stop,
-  and $f_E(x | \lambda)$ is the probability density of an exponential distribution 
-  with rate $\lambda$.
-  
-\end{enumerate}
+We only apply the likelihood when the data is recieved, 
+so the two necessary likelihood functions are,
+for an arrival time,
+\begin{equation}
+  \label{eq:l2a}
+  \log L_2 (\bY_k | \bX_k^{(i)})
+%  = \log L_2 (T_j^a | A_j^{(i)}) 
+  = - \frac{1}{2}\log (2\pi\varepsilon^2) - 
+  \frac{(T_j^a - A_j^{(i)})^2}{2\varepsilon^2},
+\end{equation}
+and for a departure time
+(note that the departure time for a particle
+is simply $D_j^{(i)} = A_j^{(i)} + \tilde D_j^{(i)}$),
+\begin{equation}
+  \label{eq:l2d}
+  \log L_2 (\bY_k | \bX_k^{(i)})
+%  = \log L_2 (T_j^d | D_j^{(i)}) 
+  = - \frac{1}{2}\log (2\pi\varepsilon^2) - 
+  \frac{(T_j^d - D_j^{(i)})^2}{2\varepsilon^2}
+\end{equation}
 
 
 We now determine the likelihood of each particle by combining $L_1$ and $L_2$;
@@ -521,14 +512,9 @@ We now determine the likelihood of each particle by combining $L_1$ and $L_2$;
 This is then used to compute the weight of each particle,
 \begin{equation}
   \label{eq:particle_weights}
-  w_i = \frac{L (\bY_k | \bX_k^{(i)})}{\sum_{j=1}^N   L (\bY_k | \bX_k^{(j)})}.
+  w_i = \frac{L (\bY_k | \bX_k^{(i)})}{\sum_{j=1}^I   L (\bY_k | \bX_k^{(j)})}.
 \end{equation}
-
-The resampling stage takes place at the beginning of each iteration for computational 
-reasons (see section~\ref{sec:results}).
-so we therefore use the weighted estimates of parameters in the next section.
-However, the resampling is simply done using a standard weighted resampling 
-algorithm with replacement.
+These weights are then used to perform a weighted resample with replacement.
 
 
 \section{Real-time transport road network model: Kalman filter}
@@ -546,61 +532,80 @@ which we expect to be unimodal and approximately Gaussian
 Use weighted speed estimates as data,
 and weighted variance as measurement error.
 
-Want to find the state,
+Want to find the state of all $M$ segments in the network,
 \begin{equation}
   \label{eq:kf_state}
-  \Theta = [\theta_1, \cdots, \theta_L]^T\quad\text{and}\quad
-  \Xi = \diag(\xi_1, \cdots, \xi_L) = \bxi\eye_L,
+  \bbeta = [\beta_1, \cdots, \beta_M]^T
 \end{equation}
-which are the mean and variance of each segement, respectively.
+which is the travel time along each segment,
+along with the variance-covariance matrix $\Sigma$.
+For now, we are assuming segments are independent,
+so $\Sigma$ is a diagonal matrix.
 
 
 We run the Kalman filter every time we run the particle filter,
 since it has a low cost, allowing the most recent data to be incorporated.
-For each vehicle $c$, we have $N_c$ particles which we use to
-compute the mean distance into trip and velocity,
+For each vehicle $v$, we have $I_v$ particles which we use to
+compute the mean distance into trip,
 \begin{equation}
   \label{eq:weighted_mean}
-  \bar d_c = \sum_{i=1}^{N_c} w_c^{(i)} d_c^{(i)} \quad\text{and}\quad
-  \bar v_c = \sum_{i=1}^{N_c} w_c^{(i)} v_c^{(i)},
+  \bar x_v = \sum_{i=1}^{I_v} w_v^{(i)} x_v^{(i)}
 \end{equation}
-as well as the weighted sample variance,
-\begin{equation}
-  \label{eq:weighted_variance}
-  \bar S_c^2 = \sum_{i=1}^{N_c} w_c^{(i)} (v_c^{(i)} - \bar v_c)^2,
-\end{equation}
-since $\sum_{i=1}^{N_c} w_c^{(i)} = 1\quad \forall c = 1,\ldots,C$.
+which we can use to estimate which segment the vehicle is in
+(using the same method as in the initialisation step).
 
-Using $\bar d_c$, we can find the segment id corresponding to each busses most probable location,
-and then combine all vehicle speed estimates for each segment.
+When the vehicle passes through a segment, $r_\ell$,
+we set the travel time of the vehicle using the 
+weighted mean and sample variance of the particles,
+\begin{align}
+  \label{eq:weighted_travel}
+  \bar b_{v,\ell} &= \sum_{i=1}^{I_v} w_v^{(i)} b_{v\ell}^{(i)} \\
+  \bar S_{v,\ell}^2 &= \sum_{i=1}^{I_v} w_v^{(i)}(b_{v\ell}^{(i)} - \bar b_{v\ell})
+\end{align}
 
-In situations where multiple vehicles are in the same segment $\ell$, 
-we can simply combine the estimates, using $C_\ell = $ number of vehicles in segment $\ell$ 
-\cite{cn}.
-\begin{equation}
+
+Having processed all vehicles, we move on to updating each \emph{segment},
+$R_m$, $m = 1, \ldots, M$.
+Define
+\begin{equation*}
+  V_m = \{v:\text{ vehicle $v$ passed through segment } R_m\}
+\end{equation*}
+and let $K_m$ be the length of $V_m$,
+and $\ell(R_m)$ be the segment index of the given stop
+(i.e., $\ell(r_\ell) = \ell$).
+\begin{align}
   \label{eq:kf_data_estimates}
-  \hat V_\ell = \frac{1}{C_\ell} \sum_{c=1}^{C_\ell} \bar v_j \quad\text{and}\quad
-  \hat P_\ell = \frac{1}{C_\ell} \sum_{j=1}^{C_\ell} \left(\bar v_c^2 + \bar S_c^2\right) - \hat V_\ell^2
-\end{equation}
+  \hat B_m &= \frac{1}{K_m} \sum_{v \in V_m} \bar b_{v,\ell(R_m)}  \\
+  \hat Q_m &= \frac{1}{K_m} \sum_{v \in V_m} 
+  \left(\bar b_{v\ell(R_m)}^2 + \bar S_{v\ell(R_m)}^2\right) - \hat B_m^2
+\end{align}
 
-Next is just the simple matter of applying the Kalman filter algorithm \cite{Anderson_2012} 
+Next is just the simple matter of applying the Kalman filter algorithm 
+\cite{Anderson_2012} 
 to the transport road network state,
-using the data \mbox{$\hat\bV_k = [\hat V_1, \ldots, \hat V_L]$} as the observation vector
-and \mbox{$\hat\bP_k = \diag(\hat P_1, \ldots, \hat P_L)$},
+using the data \mbox{$\hat {\mat B}_m = [\hat B_1, \ldots, \hat B_M]$} 
+as the observation vector
+and \mbox{$\hat {\mat Q}_k = \diag(\hat Q_1, \ldots, \hat Q_M)$},
 as the measurement error matrix.
+The transition matrix for the network state, $\mat F_c$,
+is currently an identity matrix,
+but in future we'll allow for the update to account for
+changes in adjacent segments.
 The Kalman filter prediction equations are
 \begin{align}
-  \Theta_{k|k-1} &= \Theta_{k-1|k-1} \\
-  \Xi_{k|k-1} &= \Xi_{k-1|k-1} + \bW_k
+  \bbeta_{c|c-1} &= \mat F_c\bbeta_{c-1|c-1} \\
+  \Sigma_{c|c-1} &= \Sigma_{c-1|c-1} + \bW_c
 \end{align}
-where $\bW_k \sim \mathcal{N}(0, \Delta_k\zeta^2\eye_L)$, $\zeta^2$ is the system noise parameter,
-and $\Delta_k = t_k - t_{k-1}$.
+where $\bW_c \sim \mathcal{N}(0, \delta_c\xi^2\eye_M)$, 
+$\xi^2$ is the system noise parameter,
+and $\delta_c = t_c - t_{c-1}$ is the time since the segment
+was last updated.
 
 The update equations simplify to
 \begin{align}
-  \bK_k &= \frac{\Xi_{k|k-1}}{\Xi_{k|k-1} + \hat\bP_k} \\
-  \Theta_{k|k} &= \Theta_{k|k-1} + \bK_k(\bV_k - \Theta_{k|k-1}) \\
-  \Xi_{k|k} &= (\eye_L - \bK_k) \Xi_{k|k-1}
+  \bK_c &= \frac{\Sigma_{c|c-1}}{\Sigma_{c|c-1} + \hat {\mat Q}_c} \\
+  \bbeta_{c|c} &= \bbeta_{c|c-1} + \bK_c(\hat {\mat B}_c - \bbeta_{c|c-1}) \\
+  \Sigma_{c|c} &= (\eye_M - \bK_c) \Sigma_{c|c-1}
 \end{align}
 which make use of the segment means and variances computed in~(\ref{eq:kf_data_estimates}).
 
@@ -651,48 +656,72 @@ one example might be to use \emph{sub-segments}.
 \end{itemize}
 
 
-
 \bibliographystyle{IEEEtran}
 \bibliography{IEEEabrv,../reflist.bib}
 
 
 \appendix[List of Symbols]
 
-\begin{tabular}{ll}
-  $N_c$ & number of particles for vehicle $c$ \\
-  $C$ & number of vehicles \\
-  $C_\ell$ & number of vehicles in segment $\ell$ \\
-  $M$ ($M_r$) & number of stops (for given route $r$) \\
-  $L$ ($L_r$) & number of segments (for given route $r$) \\
-  $\bS^d_r, \bR^d_r$ & stop, intersection distances along route $r$ \\
-  $t_k$ & time at observation $k$ \\
+\begin{xtabular}{ll}
+  \toprule
+  &\textbf{Data} \\ \midrule
+  $t_k$, $t_c$ & time at observation $k$, $c$ \\
+  $\delta_x$ & time since last observation, $t_x - t_{x-1}$\\
   $\bY_k$ & observation $k$ \\
-  $\phi,\lambda$ & latitude, latitude \\
-  $T^a_j, T^d_j$ & arrival, departure time at stop $j \in \{1, \ldots, M_s\}$ \\
-  $\bX_k$ & vehicle state associated with obs $k$ \\
-  $d$ & distance into trip (meters) \\
-  $v$ & velocity (speed, meters per second) \\
-  $s$ & stop index $\in \{1, \ldots, M_s\}$ \\
-  $A_s, D_s$ & arrival, departure time at stop $s$ \\
-  $r$ & segment index $\in \{1, \ldots, M_r\}$ \\
-  $Q_r, B_r$ & queue time (seconds), begin time for segment $r$ \\
-  $z$ & computed GPS position of a particle \\
-  $\delta$ & time since last observation (seconds) \\
+  $\tilde y_k$ & GPS position of vehicle (degrees) \\
+  $\phi,\lambda$ & latitude, longitude (radians) \\
+  $T^a_j, T^d_j$ & arrival, departure time at stop $j \in \{1, \ldots, J\}$ \\
+  $S_n$ & unique identifier of stop $n$ \\
+  $s_j$, $s_j^x$, $s_j^p$ & unique identifier of $j$th stop (of relevent route), shape distance traveled, position \\
+  $R_m$ & unique identifier of segment $m$  \\
+  $r_\ell$, $r_\ell^x$, $r_\ell^p$ & unique identifier of $\ell$th segment (of relevent route), shape distance traveled, path \\
+  \bottomrule
+  \\ \toprule
+  &\textbf{Parameters} \\ \midrule
   $\pi$ & probability of stopping at a stop \\
   $\gamma$ & minimum dwell time (seconds) \\
   $\tau$ & mean dwell time (seconds) \\
   $\rho$ & probability of stopping at an intersection \\
-  $\kappa$ & mean queue time at intersection \\
-  $\sigma_v^2$ & system noise (particle filter) \\
-  $\sigma_r^2$ & between segment velocity variability \\
-  $\varepsilon_y^2, \varepsilon_d^2$ & GPS, arrival/departure time error \\
-  $\varepsilon_S, \varepsilon_I$ & stop, intersection radius (meters) \\
+  $\theta_m$ & mean queue time (seconds) at intersection of segment $m$ \\
+  $\beta_m$ & mean travel time (seconds) for segment $m$ \\
+  $\bbeta$, $\Sigma$ & transit network state (mean, covariance) \\
+  $\eta$ & stop size (m) \\
+  $\kappa$ & intersection size (m) \\
+  $\sigma_x$ & system noise (variability in speed) \\
+  $\sigma_y$ & GPS error \\
+  $\varepsilon$ & arrival/departure time error \\
+  $\xi$ & system noise (Kalman filter) \\
+  \bottomrule
+  \\ \toprule
+  &\textbf{Variables} \\ \midrule
+  $\bX_k$ & vehicle state associated with obs $k$ \\
+  $x$, $\dot x$ & vehicle distance into trip, velocity \\
+  $j$, $\ell$ & stop, segment index \\
+  $A_j$, $\tilde D_j$, $D_j$ & arrival, dwell, departure time at stop $j$ \\
+  $q_j$, $b_j$ & queue, travel time \\
+  $z^{(i)}$ & computed GPS position of particle $(i)$ \\
+  $p^{(i)}$ & indicator to whether particle $(i)$ stopped \\
   $w$ & particle weight \\
-  $\Theta, \Xi$ & transport road state mean, variance \\
-  $\hat V_\ell$ & mean speed of recent vehicles in segment $\ell$ \\
-  $\hat P_\ell$ & estimated population variance of vehicle speeds in segment $\ell$ \\
-  $\zeta^2$ & system noise (Kalman filter)
-\end{tabular}
+  $B_m$, $Q_m$ & mean, covariance of travel time of all recent vehicles along segment $m$ \\
+  $\mat F_c$ & network state transition matrix \\
+  $V$, $v$ & number of vehicles, indexed by $v$ \\
+  $I$, $i$ & number of particles (per vehicle), indexed by $i$ \\
+  $J$, $j$ & number of stops (conditional on route), indexed by $j$ \\
+  $L$, $\ell$ & number of segments (conditional on route), indexed by $\ell$ \\
+  $N$, $n$ & total number of stops in network, indexed by $n$ \\
+  $M$, $m$ & total number of segments in network, indexed by $m$ \\
+  $k$ & index for vehicle observations \\
+  $c$ & index for transit network state updates \\
+  \bottomrule
+  \\ \toprule
+  &\textbf{Functions} \\ \midrule
+  $f$ & vehicle transition function \\
+  $h$ & vehicle measurement function \\
+  $g$ & equirectangular projection \\
+  \bottomrule
+\end{xtabular}
+  
+
 
 \vspace{1em}
 Times are UNIX timestamps (seconds since 1 Janurary, 1970) unless stated otherwise.
