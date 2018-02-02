@@ -46,7 +46,7 @@
 \label{sec:intro}
 
 
-Modelling busses in real-time has been done for a while now 
+Modelling buses in real-time has been done for a while now 
 \cite{Cats_2015,Chen_2014,Hans_2015,Jeong_2005,TCRP_2003,Wessel_2016,
   Xinghao_2013}.
 Modelling the underlying state of the road network in order to improve 
@@ -237,7 +237,7 @@ the bus will stop with probability $\pi_{s_j}$
 If it stops, it will wait a minimum of $\gamma$ seconds 
 while the doors are opened and closed,
 and an additional $u$ seconds as passengers board and disembark.
-$\gamma$ is considered a fixed parameter, across all busses, 
+$\gamma$ is considered a fixed parameter, across all buses, 
 while $u$ is given an exponential distribution with mean $\tau_{s_j}$.
 For now, $\pi_s = \pi$ and $\tau_s = \tau$ $\forall s$
 (i.e., every stop has the same stopping probability and mean dwell time; 
@@ -283,7 +283,7 @@ THE ABOVE WILL CHANGE:
 
 \subsection{Predict: transition function}
 The idea behind using particle filter (as opposed to other models)
-is that it is well suited modelling busses \cite{Hans_2015},
+is that it is well suited modelling buses \cite{Hans_2015},
 as it has good coverage of the plausible locations and thus overcomes
 many problems associated with modelling transit vehicles,
 such as multimodality (due to loops, traffic lights, and stops).
@@ -485,26 +485,119 @@ This is then used to compute the weight of each particle,
 These weights are then used to perform a weighted resample with replacement.
 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Real-time transport road network model: Kalman filter}
 \label{sec:kf}
 
+The main goal of our work is to estimate arrival times of buses,
+which requires knowledge of how long it takes a bus to
+travel along roads within the network.
+Thus, we need to estimate the \emph{road network state} at time $c$,
+\begin{equation}
+  \label{eq:kf_state}
+  \bbeta_c = [\beta^1_c, \cdots, \beta^M_c]^T
+\end{equation}
+where $\beta^j_c$ is the travel time along road segment $j$.
+The basic idea is to update this state every time a bus travels
+along a segment of road.
+This way, subsequent buses can use the most recent travel time
+information to estimate how long it will take them to reach 
+upcoming stops.
+
+Due to the simplicity of the model (a single parameter, travel time),
+we are using an \gls{ekf} algorithm; 
+we are modeling each segment independently, although in the future
+we plan to take into account adjacent segments.
+However, since we cannot expect regular observations,
+we need the state to "fall back" on our prior estimate of travel time%
+---based on historical data---over time.
+
+The first stage is to derive the transition function $f_c$ that
+trends towards the prior mean, $\mu_j(t)$, and variance, $\omega_j(t)^2$,
+of travel times along segment $j$ at time $t$ (based on historical data).
+For now, we will be using $\mu_j = \mu_j(t)$ and $\omega_j = \omega_j(t)\ \forall t$.
+We also need to allow $f_c$ to cope with irregular update intervals 
+($\Delta_c = $ time since segment was last updated).
+
+We first define a one-second transition function $f$ such that the state mean
+converges towards the prior mean,
+\begin{equation}
+  \label{eq:kf_trans1}
+  \beta_{c} = f(\beta_{c-1}, \mu, \lambda) = \beta_{c-1} + \lambda(\mu - \beta_{c-1}),
+\end{equation}
+where $\lambda \in (0, 1)$ is a tuning parameter that determines how quickly
+the process converges to the prior.
+We next define $f_n$ as a recusive composition of $n$ transitions,
+\begin{equation}
+  \label{eq:kf_transf}
+f_n(\beta, \mu, \lambda) =
+(f^1\circ \cdots \circ f^n) (\beta, \mu, \lambda),\quad
+\text{where } f^j \equiv f\ \forall j.
+\end{equation}
+
+For the \gls{ekf}, we need the derivative of $f_n$, which we get via the chain rule.
+To simplify notation, we're dropping the $\mu$ and $\beta$ parameters since they constant.
+\begin{align}
+  \label{eq:kf_deriv}
+  F_n = f_n'(\beta)\nonumber
+    &= f'[(f^1\circ \cdots \circ f^{n-1})(\beta)]
+      (f^1\circ \cdots \circ f^{n-1})'(\beta) \nonumber \\
+    &= f'[f_{n-1}(\beta)] F_{n-1} \nonumber \\
+  \intertext{which, by recursion, we get}
+    &= f'[f_{n-1}(\beta)] f'[f_{n-2}(\beta)] \cdots f'[f_1(\beta)] f'(\beta) \nonumber \\
+    &= f'(\beta) \prod_{i=1}^{n-1} f'[f_i(\beta)] \nonumber \\
+  \intertext{Next we can calculate 
+  $f'(\beta, \mu, \lambda) = \frac{\partial}{\partial \beta} \beta + \lambda(\mu - \beta) = 1 - \lambda$,
+  so the derivative becomes}
+    F_n &= (1-\lambda) \prod_{i=1}^n (1 - \lambda) = (1-\lambda)^n
+\end{align}
+
+That ensure that as $n$ goes to infinity, $f_n(\beta, \mu, \lambda) \to \mu$.
+To do the same with the variance, we need to find a value for $Q$,
+the variance of system noise, which is involved in the prediction of the state variance, $\Sigma$:
+\begin{align}
+  \label{eq:kf_varpred}
+  \Sigma_{c|c-1} &= F_n^2\Sigma_{c-1|c-1} + Q \nonumber \\
+  \intertext{At equilibrium, we want $\Sigma_{c|c-1} = \Sigma_{c-1|c-1} = \omega$, so}
+  \omega &= F_n^2 \omega + Q = (1-\lambda)^{2n} \omega + Q \nonumber \\
+  \intertext{which, solving for $Q$, gives us}
+  Q &= \omega(1 - (1 - \lambda)^{2n})
+\end{align}
+
+The last step is to choose a value of $\lambda$.
+However, any fixed value will cause the system to converge quickly when the difference is large;
+instead, we want the convergence to be a function of the ratio of information held
+in the prior and posterior states. 
+For example, if we have a lot of buses traveling at the same speed along a segment, 
+we will have a lot of information and want the state estimate to remain there
+longer that if only one bus went through. 
+So we will use $\lambda = \phi \frac{\Sigma_{c-1|c-1}}{\Sigma_{c-1|c-1} + \omega}$.
+
+
+
+\vspace{2em}
+\hrule
 Now that each vehicle is modelled by a sample of particles,
-we can use the speed estimates of busses along segments to estimate
+we can use the speed estimates of buses along segments to estimate
 the speed along them, regardless of the route.
 In future we can add correlation structure between adjacent segments.
 
 Use Kalman filter because we have one parameter, speed, 
 which we expect to be unimodal and approximately Gaussian
-(some busses travel faster or slower).
+(some buses travel faster or slower).
 
 Use weighted speed estimates as data,
 and weighted variance as measurement error.
 
 Want to find the state of all $M$ segments in the network,
-\begin{equation}
-  \label{eq:kf_state}
-  \bbeta = [\beta_1, \cdots, \beta_M]^T
-\end{equation}
+% \begin{equation}
+%   \label{eq:kf_state}
+%   \bbeta = [\beta_1, \cdots, \beta_M]^T
+% \end{equation}
 which is the travel time along each segment,
 along with the variance-covariance matrix $\Sigma$.
 For now, we are assuming segments are independent,
