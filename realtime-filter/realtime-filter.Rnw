@@ -94,19 +94,19 @@ Add max segment length to attempt to reduce within-segment variability
 on roads with few intersections (e.g., highways).
 
 Do this by identifying all intersections,
-which can be downloaded from OpenStreetMap \cite{OpenStreetMap_2017}
+which can be downloaded from \gls{osm} \cite{OpenStreetMap_2017}
 and segment routes at these points,
 as shown in figure~\ref{fig:route_segmentation}.
-For now, only using traffic lights and roundabouts as simplification.
-Modify \gls{gtfs} data so \emph{shapes} table becomes
-\texttt{shapes}, \texttt{segments}, and \texttt{segment\_shapes}.
+For now, only using traffic lights and roundabouts 
+(as these are easy to access from \gls{osm}).
+Modify \gls{gtfs} data
+by adding \texttt{intersections}, \texttt{segments}, and \texttt{shape\_segments} tables.
 We assume that if two routes both go through intersections $A$ and $B$,
 they follow the same road to do so
-(routes retain their own shape, so in cases where this \emph{is not} true,
-the shape will still be valid).
+(once we scale up to all intersections, this will be true almost surely).
+We also allow segments to begin or end at a bus stop, 
+which allows routes with the same origin or destination to share segments.
 
-Thus as we add new routes, we don't need to create new segments
-(except at start/end\ldots see section~\ref{sec:discussion}).
 
 
 <<route_segmentation,echo=FALSE,out.width='0.5\\linewidth',fig.cap="Simplified unidirectional road network diagram, with (a) overlapping routes, and (b) the segments obtained by splitting the routes at intersections (solid dots). Route 1 $ = \\{R_1, R_2, R_3\\}$, route 2 $=\\{R_4,R_2,R_5,R_6\\}$, and route 3 $=\\{R_7,R_5,R_8,R_9\\}$.",fig.scap="Simplied diagram of overlapping routes",fig.subcap=c("Routes","Segments")>>=
@@ -280,6 +280,15 @@ THE ABOVE WILL CHANGE:
 \item each time, reweight (and resample?) based on proximity
 \end{itemize}
 
+In our particle filter implementation,
+for a single vehicle $v$ we initialize $I$ particles,
+and using the superscript $(i) : i = 1, \ldots, I$ to denote 
+a value for a single particle.
+Each particle is initialized with a full trajectory (see below),
+from the begining of the route at time $t_o^{(i)}$ (trip start time is unknown),
+until they reach the last stop $s_J$.
+
+
 
 \subsection{Predict: transition function}
 The idea behind using particle filter (as opposed to other models)
@@ -294,6 +303,28 @@ laws of physics.
 Rather than dealing with a state \emph{distribution}.
 
 Downside is computational demand.
+
+In our chosen approach, a particle represents a full journey,
+which allows us to estimate travel times for previous segments, 
+as well as produce arrival time predictions in the same step.
+The trajectory, which is demonstrated in figure~\ref{fig:trajectory},
+is computed at each second of the journey, started at $t_0^{(i)}$.
+Each particle is indendently run through a \emph{transition} algorithm,
+outlined in figure~\ref{alg:transition}.
+
+<<trajectory,echo=FALSE,out.width='\\linewidth',fig.cap="desc",fig.scap="short desc",fig.width=10,fig.height=5>>=
+plot.new()
+plot.window(c(0, 600), c(0, 1000), xaxs = "i", yaxs = "i")
+axis(2, c(0, 400, 600, 1100), c(0, expression(s[1]^d), expression(r[1]^d), ""), las = 1, family = "serif")
+axis(1, c(0, 700), c(expression(t[0]), ""))
+mtext("Time (s)", 1, 2)
+abline(h = 400, lty = 2, col = "#999999")
+abline(h = 600, lty = "7727", lwd = 2, col = "#999999")
+
+@ 
+
+
+\vspace{1em}\hrule\vspace{1em}
 
 Algorithm~1 describes the particle filter transition algorithm that
 describes the motion of a bus between observations.
@@ -723,7 +754,6 @@ one example might be to use \emph{sub-segments}.
 
 \appendix[List of Symbols]
 
-%\begin{xtabular}{lp{6cm}}
 \begin{xtabular}{ll}
   \toprule
   &\textbf{Data} \\ \midrule
