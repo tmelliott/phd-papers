@@ -533,81 +533,96 @@ Thus, we need to estimate the \emph{road network state} at time $c$,
   \label{eq:kf_state}
   \bbeta_c = [\beta^1_c, \cdots, \beta^M_c]^T
 \end{equation}
-where $\beta^j_c$ is the travel time along road segment $j$.
+where $\beta^m_c$ is the travel time along road segment $m$.
 The basic idea is to update this state every time a bus travels
 along a segment of road.
 This way, subsequent buses can use the most recent travel time
 information to estimate how long it will take them to reach 
 upcoming stops.
 
-Due to the simplicity of the model (a single parameter, travel time),
-we are using an \gls{ekf} algorithm; 
-we are modeling each segment independently, although in the future
-we plan to take into account adjacent segments.
+We are using an \gls{ekf} algorithm to model the network state,
+treating each segment independently for now, although in the future
+we plan to take into account adjacent segments
+(see section~\ref{sec:discussion}).
 However, since we cannot expect regular observations,
-we need the state to "fall back" on our prior estimate of travel time%
+we need the state to ``fall back'' on a prior travel time distribution%
 ---based on historical data---over time.
 
-The first stage is to derive the transition function $f_c$ that
-trends towards the prior mean, $\mu_j(t)$, and variance, $\omega_j(t)^2$,
-of travel times along segment $j$ at time $t$ (based on historical data).
-For now, we will be using $\mu_j = \mu_j(t)$ and $\omega_j = \omega_j(t)\ \forall t$.
-We also need to allow $f_c$ to cope with irregular update intervals 
-($\Delta_c = $ time since segment was last updated).
+The model formulation for the network state is therefore
+\begin{align}
+  \label{eq:kf_model}
+  \bbeta_c &= \mat{F}_c(\bbeta_{c-1}, \bnu_c, \bpsi_c) + \bu_c \\
+  \bB_c &= \bbeta_c + \be_c,
+\end{align}
+where $\mat{F}_c$ is the transition function at time $c$ that
+trends towards the prior mean, $\bnu_c$, at some rate determined
+by the turning parameter $\bpsi_c$.
+Note that all of these parameters are vectors with $M$-components.
 
-We first define a one-second transition function $f$ such that the state mean
+The first stage is to derive the transition function $\mat{F}_c$ that
+trends towards the prior mean, $\bnu_c$, based on historical data.
+We also need to allow $\mat{F}_c$ to cope with irregular update intervals 
+($\Delta_c = t_c - t_{c-1} = $ time since segment was last updated).
+
+We first define a one-second transition function $\mat{F}$ such that the state mean
 converges towards the prior mean,
 \begin{equation}
   \label{eq:kf_trans1}
-  \beta_{c} = f(\beta_{c-1}, \mu, \lambda) = \beta_{c-1} + \lambda(\mu - \beta_{c-1}),
+  \bbeta_{c} = \mat{F}_c(\bbeta_{c-1}, \bnu, \bpsi) = \bbeta_{c-1} + \bpsi_c\circ(\bnu - \bbeta_{c-1}),
 \end{equation}
-where $\lambda \in (0, 1)$ is a tuning parameter that determines how quickly
+where $\psi^m_c \in (0, 1)\ \forall m$ is a tuning parameter that determines how quickly
 the process converges to the prior.
-We next define $f_n$ as a recusive composition of $n$ transitions,
+We next define $\mat{F}_n$ as a recusive composition of $n$ transitions,
 \begin{equation}
   \label{eq:kf_transf}
-f_n(\beta, \mu, \lambda) =
-(f^1\circ \cdots \circ f^n) (\beta, \mu, \lambda),\quad
-\text{where } f^j \equiv f\ \forall j.
+\mat{F}_n(\bbeta, \bnu, \bpsi) =
+(\mat{F}^1\circ \cdots \circ \mat{F}^n) (\bbeta, \bnu, \bpsi),\quad
+\text{where } \mat{F}^j \equiv \mat{F}\ \forall j.
 \end{equation}
 
-For the \gls{ekf}, we need the derivative of $f_n$, which we get via the chain rule.
-To simplify notation, we're dropping the $\mu$ and $\beta$ parameters since they constant.
+For the \gls{ekf}, we need the derivative of $\mat{F}_n$, which we get via the chain rule.
+To simplify notation, we're dropping the $\bnu$ and $\bpsi$ parameters since they're constant,
+and also only considering each segment independently, so
 \begin{align}
   \label{eq:kf_deriv}
-  F_n = f_n'(\beta)\nonumber
-    &= f'[(f^1\circ \cdots \circ f^{n-1})(\beta)]
-      (f^1\circ \cdots \circ f^{n-1})'(\beta) \nonumber \\
-    &= f'[f_{n-1}(\beta)] F_{n-1} \nonumber \\
+  \F_n' (\bbeta) &= 
+    \begin{bmatrix}
+      F_n' (\beta^1) \\ \vdots \\ F_n' (\beta^M)
+    \end{bmatrix}\nonumber \\
+  \text{and } F_n'(\beta)\nonumber
+    &= F'[(F^1\circ \cdots \circ F^{n-1})(\beta)]
+      (F^1\circ \cdots \circ F^{n-1})'(\beta) \nonumber \\
+    &= F'[\F_{n-1}(\beta)] F'_{n-1}(\beta) \nonumber \\
   \intertext{which, by recursion, we get}
-    &= f'[f_{n-1}(\beta)] f'[f_{n-2}(\beta)] \cdots f'[f_1(\beta)] f'(\beta) \nonumber \\
-    &= f'(\beta) \prod_{i=1}^{n-1} f'[f_i(\beta)] \nonumber \\
+    &= F'[F_{n-1}(\beta)] F'[F_{n-2}(\beta)] \cdots F'[F_1(\beta)] F'(\beta) \nonumber \\
+    &= F'(\beta) \prod_{i=1}^{n-1} F'[F_i(\beta)] \nonumber \\
   \intertext{Next we can calculate 
-  $f'(\beta, \mu, \lambda) = \frac{\partial}{\partial \beta} \beta + \lambda(\mu - \beta) = 1 - \lambda$,
+  $F'(\beta, \nu, \psi) = \frac{\partial}{\partial \beta} \left[\beta + \psi(\nu - \beta)\right] = 1 - \psi$,
   so the derivative becomes}
-    F_n &= (1-\lambda) \prod_{i=1}^n (1 - \lambda) = (1-\lambda)^n
+    F'_n(\beta) &= (1-\psi) \prod_{i=1}^n (1 - \psi) = (1-\psi)^n
 \end{align}
 
-That ensure that as $n$ goes to infinity, $f_n(\beta, \mu, \lambda) \to \mu$.
-To do the same with the variance, we need to find a value for $Q$,
-the variance of system noise, which is involved in the prediction of the state variance, $\Sigma$:
+That ensure that as $n$ goes to infinity, $\F_n(\bbeta, \bnu, \bpsi) \to \bnu$.
+To do the same with the variance, we need to find a value for $\bQ$,
+the variance of system noise, which is involved in the prediction of the state variance, $\bP$:
 \begin{align}
   \label{eq:kf_varpred}
-  \Sigma_{c|c-1} &= F_n^2\Sigma_{c-1|c-1} + Q \nonumber \\
-  \intertext{At equilibrium, we want $\Sigma_{c|c-1} = \Sigma_{c-1|c-1} = \omega$, so}
-  \omega &= F_n^2 \omega + Q = (1-\lambda)^{2n} \omega + Q \nonumber \\
+  \bP_{c|c-1} &= \F_n \bP_{c-1|c-1}\F_n^T + \bQ \nonumber \\
+  \intertext{At equilibrium, we want $\bP_{c|c-1} = \bP_{c-1|c-1} = \bxi$,
+  which we can also compute independently for each segment (since the off-diagonals will be 0):}
+  \xi^m &= F'_n(\beta^m) \xi^m F'_n(\beta^m)^T + Q_{m,m} = (1-\psi^m)^{2n} \xi^m + Q_{m,m} \nonumber \\
   \intertext{which, solving for $Q$, gives us}
-  Q &= \omega(1 - (1 - \lambda)^{2n})
+  Q_{m,m} &= \xi^m(1 - (1 - \psi^m)^{2n})
 \end{align}
 
-The last step is to choose a value of $\lambda$.
+The last step is to choose a value of $\bpsi$.
 However, any fixed value will cause the system to converge quickly when the difference is large;
 instead, we want the convergence to be a function of the ratio of information held
 in the prior and posterior states. 
 For example, if we have a lot of buses traveling at the same speed along a segment, 
 we will have a lot of information and want the state estimate to remain there
 longer that if only one bus went through. 
-So we will use $\lambda = \phi \frac{\Sigma_{c-1|c-1}}{\Sigma_{c-1|c-1} + \omega}$.
+So we will use $\psi^m = \phi \frac{P^m_{c-1|c-1}}{P^m_{c-1|c-1} + \xi^m}$.
 
 
 
