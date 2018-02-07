@@ -604,12 +604,15 @@ and also only considering each segment independently, so
 That ensure that as $n$ goes to infinity, $\F_n(\bbeta, \bnu, \bpsi) \to \bnu$.
 To do the same with the variance, we need to find a value for $\bQ$,
 the variance of system noise, which is involved in the prediction of the state variance, $\bP$:
-\begin{align}
+\begin{equation}
   \label{eq:kf_varpred}
-  \bP_{c|c-1} &= \F_n \bP_{c-1|c-1}\F_n^T + \bQ \nonumber \\
-  \intertext{At equilibrium, we want $\bP_{c|c-1} = \bP_{c-1|c-1} = \bxi$,
-  which we can also compute independently for each segment (since the off-diagonals will be 0):}
-  \xi^m &= F'_n(\beta^m) \xi^m F'_n(\beta^m)^T + Q_{m,m} = (1-\psi^m)^{2n} \xi^m + Q_{m,m} \nonumber \\
+  \bP_{c|c-1} = \F_n \bP_{c-1|c-1}\F_n^T + \bQ 
+\end{equation}
+At equilibrium, we want $\bP_{c|c-1} = \bP_{c-1|c-1} = \bxi$,
+which we can also compute independently for each segment (since the off-diagonals will be 0):
+\begin{align}
+  \xi^m &= F'_n(\beta^m) \xi^m F'_n(\beta^m)^T + Q_{m,m}\\
+    &= (1-\psi^m)^{2n} \xi^m + Q_{m,m} \nonumber \\
   \intertext{which, solving for $Q$, gives us}
   Q_{m,m} &= \xi^m(1 - (1 - \psi^m)^{2n})
 \end{align}
@@ -621,53 +624,29 @@ in the prior and posterior states.
 For example, if we have a lot of buses traveling at the same speed along a segment, 
 we will have a lot of information and want the state estimate to remain there
 longer that if only one bus went through. 
-So we will use $\psi^m = \phi \frac{P^m_{c-1|c-1}}{P^m_{c-1|c-1} + \xi^m}$.
+So we will use $\psi^m = \phi \frac{P^m_{c-1|c-1}}{P^m_{c-1|c-1} + \xi^m}$,
+where $\phi$ is a tuning parameter.
 
 
+Now that the prediction step has been defined,
+we can consider how to update the state given a new observation;
+but first, we need to define what an "observation" is.
 
-\vspace{2em}
-\hrule
-Now that each vehicle is modelled by a sample of particles,
-we can use the speed estimates of buses along segments to estimate
-the speed along them, regardless of the route.
-In future we can add correlation structure between adjacent segments.
-
-Use Kalman filter because we have one parameter, speed, 
-which we expect to be unimodal and approximately Gaussian
-(some buses travel faster or slower).
-
-Use weighted speed estimates as data,
-and weighted variance as measurement error.
-
-Want to find the state of all $M$ segments in the network,
-% \begin{equation}
-%   \label{eq:kf_state}
-%   \bbeta = [\beta_1, \cdots, \beta_M]^T
-% \end{equation}
-which is the travel time along each segment,
-along with the variance-covariance matrix $\Sigma$.
-For now, we are assuming segments are independent,
-so $\Sigma$ is a diagonal matrix.
+Due to the nature of the application,
+we will not be updating the state \emph{immediately} after a vehicle
+traverses a road segment;
+instead, we will complete the particle filter algorithm for all buses,
+and then deal with the data obtained.
 
 
-We run the Kalman filter every time we run the particle filter,
-since it has a low cost, allowing the most recent data to be incorporated.
-For each vehicle $v$, we have $I_v$ particles which we use to
-compute the mean distance into trip,
-\begin{equation}
-  \label{eq:weighted_mean}
-  \bar x_v = \sum_{i=1}^{I_v} w_v^{(i)} x_v^{(i)}
-\end{equation}
-which we can use to estimate which segment the vehicle is in
-(using the same method as in the initialisation step).
-
-When the vehicle passes through a segment, $r_\ell$,
-we set the travel time of the vehicle using the 
-weighted mean and sample variance of the particles,
+For each vehicle $v$, we have $I_v$ particles,
+with weights $w_v^{(i)}, i=1\ldots I_v$, which we use to
+estimate the vehicle's travel time through segment $r_\ell$
+by using the weighted mean and sample variance:
 \begin{align}
   \label{eq:weighted_travel}
   \bar b_{v,\ell} &= \sum_{i=1}^{I_v} w_v^{(i)} b_{v\ell}^{(i)} \\
-  \bar S_{v,\ell}^2 &= \sum_{i=1}^{I_v} w_v^{(i)}(b_{v\ell}^{(i)} - \bar b_{v\ell})
+  \bar S_{v,\ell}^2 &= \sum_{i=1}^{I_v} w_v^{(i)}(b_{v\ell}^{(i)} - \bar b_{v\ell})^2
 \end{align}
 
 
@@ -677,13 +656,13 @@ Define
 \begin{equation*}
   V_m = \{v:\text{ vehicle $v$ passed through segment } R_m\}
 \end{equation*}
-and let $K_m$ be the length of $V_m$,
+and let $|V_m|$ be the number of elements in $V_m$,
 and $\ell(R_m)$ be the segment index of the given stop
 (i.e., $\ell(r_\ell) = \ell$).
 \begin{align}
   \label{eq:kf_data_estimates}
-  \hat B_m &= \frac{1}{K_m} \sum_{v \in V_m} \bar b_{v,\ell(R_m)}  \\
-  \hat Q_m &= \frac{1}{K_m} \sum_{v \in V_m} 
+  \hat B_m &= \frac{1}{|V_m|} \sum_{v \in V_m} \bar b_{v,\ell(R_m)}  \\
+  \hat E_m &= \frac{1}{|V_m|} \sum_{v \in V_m} 
   \left(\bar b_{v\ell(R_m)}^2 + \bar S_{v\ell(R_m)}^2\right) - \hat B_m^2
 \end{align}
 
@@ -692,29 +671,16 @@ Next is just the simple matter of applying the Kalman filter algorithm
 to the transport road network state,
 using the data \mbox{$\hat {\mat B}_m = [\hat B_1, \ldots, \hat B_M]$} 
 as the observation vector
-and \mbox{$\hat {\mat Q}_k = \diag(\hat Q_1, \ldots, \hat Q_M)$},
+and \mbox{$\hat {\mat E}_k = \diag(\hat E_1, \ldots, \hat E_M)$},
 as the measurement error matrix.
-The transition matrix for the network state, $\mat F_c$,
-is currently an identity matrix,
-but in future we'll allow for the update to account for
-changes in adjacent segments.
-The Kalman filter prediction equations are
-\begin{align}
-  \bbeta_{c|c-1} &= \mat F_c\bbeta_{c-1|c-1} \\
-  \Sigma_{c|c-1} &= \Sigma_{c-1|c-1} + \bW_c
-\end{align}
-where $\bW_c \sim \mathcal{N}(0, \delta_c\xi^2\eye_M)$, 
-$\xi^2$ is the system noise parameter,
-and $\delta_c = t_c - t_{c-1}$ is the time since the segment
-was last updated.
 
-The update equations simplify to
+The update equations for the \gls{ekf} state are now
 \begin{align}
-  \bK_c &= \frac{\Sigma_{c|c-1}}{\Sigma_{c|c-1} + \hat {\mat Q}_c} \\
+  \bK_c &= \bP_{c|c-1}(\bP_{c|c-1} + \hat {\mat E}_c)^{-1} \\
   \bbeta_{c|c} &= \bbeta_{c|c-1} + \bK_c(\hat {\mat B}_c - \bbeta_{c|c-1}) \\
-  \Sigma_{c|c} &= (\eye_M - \bK_c) \Sigma_{c|c-1}
+  \bP_{c|c} &= (\eye_M - \bK_c) \bP_{c|c-1}.
 \end{align}
-which make use of the segment means and variances computed in~(\ref{eq:kf_data_estimates}).
+
 
 
 \section{Arrival time prediction}
