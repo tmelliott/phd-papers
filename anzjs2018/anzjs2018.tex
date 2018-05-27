@@ -1,0 +1,73 @@
+\documentclass[times, doublespace]{anzsauth}
+\usepackage{moreverb}
+\usepackage{url}
+\usepackage{grffile}
+\usepackage{lineno}
+\usepackage{lipsum}
+\usepackage[UKenglish]{isodate}
+
+\def\volumeyear{2018}
+\linenumbers
+
+\begin{document}
+\cleanlookdateon
+\runningheads{Short title of paper}{TOM~ELLIOTT AND THOMAS~LUMLEY}
+\title{Long name of the paper}
+\author{Tom Elliott\corrauth and Thomas Lumley}
+\affiliation{University of Auckland}
+\address{
+    Department of Statistics, University of Auckland, Private Bag 92019, Auckland 1142, New Zealand\\
+    Email: \texttt{tom.elliott@auckland.ac.nz}
+}
+
+\begin{abstract}
+Lorem ipsum blah blah blah.
+\end{abstract}
+
+\keywords{particle filter; Kalman filter; transit modeling;
+          transit networks; statistical computing}
+
+\maketitle
+\section{Introduction}
+\label{sec:intro}
+
+Overview of the history, problem, proposed solution I guess...
+
+
+\section{GTFS network construction}
+\label{sec:gtfs}
+
+Before we can usefully model buses in real-time, 
+we need to construct a \emph{transit network}, 
+consisting of \emph{intersections} (nodes),
+connected by \emph{road segments} (edges).
+In this way, each \emph{route} 
+(a journey taken by a transit vehicle, from an origin to a destination by a fixed path)
+can be represented as a sequence of road segments,
+each of which we will model as vehicles travel along them (see section~\ref{sec:kf}).
+
+
+\section{Real-time vehicle model}
+\label{sec:pf}
+
+The real-time vehicle model that runs ... in real time?
+
+
+\section{Network model}
+\label{sec:kf}
+
+Two parts to this - first, the prior prediction step; then, the data update step.
+
+\subsection{Prediction step}
+\label{sec:kf-pred}
+
+
+
+\subsection{Update step}
+\label{sec:kf-update}
+
+
+
+
+
+\end{document}
