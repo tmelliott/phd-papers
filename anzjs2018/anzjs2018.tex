@@ -3,8 +3,11 @@
 \usepackage{url}
 \usepackage{grffile}
 \usepackage{lineno}
+% \usepackage{lmodern}
 \usepackage{lipsum}
 \usepackage[UKenglish]{isodate}
+
+\input{../glossary.tex}
 
 \def\volumeyear{2018}
 \linenumbers
@@ -45,17 +48,36 @@ to incorporate as much information as necessary to predict arrival times.
 \end{abstract}
 
 \keywords{particle filter; Kalman filter; transit modeling;
-          transit networks; statistical computing; gtfs}
+          transit networks; statistical computing; applications; gtfs}
 
 \maketitle
 \section{Introduction}
 \label{sec:intro}
+
 
 The need for realtime information.
 Where it goes wrong: 
 - bad schedule calibration;
 - no accounting for realtime traffic 
 Literature review of historical and present methods?
+
+% Bus arrival-time prediction is far from a novel concept: 
+% ever since the first vehicle tracking technology was implemented
+% in transit vehicles in the late 1980's, 
+% real-time models have been implemented to provide \gls{rti} for commuters.
+% The simplest form of this is, the \gls{eta}
+% (usually displayed as \emph{minutes until arrival}),
+% was implemented in {{region}} by \cite{Wall99analgorithm} 
+% using their proposed \gls{kf} algorithm.
+% In their work, they used historical data to obtain \glspl{eta}.
+
+% Over the years, advances in computing power have enabled new
+% modeling approaches,
+% such as support vector machines \citep{Yu_2006},
+% artificial neural networks \citep{Yu_2011},
+% and more recently particle filters \citep{Hans_2015}.
+
+
 
 Particle filter has proven useful to this kind of dynamic problem,
 where the state distribution is non-gaussian, non-symmetric, 
@@ -82,14 +104,16 @@ with a focus on the implementation in a realtime setting.
 \section{Transit network construction}
 \label{sec:gtfs}
 
-Before we can usefully model buses in real-time, 
-we need to construct a \emph{transit network}, 
-consisting of \emph{intersections} (nodes),
+Before we can usefully model buses in real-tim{}e, 
+we need to construct a \emph{transit network},
+consisting of \emph{intersections} (nodes)
 connected by \emph{road segments} (edges).
 In this way, each \emph{route} 
 (a journey taken by a transit vehicle, from an origin to a destination by a fixed path)
 can be represented as a sequence of road segments,
-each of which we will model as vehicles travel along them (see section~\ref{sec:kf}).
+each of which we model as vehicles travel along them (see section~\ref{sec:kf}).
+
+
 
 
 \section{The Models}
@@ -156,6 +180,6 @@ Next steps include
 
 
 \bibliographystyle{anzsj}
-\bibliography{refs.bib}
+\bibliography{../reflist.bib}
 
 \end{document}
