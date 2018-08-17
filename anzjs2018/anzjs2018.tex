@@ -16,7 +16,7 @@
 \cleanlookdateon
 \runningheads{Short title of paper}{TOM~ELLIOTT AND THOMAS~LUMLEY}
 \title{Long name of the paper}
-\author{Tom Elliott\corrauth and Thomas Lumley}
+\author{Tom Elliott\corrauth~and~Thomas~Lumley}
 \affiliation{University of Auckland}
 \address{
     Department of Statistics, University of Auckland,\\
@@ -101,10 +101,17 @@ with a focus on the implementation in a realtime setting.
 
 
 
-\section{Transit network construction}
+\section{Working with GTFS data}
 \label{sec:gtfs}
 
-Before we can usefully model buses in real-tim{}e, 
+What is GTFS? Its purpose. Its accessibility (global, free).
+Thus a good thing to use.
+
+
+\subsection{Transit network construction}
+\label{sec:network_build}
+
+Before we can usefully model buses in real-time, 
 we need to construct a \emph{transit network},
 consisting of \emph{intersections} (nodes)
 connected by \emph{road segments} (edges).
@@ -113,6 +120,14 @@ In this way, each \emph{route}
 can be represented as a sequence of road segments,
 each of which we model as vehicles travel along them (see section~\ref{sec:kf}).
 
+
+
+\subsection{Realtime vehicle locations}
+\label{sec:realtime_data}
+
+Recieve vehicle updates ~30 seconds (but the actual update frequency varies continually, even for a single bus).
+Key features of the data - position, trip, timestamp, etc.
+Also note there is trip updates feed, but this is less useful (the arrival/departure times themselves haven't proved reliable).
 
 
 
