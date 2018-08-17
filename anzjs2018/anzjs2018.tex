@@ -16,7 +16,7 @@
 \cleanlookdateon
 \runningheads{Short title of paper}{TOM~ELLIOTT AND THOMAS~LUMLEY}
 \title{Long name of the paper}
-\author{Tom Elliott\corrauth and Thomas Lumley}
+\author{Tom Elliott\corrauth~and~Thomas~Lumley}
 \affiliation{University of Auckland}
 \address{
     Department of Statistics, University of Auckland, 
@@ -25,40 +25,93 @@
 }
 
 \begin{abstract}
-Lorem ipsum blah blah blah.
+Predicting transit vehicle arrival time is a somewhat complex procress.
+Road networks are dynamic, and can change from free-flowing to highly congested
+very quickly.
+Any reliable prediction framework needs to be able to respond to these changes,
+but also to future trends, such as typical changes to traffic flow
+at peak times, based on hisorical data.
+Of course, the major constraint on any prediction framework is going to be
+computational efficiency.
+Due to the realtime nature of the problem, predictions need to be 
+available as soon as possible after observing the vehicles' positions,
+which are updated approximately every 30~seconds.
+In this paper, we describe our C++ implementation of a particle filter to estimate
+vehicle state in combination with a network state model,
+allowing us to model transit vehicle flow through the network.
+While our application here is being testing in Auckland, New Zealand,
+we hope that our methods are general enough to be applied to any
+transit network that uses GTFS.
+Preliminary results show that, with suitable hardware,
+the framework is fast enough while retaining the complexity necessary
+to incorporate as much information as necessary to predict arrival times.
 \end{abstract}
 
 \keywords{particle filter; Kalman filter; transit modeling;
-          transit networks; statistical computing; applications}
+          transit networks; statistical computing; applications; gtfs}
 
 \maketitle
 \section{Introduction}
 \label{sec:intro}
 
-Bus arrival-time prediction is far from a novel concept: 
-ever since the first vehicle tracking technology was implemented
-in transit vehicles in the late 1980's, 
-real-time models have been implemented to provide \gls{rti} for commuters.
-The simplest form of this is, the \gls{eta}
-(usually displayed as \emph{minutes until arrival}),
-was implemented in {{region}} by \cite{Wall99analgorithm} 
-using their proposed \gls{kf} algorithm.
-In their work, they used historical data to obtain \glspl{eta}.
 
-Over the years, advances in computing power have enabled new
-modeling approaches,
-such as support vector machines \citep{Yu_2006},
-artificial neural networks \citep{Yu_2011},
-and more recently particle filters \citep{Hans_2015}.
+The need for realtime information.
+Where it goes wrong: 
+- bad schedule calibration;
+- no accounting for realtime traffic 
+Literature review of historical and present methods?
+
+% Bus arrival-time prediction is far from a novel concept: 
+% ever since the first vehicle tracking technology was implemented
+% in transit vehicles in the late 1980's, 
+% real-time models have been implemented to provide \gls{rti} for commuters.
+% The simplest form of this is, the \gls{eta}
+% (usually displayed as \emph{minutes until arrival}),
+% was implemented in {{region}} by \cite{Wall99analgorithm} 
+% using their proposed \gls{kf} algorithm.
+% In their work, they used historical data to obtain \glspl{eta}.
+
+% Over the years, advances in computing power have enabled new
+% modeling approaches,
+% such as support vector machines \citep{Yu_2006},
+% artificial neural networks \citep{Yu_2011},
+% and more recently particle filters \citep{Hans_2015}.
 
 
 
-\section{GTFS network construction}
+Particle filter has proven useful to this kind of dynamic problem,
+where the state distribution is non-gaussian, non-symmetric, 
+multimodal...
+
+Any other recent attempts at network-estimation?
+There was a KF using point-to-point speed estimations? 
+
+Computational aspect - historically, models had to be simple 
+(e.g., KF) so they could run in realtime.
+These days, running a somewhat powerful VM on a remote server
+is almost standard practice, so we can take full advantage 
+and use a more computationally demanding (particle filter)
+but more accurate estimation technique - paired with a more complex model.
+
+We first give an overview of the transit network,
+and how we construct it from raw GTFS shape data.
+This paper assumes a very basic model,
+with a focus on the implementation in a realtime setting.
+
+
+
+
+\section{Working with GTFS data}
 \label{sec:gtfs}
 
+What is GTFS? Its purpose. Its accessibility (global, free).
+Thus a good thing to use.
 
 
-Before we can usefully model buses in real-tim{}e, 
+\subsection{Transit network construction}
+\label{sec:network_build}
+
+Before we can usefully model buses in real-time, 
 we need to construct a \emph{transit network},
 consisting of \emph{intersections} (nodes)
 connected by \emph{road segments} (edges).
@@ -69,27 +122,76 @@ each of which we model as vehicles travel along them (see section~\ref{sec:kf}).
 
 
 
+\subsection{Realtime vehicle locations}
+\label{sec:realtime_data}
 
-\section{Real-time vehicle model}
+Recieve vehicle updates ~30 seconds (but the actual update frequency varies continually, even for a single bus).
+Key features of the data - position, trip, timestamp, etc.
+Also note there is trip updates feed, but this is less useful (the arrival/departure times themselves haven't proved reliable).
+
+
+
+\section{The Models}
+\label{sec:models}
+
+\subsection{Real-time vehicle model}
 \label{sec:pf}
 
 The real-time vehicle model that runs ... in real time?
 
 
-\section{Network model}
+\subsection{Network model}
 \label{sec:kf}
 
 Two parts to this - first, the prior prediction step; then, the data update step.
 
-\subsection{Prediction step}
-\label{sec:kf-pred}
+
+\section{Implementing in realtime}
+\label{sec:rt}
+
+How we implement it, choice of software (Rcpp = R + C++).
+R: dealing with data structures is easier, maintainability, interfacing
+C++: speed
+
+Overall structure:
+- load
+- fetch positions
+- initialize or mutate+update
+- update network
+- make ETA predictions (vehicle state + network state)
+
+Some of the key things:
+- minimise copy, parallelisation using OMP
+- moving as much computation ``outside'' of the main loop as possible
+  (e.g., ``pre''-predict vehicle/network states so only update required)
+  so ETAs are generated ASAP after retrieving data
+- keeping the GTFS database up-to-date by fetching new data each morning
+- distribution - a cloud database vs a single protobuf file with everything 
+  (maintenance/reliability/speed/size)
 
 
+\section{Preliminary Results}
+\label{sec:results}
 
-\subsection{Update step}
-\label{sec:kf-update}
+Currently only have timings (i.e., yes this is plausible).
+- Function of number of particles/number of cores/number of buses.
+- Network coverage? i.e., how many road segments actually get enough data
+to generate useful numbers
+
+- any problems?
 
 
+\section{Discussion and Future Work}
+\label{sec:discussion}
+
+It all seems to work (hopefully I don't need to change this D:)
+
+Next steps include
+- generating useful priors for ``fall back'' (i.e., no data, future) prediction
+- develop and implement a more complex network update model (correlations, etc)
+- prediction estimates (point vs interval)
+
+\cite{Hans_2015}
 
 
 \bibliographystyle{anzsj}
