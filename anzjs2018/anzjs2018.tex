@@ -188,7 +188,19 @@ Also note there is trip updates feed, but this is less useful (the arrival/depar
 \subsection{Real-time vehicle model}
 \label{sec:pf}
 
-The real-time vehicle model that runs ... in real time?
+To generate arrival time predictions, 
+several aspects of the vehicle's \emph{state} need to first be estimated,
+such as its speed.
+The \emph{unmeasurable state} of a vehicle at time $t_k$ is denoted by
+\begin{equation}
+    X_k = \begin{bmatrix} x_k & \dot x_k & \ddot x_k \end{bmatrix}^\top,
+\end{equation}
+where $x$ is the distance traveled along a route,
+$\dot x$ is the speed (the first derivative of distance traveled as a function of time),
+and $\ddot x$ is acceleration (the second derivative).
+
+The next state is modeled as a function of the current state,
+using a transition function $f$
 
 
 \subsection{Network model}
