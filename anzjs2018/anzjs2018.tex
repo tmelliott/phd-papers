@@ -176,9 +176,25 @@ and the connecting paths (road segments or \emph{edges}).
 \subsection{Realtime vehicle locations}
 \label{sec:realtime_data}
 
-Recieve vehicle updates ~30 seconds (but the actual update frequency varies continually, even for a single bus).
-Key features of the data - position, trip, timestamp, etc.
-Also note there is trip updates feed, but this is less useful (the arrival/departure times themselves haven't proved reliable).
+GTFS realtime allows developers to query the current positions of vehicles
+in the transit network.
+The data consists of the time $t_k$ that the observation was made,
+the GPS position of the vehicle, $Y_k$, 
+and some other information about the trip being serviced.
+Vehicle positions are usually updated within 30~seconds,
+but this can vary from 10~seconds to several minutes,
+so there is often a lot of uncertainty about the trajectory
+between two observations, particularly when there is a bus stop
+or intersection between them.
+
+Another complication with the Auckland Transport realtime feed is that
+the buses are programmed to report their location when arriving at
+bus stops and some major intersections.
+Often these positions appear to be preemptive (i.e., that bus is almost there, 
+but not quiet),
+and subsequent observations place the bus \emph{behind} the stop or intersection.
+This must therefore be accounted for in the model proposed in the next section.
+
 
 
 
@@ -188,7 +204,17 @@ Also note there is trip updates feed, but this is less useful (the arrival/depar
 \subsection{Real-time vehicle model}
 \label{sec:pf}
 
-The real-time vehicle model that runs ... in real time?
+In order to estimate vehicle speed from a series of noisy GPS observations,
+we need a model capable of overcoming several key problems:
+varying update intervals, multimodality, assymetry, 
+and some other artefacts such as mentioned in Section~\ref{sec:realtime_data}.
+One estimation technique that suits itself well to this type of problem
+is the particle filter, 
+which has been used in several other bus modeling applications
+\citep{Hans_2015}.
+The primary advantage of this approach is that we need not make any 
+unnecessary assumptions, particularly on the shape of the distributions 
+as is the case in other commonly used methods such as the Kalman filter.
 
 
 \subsection{Network model}
