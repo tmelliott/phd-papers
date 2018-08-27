@@ -1,0 +1,37 @@
+\section{The Models}
+\label{sec:models}
+
+\subsection{Real-time vehicle model}
+\label{sec:pf}
+
+In order to estimate vehicle speed from a series of noisy GPS observations,
+we need a model capable of overcoming several key problems:
+varying update intervals, multimodality, assymetry, 
+and some other artefacts such as mentioned in Section~\ref{sec:realtime_data}.
+One estimation technique that suits itself well to this type of problem
+is the particle filter, 
+which has been used in several other bus modeling applications
+\citep{Hans_2015}.
+The primary advantage of this approach is that we need not make any 
+unnecessary assumptions, particularly on the shape of the distributions 
+as is the case in other commonly used methods such as the Kalman filter.
+
+
+To generate arrival time predictions, 
+several aspects of the vehicle's \emph{state} need to first be estimated,
+such as its speed.
+The \emph{unmeasurable state} of a vehicle at time $t_k$ is denoted by
+\begin{equation}
+    X_k = \begin{bmatrix} x_k & \dot x_k & \ddot x_k \end{bmatrix}^\top,
+\end{equation}
+where $x$ is the distance traveled along a route,
+$\dot x$ is the speed (the first derivative of distance traveled as a function of time),
+and $\ddot x$ is acceleration (the second derivative).
+
+
+
+
+\subsection{Network model}
+\label{sec:kf}
+
+Two parts to this - first, the prior prediction step; then, the data update step.

@@ -1,0 +1,47 @@
+\section{Introduction}
+\label{sec:intro}
+
+
+The need for realtime information.
+Where it goes wrong: 
+- bad schedule calibration;
+- no accounting for realtime traffic 
+- mention how only the delays are used (in Akl), which rely on (often inaccurate) schedules
+Literature review of historical and present methods?
+
+% Bus arrival-time prediction is far from a novel concept: 
+% ever since the first vehicle tracking technology was implemented
+% in transit vehicles in the late 1980's, 
+% real-time models have been implemented to provide \gls{rti} for commuters.
+% The simplest form of this is, the \gls{eta}
+% (usually displayed as \emph{minutes until arrival}),
+% was implemented in {{region}} by \cite{Wall99analgorithm} 
+% using their proposed \gls{kf} algorithm.
+% In their work, they used historical data to obtain \glspl{eta}.
+
+% Over the years, advances in computing power have enabled new
+% modeling approaches,
+% such as support vector machines \citep{Yu_2006},
+% artificial neural networks \citep{Yu_2011},
+% and more recently particle filters \citep{Hans_2015}.
+
+
+
+Particle filter has proven useful to this kind of dynamic problem,
+where the state distribution is non-gaussian, non-symmetric, 
+multimodal...
+
+Any other recent attempts at network-estimation?
+There was a KF using point-to-point speed estimations? 
+
+Computational aspect - historically, models had to be simple 
+(e.g., KF) so they could run in realtime.
+These days, running a somewhat powerful VM on a remote server
+is almost standard practice, so we can take full advantage 
+and use a more computationally demanding (particle filter)
+but more accurate estimation technique - paired with a more complex model.
+
+We first give an overview of the transit network,
+and how we construct it from raw GTFS shape data.
+This paper assumes a very basic model,
+with a focus on the implementation in a realtime setting.

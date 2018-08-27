@@ -1,0 +1,91 @@
+\section{Working with GTFS data}
+\label{sec:gtfs}
+
+GTFS (general transit feed specification)
+is an API (application programming interface) specification for transit data,
+developed and maintained by Google \citep{GoogleDevelopers_2006}.
+It is used by over 900~transit providers around the world,
+including here in Auckland, New Zealand
+(source \url{http://transitfeeds.com}),
+allowing an application developed locally to
+be deployed to another GTFS-based public transport system with minimal modification.
+
+
+The two main components of GTFS are \emph{static} and \emph{realtime}.
+Static GTFS includes information about routes, trips, shapes, and stops:
+a \emph{route} is a sequence of two or more stops displayed as a single service;
+a \emph{trip} is an instance of a route occuring at a specific time of day;
+a \emph{shape} is the sequence of points defining a vehicle's path along a route;
+and a \emph{stop} is a physical location where passengers can embark and disembark
+the vehicle.
+GTFS realtime feeds provide information such as vehicle positions and trip delays,
+and are usually accessed via an API.
+% The latter is often the only covariate used for predicting arrival time,
+% as previously discussed:
+% while it is a computationally inexpensive method (simply addition),
+% it relies on accurate schedules and cannot respond quickly to realtime events.
+
+\subsection{Transit network construction}
+\label{sec:network_build}
+
+Arguably one of the most important predictors of arrival time is
+the travel time along intermediate roads,
+however in most applications this vital information is unavailable,
+at least directly. 
+Several predictive approaches used \emph{headway},
+the time between consecutive trips along the same route
+\citep{Hans_2015}.
+While this is reasonable for high frequency routes,
+low frequncy routes will be unable to react quickly to changes in congestion,
+and it is for these routes which reliable ETAs are arguably more important,
+since the cost of missing a bus is greater.
+
+
+One solution would be to use information obtained from
+vehicles servicing other routes but traveling along the same roads
+to estimate arrival times;
+however, there is no direct way of knowing which routes share common roads.
+We are propose using an algorithm to convert the raw GTFS shape files
+into a \emph{road network},
+as demonstated in Figure~\ref{fig:network_creation}.
+This involves detecting locations where one or more routes meet 
+(intersections or \emph{nodes}),
+and the connecting paths (road segments or \emph{edges}).
+
+
+
+
+
+
+% Before we can usefully model buses in real-time, 
+% we need to construct a \emph{transit network},
+% consisting of \emph{intersections} (nodes)
+% connected by \emph{road segments} (edges).
+% In this way, each \emph{route} 
+% (a journey taken by a transit vehicle, from an origin to a destination by a fixed path)
+% can be represented as a sequence of road segments,
+% each of which we model as vehicles travel along them (see section~\ref{sec:kf}).
+
+
+
+\subsection{Realtime vehicle locations}
+\label{sec:realtime_data}
+
+GTFS realtime allows developers to query the current positions of vehicles
+in the transit network.
+The data consists of the time $t_k$ that the observation was made,
+the GPS position of the vehicle, $Y_k$, 
+and some other information about the trip being serviced.
+Vehicle positions are usually updated within 30~seconds,
+but this can vary from 10~seconds to several minutes,
+so there is often a lot of uncertainty about the trajectory
+between two observations, particularly when there is a bus stop
+or intersection between them.
+
+Another complication with the Auckland Transport realtime feed is that
+the buses are programmed to report their location when arriving at
+bus stops and some major intersections.
+Often these positions appear to be preemptive (i.e., that bus is almost there, 
+but not quiet),
+and subsequent observations place the bus \emph{behind} the stop or intersection.
+This must therefore be accounted for in the model proposed in the next section.
