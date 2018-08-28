@@ -4,30 +4,106 @@
 \subsection{Real-time vehicle model}
 \label{sec:pf}
 
-In order to estimate vehicle speed from a series of noisy GPS observations,
-we need a model capable of overcoming several key problems:
-varying update intervals, multimodality, assymetry, 
-and some other artefacts such as mentioned in Section~\ref{sec:realtime_data}.
-One estimation technique that suits itself well to this type of problem
-is the particle filter, 
-which has been used in several other bus modeling applications
-\citep{Hans_2015}.
-The primary advantage of this approach is that we need not make any 
-unnecessary assumptions, particularly on the shape of the distributions 
-as is the case in other commonly used methods such as the Kalman filter.
-
-
-To generate arrival time predictions, 
-several aspects of the vehicle's \emph{state} need to first be estimated,
-such as its speed.
-The \emph{unmeasurable state} of a vehicle at time $t_k$ is denoted by
+The vehicle model involves infering the \emph{unobservable state} $\bX_k$ 
+of a vehicle at time $t_k$ from the \emph{observed state} $\by_k$,
+which in this case is the GPS location of the vehicle,
+where $\lambda_k$ and $\phi_k$ are the longitude and latitude, respectively.
 \begin{equation}
-    X_k = \begin{bmatrix} x_k & \dot x_k & \ddot x_k \end{bmatrix}^\top,
+\label{eq:vehicle_observation}
+\by_k = \begin{bmatrix} \lambda_k \\ \phi_k \end{bmatrix}
 \end{equation}
-where $x$ is the distance traveled along a route,
-$\dot x$ is the speed (the first derivative of distance traveled as a function of time),
-and $\ddot x$ is acceleration (the second derivative).
+To construct the unobservable state, 
+each vehicle is assumed to follow the trajectory defined by a trajectory function of time, $x(t)$,
+such that the distance traveled along a route by a vehicle at time $t_k$ is given by
+$x_k = x(t_k)$.
+Additionally, speed and acceleration are given by
+the first and second derivatives of the trajectory function,
+$\dot x_k = x'(t_k)$ and $\ddot x_k = x''(t_k)$, respectively.
+Exactly how the state is constructed will depend on the model being used.
 
+
+Since observations of the vehicle are irregular, 
+a \emph{transition function} $f$ is used to
+predict the vehicle's state at time $t_k$ given the current knowledge of the state at time $t_{k-1}$,
+as well as accounting for \emph{system noise}, $\sigma_x^2$.
+We also define a \emph{measurement function} $h$ which describes the relationship between
+the observable and unobservable states,
+and accounting for \emph{measurement error}, $\bv_k$,
+\begin{equation}
+\label{eq:vehicle_measurement}
+\by_k = h(\bX_k) + \bv_k = h(x_k) + \bv_k,
+\end{equation}
+so all models need to estimate at least $x_k$, the distance traveled along the route.
+
+
+The model is split into two steps, prediction and update.
+The prediction involves using the transition function to predict
+the next state, $\hat\bX_{k|k-1}$,
+while the update step using a likelihood function and the measurement function
+to update the state to account for the observed vehicle location, $\by_k$,
+giving a final estimate of $\hat\bX_{k|k}$.
+
+
+\subsubsection{Predicting state using the transtion function}
+\label{sec:pf_prediction}
+
+The transition function is a model of bus behaviour that allows
+predictions of future states to be made given the most recently 
+updated state.
+Developing a good model for bus behaviour allows us to estimate
+parameters of interest, such as vehicle speed,
+dwell time at bus stops, and travel time along individual roads,
+the last of which is of course our primary objective.
+In this section, we propose [HOW MANY?] increasingly complex models
+of bus behaviour.
+
+
+%% MODEL 1
+The first model, $\bM_0$, assumes a constant speed between observations
+using the state
+$\bX_k = \left[\begin{smallmatrix}x_k && \dot x_k\end{smallmatrix}\right]^\top$
+and Gaussian system noise with mean zero and variance adjusted by
+$\Delta_k = t_k - t_{k-1}$.
+\begin{equation*}
+\hat\bX_{k|k-1} = f_0(\bX_{k-1|k-1}, \Delta_k, \sigma_x^2) =
+\begin{bmatrix}
+x_{k|k-1} & \dot x_{k|k-1}
+\end{bmatrix}
+\end{equation*}
+where
+\begin{align*}
+x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k|k-1} \\
+x_{k|k-1} &= \dot x_{k-1|k-1} + w_k \\
+w_k &\sim \mathcal{N}_T(0, \Delta_k \sigma_x^2)
+\end{align*}
+Here, $\mathcal{N}_T$ denotes a truncated normal distribution such that
+the system noise is truncated to ensure the speed remains between 0 and 30~m/s.
+
+
+While $\bM_0$ may perform well on average,
+and indeed if all we were interested in was estimating $x_k$ it may be adequate;
+however, it is missing two important features of bus behaviour:
+\begin{itemize}
+\item variable speeds along roads, \emph{which is what we are truly interested in}
+\item unknown dwell times at bus stops
+\end{itemize}
+
+
+The first of these is incorporated into $\bM_1$,
+which allows vehicle speeds to vary over time.
+This model uses the same state as $\bM_0$,
+but a different transition function $f_1$.
+In this case, the state equations depend on a sequence of system noise,
+$\bw_k = \{\bw_k^1, \cdots, \bw_k^{\Delta_k}\}$
+\begin{align*}
+x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \\
+\dot x_{k|k-1} &= \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \\
+w_k^i &\sim \mathcal{N}_T(0, \sigma_x^2)
+\end{align*}
+Again, system noise is assumed to have a Gaussian distribution, 
+truncated to ensure that the vehicle's speed is always between 0 and 30~m/s.
+This is achieved by iteratively estimating each second the the vehicle's state,
+each time ensuring the speed remains in the specified range.
 
 
 
