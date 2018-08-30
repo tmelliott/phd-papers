@@ -95,15 +95,69 @@ This model uses the same state as $\bM_0$,
 but a different transition function $f_1$.
 In this case, the state equations depend on a sequence of system noise,
 $\bw_k = \{\bw_k^1, \cdots, \bw_k^{\Delta_k}\}$
-\begin{align*}
-x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \\
+\begin{align}
+\label{eq:transition_f1}
+x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \nonumber \\
 \dot x_{k|k-1} &= \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \\
-w_k^i &\sim \mathcal{N}_T(0, \sigma_x^2)
-\end{align*}
+w_k^i &\sim \mathcal{N}_T(0, \sigma_x^2) \nonumber
+\end{align}
 Again, system noise is assumed to have a Gaussian distribution, 
 truncated to ensure that the vehicle's speed is always between 0 and 30~m/s.
 This is achieved by iteratively estimating each second the the vehicle's state,
 each time ensuring the speed remains in the specified range.
+
+
+The next model, $\bM_2$, allows for dwell times at bus stops.
+Since buses can either stop and wait, or not stop,
+multimodality is introduced to the system,
+which requires a modeling framework, such as the particle filter used here,
+to handle it.
+For each bus stop $j = 1, \ldots, M$ along a route,
+its distance into the trip, $S_j^d$, 
+is used to determine when a vehicle passes a stop.
+When this occurs, the dwell time $\delta_j \geq 0$ at stop $j$ is modelled
+using the stopping probability, $\pi_j$,
+a common dwell time parameter $\gamma$ which models the
+deceleration, opening and closing of doors, and acceleration at bus stops,
+and a stop dwell time $\tau_j$ for passengers alighting and disembarking.
+Therefore the stop dwell time is
+\begin{equation}
+\label{eq:dwell_time}
+\delta_j = p_j(\gamma + \tilde\delta_j),\quad
+p_j \sim \mathrm{Bern}(\pi_j),\quad
+\tilde\delta_j \sim \mathcal{E}(\tau_j)
+\end{equation}
+
+To define the transition function for this model, $f_2$,
+we need to account for multiple dwell times.
+Let $s_n$ be the index of the next stop,
+and sample dwell times for each upcoming stop $j = s_n, \ldots, M$,
+noting that these can be zero.
+Assuming the vehicle passes stops $s_n$ up to $J-1$,
+does it reach stop $J$ in the time remaining?
+\begin{equation}
+\tilde X_k^J = \min\left\{
+S_J^d, f_1(\hat X_{k|k-1}, \Delta_k - \sum_{j=s_n}^{J-1}\delta_j)\right\}
+\end{equation}
+Taking the maximum of the sequence gives the predicted distance
+traveled by the vehicle, so
+\begin{equation}
+\hat X_{k|k-1} = f_2 (\hat X_{k-1|k-1}, \Delta_k) =
+\max_{J = s_n, \ldots, M}\left\{
+    \tilde X_k^J
+\right\}
+\end{equation}
+
+Care needs to be made when generating the sequence,
+so in practice the state will be calculated recursively to ensure
+the system noise is consistent.
+\begin{equation*}
+\hat{\tilde X}_k^J =
+\begin{cases}
+    f_1(\hat{\tilde X}_k^{J+1}, \delta_J) & J < M \\
+    \hat X_{k-1|k-1} & J = M
+\end{cases}
+\end{equation*}
 
 
 
