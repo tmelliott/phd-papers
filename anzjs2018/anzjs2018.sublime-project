@@ -2,14 +2,14 @@
 	"folders":
 	[
 		{
-			"path": "/home/emperor/Documents/uni/phd-papers"
+			"path": "."
 		}
 	],
     "build_systems":
     [
         {
             "name": "compile",
-            "shell_cmd": "cd ${project_path} && latexmk -pdf anzjs2018.tex"
+            "shell_cmd": "echo ${project_path} && cd ${project_path} && latexmk -pdf anzjs2018.tex"
         },
         {
             "name": "clean",
