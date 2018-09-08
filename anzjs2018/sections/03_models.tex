@@ -159,6 +159,74 @@ the system noise is consistent.
 \end{cases}
 \end{equation*}
 
+The final model $\bM_3$ demonstrated here will allow acceleration to vary.
+\begin{align*}
+\label{eq:model_m3}
+x_{k|k-1} &= x(t_k) \\
+\intertext{where states are recursively calculated back to $t_{k-1}$}
+x(t) &= x(t - 1) + \dot x(t) \\
+\dot x(t) &= \dot x(t-1) + \ddot x(t) \\
+\ddot x(t) &= \ddot x(t-1) + w_t,\quad
+w_t \sim \mathcal{N}(0,\sigma_x^2)
+\end{align*}
+By truncating the acceleration, 
+the speed of the vehicle can be maintained between 0 and 30~m/s.
+Additionally, when approaching a bus stop that will be stopped at,
+the acceleration will be trunctated to below zero,
+however no physical deceleration will be modeled as this is too complex
+and stopping behaviour of buses can be sudden 
+(for example when passengers signal late that they wish to board or disembark).
+After servicing a stop, the bus will need to accelerate up to speed again. 
+
+
+\subsubsection{Updating state using the observation likelihood}
+\label{sec:pf_update}
+
+The update step involves comparing the predicted state $\bX_{k|k-1}$
+with the observed state $\bY_k$,
+using the measurement function $h$ to convert between the two state spaces,
+and a likelihood function.
+The measurement function is a deterministic function that uses only the 
+distance traveled, $x_k$, along a known path $\bR$ to obtain a GPS coordinate.
+The inverse measurement function, which is used in other approaches,
+is \emph{not deterministic}, and instead uses an optimisation to
+find the ``estimated'' distance traveled,
+which invariably leads to issues in the implementation.
+By using a particle filter approach, we avoid using $h^{-1}$
+and instead determine the liklihood using $\bY_k$ directly.
+
+For the likelihood, the GPS error is assumed symmetrical about the true
+position of the vehicle, with a radius of $\sigma_y^2$ meters.
+Define a projection function $g(\cdot | \bY)$ that projects points
+onto a cartesian surface (``Flat Earth''),
+so that the distance between points is the real Earth distance.
+Then the distance between the points is
+\begin{align*}
+\delta_k &= \sqrt{\left(g(h(X_k))_1 - g(\bY_k)_1\right)^2 +
+    \left(g(h(X_k))_2 - g(\bY_k)_2\right)^2} \\
+\intertext{which can be standardised by the GPS error}
+\tilde \delta_k &=
+\sqrt{\left(\frac{g(h(X_k))_1 - g(\bY_k)_1}{\sigma_y}\right)^2 +
+    \left(\frac{g(h(X_k))_2 - g(\bY_k)_2}{\sigma_y}\right)^2} =\frac{\delta_k}{\sigma_y} \\
+\intertext{Since we assume symmetric variance, this is actually}
+\tilde\delta_k &= \sqrt{Z_1^2 + Z_2^2}, \quad
+Z_1,Z_2 \sim \mathcal{N}(0,1)
+\end{align*}
+The sum of two normal random variables has an Exponential distribution with rate $\frac{1}{2}$,
+therefore 
+\begin{equation}
+\label{eq:lhood_exp}
+\left(\frac{\delta_k}{\sigma_y}\right)^2 \sim \mathrm{Exp}\left(\frac{1}{2}\right)
+\end{equation}
+
+Combining this together, we use a distance function $d(\bY_1, \bY_2)$ that calculates
+the geographic distance between two GPS coordinates,
+the likelihood is
+\begin{equation}
+\label{eq:lhood}
+f(\bY_k | \hat\bX_{k|k-1}, \sigma_y^2) =
+\frac{1}{2} \exp\left\{-\frac{d(\bY_k, h(\hat\bX_{k|k-1}))^2}{2\sigma^2}\right\}
+\end{equation}
 
 
 \subsection{Network model}
