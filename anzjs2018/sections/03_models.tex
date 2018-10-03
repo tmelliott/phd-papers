@@ -1,299 +1,416 @@
 \section{The Models}
 \label{sec:models}
 
+The real-time nature of this application (means that for) both
+the vehicle and network models a recursive Bayesian filtering approach is logical,
+and indeed real-time tracking and robotics applications often use such (models).
+In each of the following models, 
+we assume an underlying Markov process with state $\mathcal{X}_k$,
+of which observations $\mathcal{Y}_k$ are made,
+which leads us to the following general model,
+\begin{equation}
+\label{eq:rbe_model}
+\begin{split}
+\mathcal{X}_k &= f(\mathcal{X}_{k-1}, \omega_k) \\
+\mathcal{Y}_k &= h(\mathcal{X}_k, \nu_k)
+\end{split}
+\end{equation}
+where $\omega_k\sim\mathrm{N}(0,\mathcal{Q})$ is the system noise,
+and $\nu_k\sim\mathrm{N}(0,\mathcal{R})$ is measurement error.
+The transition function $f$ determines the relationship between consecutive states,
+while the measurement function $h$ is a deterministic function describing the
+relationship between the underlying and observed states.
+
+The following sections describe two Bayesian filter models based on (\ref{eq:rbe_model}) used in this application.
+The first model is implemented using a particle filter to estimate vehicle states,
+with the primary objective of estimating vehicle travel times along roads,
+while the second using these estimated times to update road states,
+and is implemented using a Kalman filter.
+
 \subsection{Real-time vehicle model}
 \label{sec:pf}
 
-The vehicle model involves infering the \emph{unobservable state} $\bX_k$ 
-of a vehicle at time $t_k$ from the \emph{observed state} $\by_k$,
-which in this case is the GPS location of the vehicle,
-where $\lambda_k$ and $\phi_k$ are the longitude and latitude, respectively.
+The underlying vehicle state at time $t_k$ consists of
+the vehicle's distance traveled $x$ in meters along the route and
+its speed $\dot x$ in meters per second.
+Additionally, we include travel times along road segments along the route, 
+$\bz = (z_1,\ldots,z_L)^\top$, in seconds,
+which are independent of time but included in the state as they are estimated
+sequentially as the vehicle traverses the route.
+These are combined into the state vector,
 \begin{equation}
-\label{eq:vehicle_observation}
-\by_k = \begin{bmatrix} \lambda_k \\ \phi_k \end{bmatrix}
-\end{equation}
-To construct the unobservable state, 
-each vehicle is assumed to follow the trajectory defined by a trajectory function of time, $x(t)$,
-such that the distance traveled along a route by a vehicle at time $t_k$ is given by
-$x_k = x(t_k)$.
-Additionally, speed and acceleration are given by
-the first and second derivatives of the trajectory function,
-$\dot x_k = x'(t_k)$ and $\ddot x_k = x''(t_k)$, respectively.
-Exactly how the state is constructed will depend on the model being used.
-
-
-Since observations of the vehicle are irregular, 
-a \emph{transition function} $f$ is used to
-predict the vehicle's state at time $t_k$ given the current knowledge of the state at time $t_{k-1}$,
-as well as accounting for \emph{system noise}, $\sigma_x^2$.
-We also define a \emph{measurement function} $h$ which describes the relationship between
-the observable and unobservable states,
-and accounting for \emph{measurement error}, $\bv_k$,
-\begin{equation}
-\label{eq:vehicle_measurement}
-\by_k = h(\bX_k) + \bv_k = h(x_k) + \bv_k,
-\end{equation}
-so all models need to estimate at least $x_k$, the distance traveled along the route.
-
-
-The model is split into two steps, prediction and update.
-The prediction involves using the transition function to predict
-the next state, $\hat\bX_{k|k-1}$,
-while the update step using a likelihood function and the measurement function
-to update the state to account for the observed vehicle location, $\by_k$,
-giving a final estimate of $\hat\bX_{k|k}$.
-
-
-\subsubsection{Predicting state using the transtion function}
-\label{sec:pf_prediction}
-
-The transition function is a model of bus behaviour that allows
-predictions of future states to be made given the most recently 
-updated state.
-Developing a good model for bus behaviour allows us to estimate
-parameters of interest, such as vehicle speed,
-dwell time at bus stops, and travel time along individual roads,
-the last of which is of course our primary objective.
-In this section, we propose [HOW MANY?] increasingly complex models
-of bus behaviour.
-
-
-%% MODEL 1
-The first model, $\bM_0$, assumes a constant speed between observations
-using the state
-$\bX_k = \left[\begin{smallmatrix}x_k && \dot x_k\end{smallmatrix}\right]^\top$
-and Gaussian system noise with mean zero and variance adjusted by
-$\Delta_k = t_k - t_{k-1}$.
-\begin{equation*}
-\hat\bX_{k|k-1} = f_0(\bX_{k-1|k-1}, \Delta_k, \sigma_x^2) =
+\label{eq:vehicle_state}
+\bX_k = 
 \begin{bmatrix}
-x_{k|k-1} & \dot x_{k|k-1}
-\end{bmatrix}
-\end{equation*}
-where
-\begin{align*}
-x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k|k-1} \\
-x_{k|k-1} &= \dot x_{k-1|k-1} + w_k \\
-w_k &\sim \mathcal{N}_T(0, \Delta_k \sigma_x^2)
-\end{align*}
-Here, $\mathcal{N}_T$ denotes a truncated normal distribution such that
-the system noise is truncated to ensure the speed remains between 0 and 30~m/s.
+    x_k \\ \dot x_k \\ \bz
+\end{bmatrix}.
+\end{equation}
+Observations of the vehicle are made at time $t_k$ using a GPS,
+giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle,
+giving us the observation vector
+\begin{equation}
+\label{eq:vehicle_obs}
+\bY_k = \begin{bmatrix} \lambda_k \\ \phi_k \end{bmatrix}.
+\end{equation}
 
 
-While $\bM_0$ may perform well on average,
-and indeed if all we were interested in was estimating $x_k$ it may be adequate;
-however, it is missing two important features of bus behaviour:
+We decided to employ a particle filter to estimate $\bX_k$,
+since it is a highly flexible approach and has been used in recent 
+transit vehicle modeling applications \citep{Hans_2015}.
+Our main justification for using it is that it handles multimodality very well,
+which is a common feature of the proposal distribution particularly around bus stops.
+Another advantage is the intuitive likelihood function, 
+which is described later.
+Conversely, the particle filter is a computationally demanding method,
+as thousands of particles are required per bus.
+Section~\ref{sec:rt} describes how we were able to implement the particle filter in real-time.
+
+
+In the particle filter, the posterior distribution of the state at time $t_k$,
+is estimated by a set of discrete points, or particles,
+\begin{equation}
+p(\bX_k | \bY_k) \approx \tilde\bX_{k|k} := (\bX_k^{(i)})_{i=1}^N
+\end{equation}
+each of which is independently updated or \emph{mutated} using the transition function $f$,
+\begin{equation}
+p(\bX_k | \bX_{k-1}) \approx \tilde\bX_{k|k-1} := 
+\left(f(\bX_{k-1}^{(i)}, \psi)\right)_{i=1}^N
+\end{equation}
+using a parameter vector $\psi$ containing all of the necessary parameters
+for the model (including system noise).
+After mutation, \emph{selection} of a new set of particles is performed by
+importance resampling using likelihood weights.
+
+
+\subsubsection{Vehicle transition function}
+\label{sec:pf_prediction}
+As we are using a particle filter to implement the vehicle model,
+the transition function $f$ can be a complex description of bus behaviour,
+most notably
 \begin{itemize}
-\item variable speeds along roads, \emph{which is what we are truly interested in}
-\item unknown dwell times at bus stops
+\item non-constant speed along roads (acceleration as system noise),
+\item stopping and waiting at bus stops while passengers board and disembark, and
+\item stopping and waiting at intersections.
 \end{itemize}
+The details of this are given in the algorithm defined in the Appendix.
 
-
-The first of these is incorporated into $\bM_1$,
-which allows vehicle speeds to vary over time.
-This model uses the same state as $\bM_0$,
-but a different transition function $f_1$.
-In this case, the state equations depend on a sequence of system noise,
-$\bw_k = \{\bw_k^1, \cdots, \bw_k^{\Delta_k}\}$
-\begin{align}
-\label{eq:transition_f1}
-x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \nonumber \\
-\dot x_{k|k-1} &= \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \\
-w_k^i &\sim \mathcal{N}_T(0, \sigma_x^2) \nonumber
-\end{align}
-Again, system noise is assumed to have a Gaussian distribution, 
-truncated to ensure that the vehicle's speed is always between 0 and 30~m/s.
-This is achieved by iteratively estimating each second the the vehicle's state,
-each time ensuring the speed remains in the specified range.
-
-
-The next model, $\bM_2$, allows for dwell times at bus stops.
-Since buses can either stop and wait, or not stop,
-multimodality is introduced to the system,
-which requires a modeling framework, such as the particle filter used here,
-to handle it.
-For each bus stop $j = 1, \ldots, M$ along a route,
-its distance into the trip, $S_j^d$, 
-is used to determine when a vehicle passes a stop.
-When this occurs, the dwell time $\delta_j \geq 0$ at stop $j$ is modelled
-using the stopping probability, $\pi_j$,
-a common dwell time parameter $\gamma$ which models the
-deceleration, opening and closing of doors, and acceleration at bus stops,
-and a stop dwell time $\tau_j$ for passengers alighting and disembarking.
-Therefore the stop dwell time is
+For each particle, the transition function generates a plausible trajectory,
+using system noise parameter $\sigma^2$ which describes 
+how the vehicles acceleration changes as a random process,
+and propogated using Newton's laws of motion \cite{}
 \begin{equation}
-\label{eq:dwell_time}
-\delta_j = p_j(\gamma + \tilde\delta_j),\quad
-p_j \sim \mathrm{Bern}(\pi_j),\quad
-\tilde\delta_j \sim \mathcal{E}(\tau_j)
+
 \end{equation}
+This includes stopping probabilities $\boldsymbol\pi = (\pi_1,\ldots,\pi_J)^\top$ at bus stops,
+dwell times $\boldsymbol\tau = (\tau_1,\ldots,\tau_J)^\top$ for passengers to
+board and disembark (conditional on the bus stopping),
+and the minimum dwell time at stops, $\gamma$.
+For these parameters, we used constant values for all stops,
+and based the values on those used by \cite{Hans_2015};
+future work will look at modeling these separately in real-time also.
 
-To define the transition function for this model, $f_2$,
-we need to account for multiple dwell times.
-Let $s_n$ be the index of the next stop,
-and sample dwell times for each upcoming stop $j = s_n, \ldots, M$,
-noting that these can be zero.
-Assuming the vehicle passes stops $s_n$ up to $J-1$,
-does it reach stop $J$ in the time remaining?
-\begin{equation}
-\tilde X_k^J = \min\left\{
-S_J^d, f_1(\hat X_{k|k-1}, \Delta_k - \sum_{j=s_n}^{J-1}\delta_j)\right\}
-\end{equation}
-Taking the maximum of the sequence gives the predicted distance
-traveled by the vehicle, so
-\begin{equation}
-\hat X_{k|k-1} = f_2 (\hat X_{k-1|k-1}, \Delta_k) =
-\max_{J = s_n, \ldots, M}\left\{
-    \tilde X_k^J
-\right\}
-\end{equation}
-
-Care needs to be made when generating the sequence,
-so in practice the state will be calculated recursively to ensure
-the system noise is consistent.
-\begin{equation*}
-\hat{\tilde X}_k^J =
-\begin{cases}
-    f_1(\hat{\tilde X}_k^{J+1}, \delta_J) & J < M \\
-    \hat X_{k-1|k-1} & J = M
-\end{cases}
-\end{equation*}
-
-The final model $\bM_3$ demonstrated here will allow acceleration to vary.
-\begin{align*}
-\label{eq:model_m3}
-x_{k|k-1} &= x(t_k) \\
-\intertext{where states are recursively calculated back to $t_{k-1}$}
-x(t) &= x(t - 1) + \dot x(t) \\
-\dot x(t) &= \dot x(t-1) + \ddot x(t) \\
-\ddot x(t) &= \ddot x(t-1) + w_t,\quad
-w_t \sim \mathcal{N}(0,\sigma_x^2)
-\end{align*}
-By truncating the acceleration, 
-the speed of the vehicle can be maintained between 0 and 30~m/s.
-Additionally, when approaching a bus stop that will be stopped at,
-the acceleration will be trunctated to below zero,
-however no physical deceleration will be modeled as this is too complex
-and stopping behaviour of buses can be sudden 
-(for example when passengers signal late that they wish to board or disembark).
-After servicing a stop, the bus will need to accelerate up to speed again. 
+Also in this application, due to the complexity of the problem,
+we use bus stops to define road segments.
+Therefore no intersection model is required,
+only the segment travel times as predicted by the network model at time $t_k$,
+$\btheta(t_k) = (\theta_1(t_k), \ldots, \theta_L(t_k))^\top$
+(see section~\ref{sec:kf}).
+Future work will adapt this to use intersection that are indpendent 
+of bus stops, and therefore completely independent of routes,
+which will allow increasing the complexity of the model to incorporate
+intersection stopping probabilities and waiting times.
 
 
-\subsubsection{Updating state using the observation likelihood}
-\label{sec:pf_update}
+% The vehicle model involves infering the \emph{unobservable state} $\bX_k$ 
+% of a vehicle at time $t_k$ from the \emph{observed state} $\by_k$,
+% which in this case is the GPS location of the vehicle,
+% where $\lambda_k$ and $\phi_k$ are the longitude and latitude, respectively.
+% \begin{equation}
+% \label{eq:vehicle_observation}
+% \by_k = \begin{bmatrix} \lambda_k \\ \phi_k \end{bmatrix}
+% \end{equation}
+% To construct the unobservable state, 
+% each vehicle is assumed to follow the trajectory defined by a trajectory function of time, $x(t)$,
+% such that the distance traveled along a route by a vehicle at time $t_k$ is given by
+% $x_k = x(t_k)$.
+% Additionally, speed and acceleration are given by
+% the first and second derivatives of the trajectory function,
+% $\dot x_k = x'(t_k)$ and $\ddot x_k = x''(t_k)$, respectively.
+% Exactly how the state is constructed will depend on the model being used.
 
-The update step involves comparing the predicted state $\bX_{k|k-1}$
-with the observed state $\bY_k$,
-using the measurement function $h$ to convert between the two state spaces,
-and a likelihood function.
-The measurement function is a deterministic function that uses only the 
-distance traveled, $x_k$, along a known path $\bR$ to obtain a GPS coordinate.
-The inverse measurement function, which is used in other approaches,
-is \emph{not deterministic}, and instead uses an optimisation to
-find the ``estimated'' distance traveled,
-which invariably leads to issues in the implementation.
-By using a particle filter approach, we avoid using $h^{-1}$
-and instead determine the liklihood using $\bY_k$ directly.
 
-For the likelihood, the GPS error is assumed symmetrical about the true
-position of the vehicle, with a radius of $\sigma_y^2$ meters.
-Define a projection function $g(\cdot | \bY)$ that projects points
-onto a cartesian surface (``Flat Earth''),
-so that the distance between points is the real Earth distance.
-Then the distance between the points is
-\begin{align*}
-\delta_k &= \sqrt{\left(g(h(X_k))_1 - g(\bY_k)_1\right)^2 +
-    \left(g(h(X_k))_2 - g(\bY_k)_2\right)^2} \\
-\intertext{which can be standardised by the GPS error}
-\tilde \delta_k &=
-\sqrt{\left(\frac{g(h(X_k))_1 - g(\bY_k)_1}{\sigma_y}\right)^2 +
-    \left(\frac{g(h(X_k))_2 - g(\bY_k)_2}{\sigma_y}\right)^2} =\frac{\delta_k}{\sigma_y} \\
-\intertext{Since we assume symmetric variance, this is actually}
-\tilde\delta_k &= \sqrt{Z_1^2 + Z_2^2}, \quad
-Z_1,Z_2 \sim \mathcal{N}(0,1)
-\end{align*}
-The sum of two normal random variables has an Exponential distribution with rate $\frac{1}{2}$,
-therefore 
-\begin{equation}
-\label{eq:lhood_exp}
-\left(\frac{\delta_k}{\sigma_y}\right)^2 \sim \mathrm{Exp}\left(\frac{1}{2}\right)
-\end{equation}
+% Since observations of the vehicle are irregular, 
+% a \emph{transition function} $f$ is used to
+% predict the vehicle's state at time $t_k$ given the current knowledge of the state at time $t_{k-1}$,
+% as well as accounting for \emph{system noise}, $\sigma_x^2$.
+% We also define a \emph{measurement function} $h$ which describes the relationship between
+% the observable and unobservable states,
+% and accounting for \emph{measurement error}, $\bv_k$,
+% \begin{equation}
+% \label{eq:vehicle_measurement}
+% \by_k = h(\bX_k) + \bv_k = h(x_k) + \bv_k,
+% \end{equation}
+% so all models need to estimate at least $x_k$, the distance traveled along the route.
 
-Combining this together, we use a distance function $d(\bY_1, \bY_2)$ that calculates
-the geographic distance between two GPS coordinates,
-the likelihood is
-\begin{equation}
-\label{eq:lhood}
-f(\bY_k | \hat\bX_{k|k-1}, \sigma_y^2) =
-\frac{1}{2} \exp\left\{-\frac{d(\bY_k, h(\hat\bX_{k|k-1}))^2}{2\sigma^2}\right\}
-\end{equation}
+
+% The model is split into two steps, prediction and update.
+% The prediction involves using the transition function to predict
+% the next state, $\hat\bX_{k|k-1}$,
+% while the update step using a likelihood function and the measurement function
+% to update the state to account for the observed vehicle location, $\by_k$,
+% giving a final estimate of $\hat\bX_{k|k}$.
+
+
+% \subsubsection{Predicting state using the transtion function}
+% \label{sec:pf_prediction}
+
+% The transition function is a model of bus behaviour that allows
+% predictions of future states to be made given the most recently 
+% updated state.
+% Developing a good model for bus behaviour allows us to estimate
+% parameters of interest, such as vehicle speed,
+% dwell time at bus stops, and travel time along individual roads,
+% the last of which is of course our primary objective.
+% In this section, we propose [HOW MANY?] increasingly complex models
+% of bus behaviour.
+
+
+% %% MODEL 1
+% The first model, $\bM_0$, assumes a constant speed between observations
+% using the state
+% $\bX_k = \left[\begin{smallmatrix}x_k && \dot x_k\end{smallmatrix}\right]^\top$
+% and Gaussian system noise with mean zero and variance adjusted by
+% $\Delta_k = t_k - t_{k-1}$.
+% \begin{equation*}
+% \hat\bX_{k|k-1} = f_0(\bX_{k-1|k-1}, \Delta_k, \sigma_x^2) =
+% \begin{bmatrix}
+% x_{k|k-1} & \dot x_{k|k-1}
+% \end{bmatrix}
+% \end{equation*}
+% where
+% \begin{align*}
+% x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k|k-1} \\
+% x_{k|k-1} &= \dot x_{k-1|k-1} + w_k \\
+% w_k &\sim \mathcal{N}_T(0, \Delta_k \sigma_x^2)
+% \end{align*}
+% Here, $\mathcal{N}_T$ denotes a truncated normal distribution such that
+% the system noise is truncated to ensure the speed remains between 0 and 30~m/s.
+
+
+% While $\bM_0$ may perform well on average,
+% and indeed if all we were interested in was estimating $x_k$ it may be adequate;
+% however, it is missing two important features of bus behaviour:
+% \begin{itemize}
+% \item variable speeds along roads, \emph{which is what we are truly interested in}
+% \item unknown dwell times at bus stops
+% \end{itemize}
+
+
+% The first of these is incorporated into $\bM_1$,
+% which allows vehicle speeds to vary over time.
+% This model uses the same state as $\bM_0$,
+% but a different transition function $f_1$.
+% In this case, the state equations depend on a sequence of system noise,
+% $\bw_k = \{\bw_k^1, \cdots, \bw_k^{\Delta_k}\}$
+% \begin{align}
+% \label{eq:transition_f1}
+% x_{k|k-1} &= x_{k-1|k-1} + \Delta_k \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \nonumber \\
+% \dot x_{k|k-1} &= \dot x_{k-1|k-1} + \sum_{i=1}^{\Delta_k} w_k^i \\
+% w_k^i &\sim \mathcal{N}_T(0, \sigma_x^2) \nonumber
+% \end{align}
+% Again, system noise is assumed to have a Gaussian distribution, 
+% truncated to ensure that the vehicle's speed is always between 0 and 30~m/s.
+% This is achieved by iteratively estimating each second the the vehicle's state,
+% each time ensuring the speed remains in the specified range.
+
+
+% The next model, $\bM_2$, allows for dwell times at bus stops.
+% Since buses can either stop and wait, or not stop,
+% multimodality is introduced to the system,
+% which requires a modeling framework, such as the particle filter used here,
+% to handle it.
+% For each bus stop $j = 1, \ldots, M$ along a route,
+% its distance into the trip, $S_j^d$, 
+% is used to determine when a vehicle passes a stop.
+% When this occurs, the dwell time $\delta_j \geq 0$ at stop $j$ is modelled
+% using the stopping probability, $\pi_j$,
+% a common dwell time parameter $\gamma$ which models the
+% deceleration, opening and closing of doors, and acceleration at bus stops,
+% and a stop dwell time $\tau_j$ for passengers alighting and disembarking.
+% Therefore the stop dwell time is
+% \begin{equation}
+% \label{eq:dwell_time}
+% \delta_j = p_j(\gamma + \tilde\delta_j),\quad
+% p_j \sim \mathrm{Bern}(\pi_j),\quad
+% \tilde\delta_j \sim \mathcal{E}(\tau_j)
+% \end{equation}
+
+% To define the transition function for this model, $f_2$,
+% we need to account for multiple dwell times.
+% Let $s_n$ be the index of the next stop,
+% and sample dwell times for each upcoming stop $j = s_n, \ldots, M$,
+% noting that these can be zero.
+% Assuming the vehicle passes stops $s_n$ up to $J-1$,
+% does it reach stop $J$ in the time remaining?
+% \begin{equation}
+% \tilde X_k^J = \min\left\{
+% S_J^d, f_1(\hat X_{k|k-1}, \Delta_k - \sum_{j=s_n}^{J-1}\delta_j)\right\}
+% \end{equation}
+% Taking the maximum of the sequence gives the predicted distance
+% traveled by the vehicle, so
+% \begin{equation}
+% \hat X_{k|k-1} = f_2 (\hat X_{k-1|k-1}, \Delta_k) =
+% \max_{J = s_n, \ldots, M}\left\{
+%     \tilde X_k^J
+% \right\}
+% \end{equation}
+
+% Care needs to be made when generating the sequence,
+% so in practice the state will be calculated recursively to ensure
+% the system noise is consistent.
+% \begin{equation*}
+% \hat{\tilde X}_k^J =
+% \begin{cases}
+%     f_1(\hat{\tilde X}_k^{J+1}, \delta_J) & J < M \\
+%     \hat X_{k-1|k-1} & J = M
+% \end{cases}
+% \end{equation*}
+
+% The final model $\bM_3$ demonstrated here will allow acceleration to vary.
+% \begin{align*}
+% \label{eq:model_m3}
+% x_{k|k-1} &= x(t_k) \\
+% \intertext{where states are recursively calculated back to $t_{k-1}$}
+% x(t) &= x(t - 1) + \dot x(t) \\
+% \dot x(t) &= \dot x(t-1) + \ddot x(t) \\
+% \ddot x(t) &= \ddot x(t-1) + w_t,\quad
+% w_t \sim \mathcal{N}(0,\sigma_x^2)
+% \end{align*}
+% By truncating the acceleration, 
+% the speed of the vehicle can be maintained between 0 and 30~m/s.
+% Additionally, when approaching a bus stop that will be stopped at,
+% the acceleration will be trunctated to below zero,
+% however no physical deceleration will be modeled as this is too complex
+% and stopping behaviour of buses can be sudden 
+% (for example when passengers signal late that they wish to board or disembark).
+% After servicing a stop, the bus will need to accelerate up to speed again. 
+
+
+% \subsubsection{Updating state using the observation likelihood}
+% \label{sec:pf_update}
+
+% The update step involves comparing the predicted state $\bX_{k|k-1}$
+% with the observed state $\bY_k$,
+% using the measurement function $h$ to convert between the two state spaces,
+% and a likelihood function.
+% The measurement function is a deterministic function that uses only the 
+% distance traveled, $x_k$, along a known path $\bR$ to obtain a GPS coordinate.
+% The inverse measurement function, which is used in other approaches,
+% is \emph{not deterministic}, and instead uses an optimisation to
+% find the ``estimated'' distance traveled,
+% which invariably leads to issues in the implementation.
+% By using a particle filter approach, we avoid using $h^{-1}$
+% and instead determine the liklihood using $\bY_k$ directly.
+
+% For the likelihood, the GPS error is assumed symmetrical about the true
+% position of the vehicle, with a radius of $\sigma_y^2$ meters.
+% Define a projection function $g(\cdot | \bY)$ that projects points
+% onto a cartesian surface (``Flat Earth''),
+% so that the distance between points is the real Earth distance.
+% Then the distance between the points is
+% \begin{align*}
+% \delta_k &= \sqrt{\left(g(h(X_k))_1 - g(\bY_k)_1\right)^2 +
+%     \left(g(h(X_k))_2 - g(\bY_k)_2\right)^2} \\
+% \intertext{which can be standardised by the GPS error}
+% \tilde \delta_k &=
+% \sqrt{\left(\frac{g(h(X_k))_1 - g(\bY_k)_1}{\sigma_y}\right)^2 +
+%     \left(\frac{g(h(X_k))_2 - g(\bY_k)_2}{\sigma_y}\right)^2} =\frac{\delta_k}{\sigma_y} \\
+% \intertext{Since we assume symmetric variance, this is actually}
+% \tilde\delta_k &= \sqrt{Z_1^2 + Z_2^2}, \quad
+% Z_1,Z_2 \sim \mathcal{N}(0,1)
+% \end{align*}
+% The sum of two normal random variables has an Exponential distribution with rate $\frac{1}{2}$,
+% therefore 
+% \begin{equation}
+% \label{eq:lhood_exp}
+% \left(\frac{\delta_k}{\sigma_y}\right)^2 \sim \mathrm{Exp}\left(\frac{1}{2}\right)
+% \end{equation}
+
+% Combining this together, we use a distance function $d(\bY_1, \bY_2)$ that calculates
+% the geographic distance between two GPS coordinates,
+% the likelihood is
+% \begin{equation}
+% \label{eq:lhood}
+% f(\bY_k | \hat\bX_{k|k-1}, \sigma_y^2) =
+% \frac{1}{2} \exp\left\{-\frac{d(\bY_k, h(\hat\bX_{k|k-1}))^2}{2\sigma^2}\right\}
+% \end{equation}
 
 
 \subsection{Network model}
 \label{sec:kf}
 
-The second part of this appraoch involves a network model of transit network travel times along links in the network.
-Reliable ETAs will require a historical data component,
-used as a prior in the absense of data as well as for
-predicting future states, 
-and a realtime update component where the travel times of vehicles
-are used to update the current estimate of network state.
+% The second part of this appraoch involves a network model of transit network travel times along links in the network.
+% Reliable ETAs will require a historical data component,
+% used as a prior in the absense of data as well as for
+% predicting future states, 
+% and a realtime update component where the travel times of vehicles
+% are used to update the current estimate of network state.
 
-The model will be another recursive Bayesian model as used for the vehicle state,
-as this provides a simple way to model realtime data.
-Since travel times can safely be assumed to be unimodal,
-we use an information filter (IF),
-which is a transformation of the Kalman filter
-using information instead of covariance,
-and allows the simple combination of multiple observations,
-for example when multiple buses traverse a road in the same update.
-The prediction step will involve a transition function that incorporates historical data
-and the update step will weight between observed and predicted travel times.
+% The model will be another recursive Bayesian model as used for the vehicle state,
+% as this provides a simple way to model realtime data.
+% Since travel times can safely be assumed to be unimodal,
+% we use an information filter (IF),
+% which is a transformation of the Kalman filter
+% using information instead of covariance,
+% and allows the simple combination of multiple observations,
+% for example when multiple buses traverse a road in the same update.
+% The prediction step will involve a transition function that incorporates historical data
+% and the update step will weight between observed and predicted travel times.
 
-The network state $\Theta_c = \{\theta_c^j\}_{j = 1}^J$ is the travel time 
-of transit vehicles along road segment $j$ at time $t_c$.
-In this implementation, we are assuming independence between each segment
-to provide a simple basis for the model; of course in reality this
-is not true and future work will investigate ways of incorporating this.
+% The network state $\Theta_c = \{\theta_c^j\}_{j = 1}^J$ is the travel time 
+% of transit vehicles along road segment $j$ at time $t_c$.
+% In this implementation, we are assuming independence between each segment
+% to provide a simple basis for the model; of course in reality this
+% is not true and future work will investigate ways of incorporating this.
 
-Using an IF requires a transition matrix, $\mathbf{F}_c$;
-however, in this case the travel time model is constant so no
-transition matrix is required (i.e., $\mathbf{F}_c = 1$).
-Let $\Delta_c = t_c - t_{c-1}$ and $P_c^j$ the state uncertainty
-with system noise $Q_c = \Delta_c \sigma_b^2$, then the update equations are
-simply the normal KF update equations,
-\begin{align}
-\label{eq:kf_transition}
-\hat\theta^j_{c|c-1} &= \hat\theta^j_{c|c-1} \\
-P^j_{c|c-1} &= P^j_{c-1|c-1} + Q_c
-\end{align}
+% Using an IF requires a transition matrix, $\mathbf{F}_c$;
+% however, in this case the travel time model is constant so no
+% transition matrix is required (i.e., $\mathbf{F}_c = 1$).
+% Let $\Delta_c = t_c - t_{c-1}$ and $P_c^j$ the state uncertainty
+% with system noise $Q_c = \Delta_c \sigma_b^2$, then the update equations are
+% simply the normal KF update equations,
+% \begin{align}
+% \label{eq:kf_transition}
+% \hat\theta^j_{c|c-1} &= \hat\theta^j_{c|c-1} \\
+% P^j_{c|c-1} &= P^j_{c-1|c-1} + Q_c
+% \end{align}
 
-For the update step, however, we need to transform into an information
-space parameterised by the information matrix 
-$\mathbf{Z}^j_{c|c-1} = P_{c|c-1}^{-1}$ 
-and the information vector $\mathbf{\hat z}^j_{c|c-1} = \hat\theta_{c|c-1} P_{c|c-1}^{-1}$.
-The measurement data obtained from the vehicle model are
-the travel time of vehicle $m$ along segment $j$,
-$\bar b^m_j$, and the uncertainty $s^m_j$.
-These can be transformed to a measurement information covaraince matrix
-and vector using the measurement matrix $\mathbf{H} = 1$ since,
-in this case, the observed state is the underlying state we are estimating (travel time).
-\begin{equation}
-I^m_{jc} = \frac{1}{(s^m_j)^{2}}\quad\text{and}\quad
-i^m_{jc} = \frac{\bar b^m_j}{(s^m_j)^2}
-\end{equation}
-The information update is now the sum of the information for all vehicles
-that traversed the segment since the last update, so
-\begin{align*}
-\mathbf{Z}^j_{c|c} &= \mathbf{Z}^j_{c|c-1} + \sum_{m=1}^M I^m_{jc} \\
-\mathbf{\hat i}^j_{c|c} &= \mathbf{\hat z}^j_{c|c-1} + \sum_{m=1}^M i^m_{jc}
-\end{align*}
-which are easily transformed back to get the desired state parameters.
-\begin{equation}
-\hat\theta^j_{c|c} = \frac{\mathbf{\hat z}^j_{c|c}}{\mathbf{Z}^j_{c|c}} 
-\quad\text{and}\quad
-P^j_{c|c} = \frac{1}{\mathbf{Z}^j_{c|c}}
-\end{equation}
+% For the update step, however, we need to transform into an information
+% space parameterised by the information matrix 
+% $\mathbf{Z}^j_{c|c-1} = P_{c|c-1}^{-1}$ 
+% and the information vector $\mathbf{\hat z}^j_{c|c-1} = \hat\theta_{c|c-1} P_{c|c-1}^{-1}$.
+% The measurement data obtained from the vehicle model are
+% the travel time of vehicle $m$ along segment $j$,
+% $\bar b^m_j$, and the uncertainty $s^m_j$.
+% These can be transformed to a measurement information covaraince matrix
+% and vector using the measurement matrix $\mathbf{H} = 1$ since,
+% in this case, the observed state is the underlying state we are estimating (travel time).
+% \begin{equation}
+% I^m_{jc} = \frac{1}{(s^m_j)^{2}}\quad\text{and}\quad
+% i^m_{jc} = \frac{\bar b^m_j}{(s^m_j)^2}
+% \end{equation}
+% The information update is now the sum of the information for all vehicles
+% that traversed the segment since the last update, so
+% \begin{align*}
+% \mathbf{Z}^j_{c|c} &= \mathbf{Z}^j_{c|c-1} + \sum_{m=1}^M I^m_{jc} \\
+% \mathbf{\hat i}^j_{c|c} &= \mathbf{\hat z}^j_{c|c-1} + \sum_{m=1}^M i^m_{jc}
+% \end{align*}
+% which are easily transformed back to get the desired state parameters.
+% \begin{equation}
+% \hat\theta^j_{c|c} = \frac{\mathbf{\hat z}^j_{c|c}}{\mathbf{Z}^j_{c|c}} 
+% \quad\text{and}\quad
+% P^j_{c|c} = \frac{1}{\mathbf{Z}^j_{c|c}}
+% \end{equation}
 
 
 
