@@ -92,23 +92,29 @@ most notably
 \item stopping and waiting at bus stops while passengers board and disembark, and
 \item stopping and waiting at intersections.
 \end{itemize}
-The details of this are given in the algorithm defined in the Appendix.
 
 For each particle, the transition function generates a plausible trajectory,
 using system noise parameter $\sigma^2$ which describes 
-how the vehicles acceleration changes as a random process,
-and propogated using Newton's laws of motion \cite{}
-\begin{equation}
-
-\end{equation}
-This includes stopping probabilities $\boldsymbol\pi = (\pi_1,\ldots,\pi_J)^\top$ at bus stops,
+how the vehicles acceleration changes as a random process.
+% In its simplest form, the transition function becomes,
+% from Newton's laws of motions,
+% \begin{equation}
+% \begin{split}
+%     x_k &= x_{k-1} + \delta_k \dot x_{k-1} \\
+%     \dot x_k &= \dot x_{k-1} + w_k,
+%     \quad w_k \sim \mathrm{N}(0, \delta_k \sigma^2)
+% \end{split}
+% \end{equation}
+However, the vehicle does not simply travel constantly along the route,
+as it needs to service bus stops along the way.
+Therefore, the transition function includes 
+stopping probabilities $\boldsymbol\pi = (\pi_1,\ldots,\pi_J)^\top$ at bus stops,
 dwell times $\boldsymbol\tau = (\tau_1,\ldots,\tau_J)^\top$ for passengers to
 board and disembark (conditional on the bus stopping),
 and the minimum dwell time at stops, $\gamma$.
 For these parameters, we used constant values for all stops,
 and based the values on those used by \cite{Hans_2015};
 future work will look at modeling these separately in real-time also.
-
 Also in this application, due to the complexity of the problem,
 we use bus stops to define road segments.
 Therefore no intersection model is required,
@@ -119,7 +125,28 @@ Future work will adapt this to use intersection that are indpendent
 of bus stops, and therefore completely independent of routes,
 which will allow increasing the complexity of the model to incorporate
 intersection stopping probabilities and waiting times.
+The details of the transition function are given in the algorithm defined in the Appendix,
+which implements those features discussed above.
 
+
+
+\subsubsection{Updating state using the observation likelihood}
+\label{sec:pf_update}
+
+After mutating the particle set, the posterior distribution is obtained by
+\emph{selection}, which is implemented by importance resampling using
+likelihood weights.
+To do so, we need to define the measurement function $h$,
+and an additional function $g$ which transforms GPS coordinates onto a flat
+surface (the geographical equirectangular projection,
+which allows us to place a bivate normal likelihood on the data.
+The model for the observation generation is,
+assuming GPS error $\epsilon^2$,
+\begin{equation}
+\label{eq:pf_obs_model}
+g(\bY_k) = g(h(\bX_k)) + \br_k,
+\quad \br_k \sim \mathrm{N}(\boldsymbol{0}, \epsilon^2\boldsymbol{I})
+\end{equation}
 
 % The vehicle model involves infering the \emph{unobservable state} $\bX_k$ 
 % of a vehicle at time $t_k$ from the \emph{observed state} $\by_k$,
