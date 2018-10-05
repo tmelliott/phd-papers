@@ -200,68 +200,85 @@ When resampling is performed, $W_k^{(i)} := N^{-1}$ for all $i$.
 \subsection{Network model}
 \label{sec:kf}
 
-% The second part of this appraoch involves a network model of transit network travel times along links in the network.
-% Reliable ETAs will require a historical data component,
-% used as a prior in the absense of data as well as for
-% predicting future states, 
-% and a realtime update component where the travel times of vehicles
-% are used to update the current estimate of network state.
+The second part of this appraoch involves a network model of transit network travel times along links in the network.
+Reliable ETAs will require a historical data component,
+used as a prior in the absense of data as well as for
+predicting future states, 
+and a realtime update component where the travel times of vehicles
+are used to update the current estimate of network state.
 
-% The model will be another recursive Bayesian model as used for the vehicle state,
-% as this provides a simple way to model realtime data.
-% Since travel times can safely be assumed to be unimodal,
-% we use an information filter (IF),
-% which is a transformation of the Kalman filter
-% using information instead of covariance,
-% and allows the simple combination of multiple observations,
-% for example when multiple buses traverse a road in the same update.
-% The prediction step will involve a transition function that incorporates historical data
-% and the update step will weight between observed and predicted travel times.
+The model will be another recursive Bayesian model as used for the vehicle state,
+as this provides a simple way to model realtime data.
+Since travel times can safely be assumed to be unimodal,
+we use an information filter (IF),
+which is a transformation of the Kalman filter
+using information instead of covariance,
+and allows the simple combination of multiple observations,
+for example when multiple buses traverse a road in the same update.
+The prediction step will involve a transition function that incorporates historical data
+and the update step will weight between observed and predicted travel times.
 
-% The network state $\Theta_c = \{\theta_c^j\}_{j = 1}^J$ is the travel time 
-% of transit vehicles along road segment $j$ at time $t_c$.
-% In this implementation, we are assuming independence between each segment
-% to provide a simple basis for the model; of course in reality this
-% is not true and future work will investigate ways of incorporating this.
+The network state $\boldsymbol\theta_c = \{\theta_c^\ell\}_{\ell = 1}^L$ is the travel time 
+of transit vehicles along road segment $\ell$ at time $t_c$.
+In this implementation, we are assuming independence between each segment
+to provide a simple basis for the model; of course in reality this
+is not true and future work will investigate ways of incorporating this.
 
-% Using an IF requires a transition matrix, $\mathbf{F}_c$;
-% however, in this case the travel time model is constant so no
-% transition matrix is required (i.e., $\mathbf{F}_c = 1$).
-% Let $\Delta_c = t_c - t_{c-1}$ and $P_c^j$ the state uncertainty
-% with system noise $Q_c = \Delta_c \sigma_b^2$, then the update equations are
-% simply the normal KF update equations,
-% \begin{align}
-% \label{eq:kf_transition}
-% \hat\theta^j_{c|c-1} &= \hat\theta^j_{c|c-1} \\
-% P^j_{c|c-1} &= P^j_{c-1|c-1} + Q_c
-% \end{align}
+Since the road state model is very simple, 
+no transition matrix or measurement matrix is required,
+and the model from (\ref{eq:rbe_model}) reduces to
+\begin{equation}
+\begin{split}
+\hat \theta_c^\ell &= \theta_{c-1}^\ell + \Delta_c^\ell v_c^\ell \\
+Z_c^\ell &= \theta_c^\ell + e_c^\ell
+\end{split}
+\end{equation}
+where $\Delta_c = t_c - t_{c-1}$,
+$v_c^\ell \sim \mathrm{N}(0, \nu^2)$ is the system noise,
+and $e_c^\ell \sim \mathrm{N}(0, R_c^\ell)$ is the measurement error
+as estimated from the vehicle model using particle uncertainty.
 
-% For the update step, however, we need to transform into an information
-% space parameterised by the information matrix 
-% $\mathbf{Z}^j_{c|c-1} = P_{c|c-1}^{-1}$ 
-% and the information vector $\mathbf{\hat z}^j_{c|c-1} = \hat\theta_{c|c-1} P_{c|c-1}^{-1}$.
-% The measurement data obtained from the vehicle model are
-% the travel time of vehicle $m$ along segment $j$,
-% $\bar b^m_j$, and the uncertainty $s^m_j$.
-% These can be transformed to a measurement information covaraince matrix
-% and vector using the measurement matrix $\mathbf{H} = 1$ since,
-% in this case, the observed state is the underlying state we are estimating (travel time).
-% \begin{equation}
-% I^m_{jc} = \frac{1}{(s^m_j)^{2}}\quad\text{and}\quad
-% i^m_{jc} = \frac{\bar b^m_j}{(s^m_j)^2}
-% \end{equation}
-% The information update is now the sum of the information for all vehicles
-% that traversed the segment since the last update, so
-% \begin{align*}
-% \mathbf{Z}^j_{c|c} &= \mathbf{Z}^j_{c|c-1} + \sum_{m=1}^M I^m_{jc} \\
-% \mathbf{\hat i}^j_{c|c} &= \mathbf{\hat z}^j_{c|c-1} + \sum_{m=1}^M i^m_{jc}
-% \end{align*}
-% which are easily transformed back to get the desired state parameters.
-% \begin{equation}
-% \hat\theta^j_{c|c} = \frac{\mathbf{\hat z}^j_{c|c}}{\mathbf{Z}^j_{c|c}} 
-% \quad\text{and}\quad
-% P^j_{c|c} = \frac{1}{\mathbf{Z}^j_{c|c}}
-% \end{equation}
+The state is estimated by its mean $\hat \theta_c^\ell = \mathrm{E}(\theta_c^\ell)$
+and uncertainty $P_c^\ell = \mathrm{var}(\theta_c^\ell)$,
+which are predicted from the previous state estimate using the prediction
+equations
+\begin{align*}
+\label{eq:kf_transition}
+\hat \theta^\ell_{c|c-1} &= \hat \theta^\ell_{c|c-1} \\
+P^\ell_{c|c-1} &= P^\ell_{c-1|c-1} + \Delta_c^\ell \nu_c^\ell
+\end{align*}
+
+For the update step, however, we need to transform into an information
+space parameterised by the information matrix $U^\ell_c$
+and the information vector $u^\ell_c$,
+\begin{equation}
+\label{eq:information_transform}
+U^\ell_{c|c-1} = \frac{1}{P_{c|c-1}}
+\quad\text{and}\quad
+\hat u^\ell_{c|c-1} = \frac{\hat \theta^\ell_{c|c-1}}{P^\ell_{c|c-1}}
+\end{equation}
+The measurement data obtained from the vehicle model are
+the travel time of vehicle $m$ along segment $\ell$,
+$\bar z_c^{m\ell}$, and the uncertainty $s^{m\ell}_c$.
+These can be transformed to a measurement information covaraince matrix
+and vector using the measurement matrix,
+\begin{equation*}
+B^{m\ell}_c = \frac{1}{(s^{m\ell}_c)^{2}}\quad\text{and}\quad
+b^{m\ell}_c = \frac{\bar z^{m\ell}_c}{(s^{m\ell}_c)^2}
+\end{equation*}
+The information update is now the sum of the information for all vehicles
+that traversed the segment since the last update, so
+\begin{align*}
+U^\ell_{c|c} &= U^\ell_{c|c-1} + \sum_{m=1}^M B^{m\ell}_{c} \\
+\hat u^\ell_{c|c} &= \hat u^\ell_{c|c-1} + \sum_{m=1}^M b^{m\ell}_{c}
+\end{align*}
+which are back transformed to get the updated state parameters
+using the inverse of (\ref{eq:information_transform})
+\begin{equation*}
+\hat \theta^\ell_{c|c} = \frac{\mathbf{\hat u}^\ell_{c|c}}{\mathbf{U}^\ell_{c|c}} 
+\quad\text{and}\quad
+P^\ell_{c|c} = \frac{1}{\mathbf{U}^\ell_{c|c}}.
+\end{equation*}
 
 
 
