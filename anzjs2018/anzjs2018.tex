@@ -6,6 +6,11 @@
 % \usepackage{lmodern}
 \usepackage{lipsum}
 \usepackage[UKenglish]{isodate}
+\usepackage{float}
+\usepackage{listings}
+\newfloat{lstfloat}{htbp}{lop}
+\floatname{lstfloat}{Listing}
+\def\lstfloatautorefname{Listing}
 
 \input{../glossary.tex}
 
@@ -63,7 +68,7 @@ to incorporate as much information as necessary to predict arrival times.
 \input{sections/02_gtfs}
 \input{sections/03_models}
 \input{sections/04_implementation}
-\input{sections/05_results}
+% \input{sections/05_results}
 \input{sections/06_discuss}
 \bibliographystyle{anzsj}
 \bibliography{../reflist.bib}

@@ -1,23 +1,68 @@
-\section{Implementing in realtime}
+\section{Real-time implementation and preliminary results}
 \label{sec:rt}
 
-How we implement it, choice of software (Rcpp = R + C++).
-R: dealing with data structures is easier, maintainability, interfacing
-C++: speed
+There are two components to the application:
+the static GTFS~schedule and network data,
+and the real-time modeling and prediction.
+We chose \verb+Rcpp+ to develop our program,
+giving us the advantages of an R~package for data manipulation 
+(notably \verb+RSQLite+ and \verb+dplyr+)
+and distribution, 
+as well as the speed and memory management capabilities of \verb|C++|. 
+As a result, all of the following has been implemented in the R package
+\verb+transitr+, available on Github (\url{https://github.com/tmelliott/transitr}).
+Here our focus is on the real-time aplication, so we are only discussing the real-time 
+features of model's implementation.
 
-Overall structure:
-- load
-- fetch positions
-- initialize or mutate+update
-- update network
-- make ETA predictions (vehicle state + network state)
+The general structure of the main function is:
+\begin{enumerate}
+\item Load GTFS data from database
+\item Indefinitely repeat when new data recieved \ldots
+\begin{enumerate}
+    \item Update or create new vehicle objects from new data
+    \item Run particle filter on each vehicle to estimate update state
+    \item Collect travel time information for each vehicle for any completed roads
+    \item Update road network with any completed road segments
+    \item Generate ETAs for vehicles
+    \item Write ETAs to extended Google Protobuf binary file for distribution
+\end{enumerate}
+\end{enumerate}
 
-Some of the key things:
-- minimise copy, parallelisation using OMP
-- moving as much computation ``outside'' of the main loop as possible
-  (e.g., ``pre''-predict vehicle/network states so only update required)
-  so ETAs are generated ASAP after retrieving data
-- keeping the GTFS database up-to-date by fetching new data each morning
-- distribution - a cloud database vs a single protobuf file with everything 
-  (maintenance/reliability/speed/size)
+The main concern is speed: 
+we desire ETAs to be available as soon as possible after obtaining the data.
+To do this, we use raw pointers to read-only GTFS objects,
+and particles are only copied when resampling is required.
+This is also why we chose to use protobuf as the output format,
+since this is fast to write and distribute.
+Steps 2b--e are performed in parallel, 
+which in our test environment of a virtual machine with 8~cores, 
+significantly speeds up computation.
+
+
+As far as results, we have two categories:
+implementation and faesibility,
+and model performance;
+we do not have any complex arrival time estimation method,
+so no results for that are shown here.
+
+
+% How we implement it, choice of software (Rcpp = R + C++).
+% R: dealing with data structures is easier, maintainability, interfacing
+% C++: speed
+
+% Overall structure:
+% - load
+% - fetch positions
+% - initialize or mutate+update
+% - update network
+% - make ETA predictions (vehicle state + network state)
+
+% Some of the key things:
+% - minimise copy, parallelisation using OMP
+% - moving as much computation ``outside'' of the main loop as possible
+%   (e.g., ``pre''-predict vehicle/network states so only update required)
+%   so ETAs are generated ASAP after retrieving data
+% - keeping the GTFS database up-to-date by fetching new data each morning
+% - distribution - a cloud database vs a single protobuf file with everything 
+%   (maintenance/reliability/speed/size)
 
