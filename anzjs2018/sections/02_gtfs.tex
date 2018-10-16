@@ -55,11 +55,32 @@ However, in this paper we use bus stops as nodes and the routes between them as 
 This captures most overlaps, 
 with the exception of some express services and multiple-stop locations,
 but these are typically in high traffic areas and should be OK.
-Figure~\ref{fig:nw_construct} demonstrates how several overlapping routes 
+Figure~\ref{fig:network_creation_2} demonstrates how several overlapping routes 
 are merged to form a road network.
 In section~\ref{sec:kf} we present a model for estimating veihcle travel time
 along a road segment.
 
+\begin{figure}[tb]
+    \centering
+    \begin{subfigure}{0.7\textwidth}
+        \centering
+        \includegraphics[width=0.95\textwidth]{figures/02_network_segments_1.pdf}
+        \caption{Raw GTFS route shapes}
+        \label{fig:network_creation_1}
+    \end{subfigure} \\
+    \begin{subfigure}{0.7\textwidth}
+        \centering
+        \includegraphics[width=0.95\textwidth]{figures/02_network_segments_2.pdf}
+        \caption{GTFS-based road network}
+        \label{fig:network_creation_2}
+    \end{subfigure}
+    \caption{Construction of a route network involves combining routes at nodes %
+        (here we are using stops) which are connected by edges (roads). %
+        In (a), the three unique routes, represented by different line types, clearly %
+        overlap in several places. In (b) these have been merged, and the width of each line %
+        represents how many routes use that link.}
+    \label{fig:network_creation}
+\end{figure}
 
 
 \subsection{Realtime vehicle locations}

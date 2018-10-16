@@ -82,8 +82,47 @@ using a parameter vector $\psi$ containing all of the necessary parameters
 for the model (including system noise).
 After mutation, \emph{selection} of a new set of particles is performed by
 importance resampling using likelihood weights,
-determined by distance between particle's map position and $\bY_k$ (fig~\ref{fig:pf_state_map})
+determined by distance between particle's map position and $\bY_k$ 
 to obtain a new sample $\tilde\bX_{k|k}$, (fig~\ref{fig:pf_state_update}).
+
+
+\begin{figure}[tb]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/03_particle_filter_1.pdf}
+        \caption{The vehicle state represented by a sample of discrete points is related to the observable state (GPS position) through the transition function $h$.}
+        \label{fig:pf_state_prev}
+    \end{subfigure}\;\;
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/03_particle_filter_2.pdf}
+        \caption{The transition function $f$ models the behaviour of each particle,
+            including changes in acceleration and stopping behaviour at bus stops.}
+        \label{fig:pf_state_predict}
+    \end{subfigure}\\
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/03_particle_filter_6.pdf}
+        \caption{Each particle's distance from the true observation is calculated using
+            the geographic distance between two coordinates, which can then be used
+            to calculate it's weight.}
+        \label{fig:pf_state_update}
+    \end{subfigure}\;\;
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/03_particle_filter_4.pdf}
+        \caption{Resampling occurs using likelihood weights that use the distance
+            between the particle's location and the vehicles reported location (red cross),
+            resulting in the updated state.}
+        \label{fig:pf_state_predict2}
+    \end{subfigure}
+    \caption{The vehicles state is estimated using a set of discrete points, or particles,
+        each of which is independently mutated to make predictions of the future state. The history of the state estimates can be used to estimate parameters of interest, such as
+        travel times along roads.}
+    \label{fig:pf_state}
+\end{figure}
+
 
 
 \subsubsection{Vehicle transition function}
