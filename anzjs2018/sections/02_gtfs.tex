@@ -2,28 +2,37 @@
 \label{sec:gtfs}
 
 GTFS (general transit feed specification)
-is an API (application programming interface) specification for transit data,
-developed and maintained by Google \citep{GoogleDevelopers_2006}.
-It is used by over 900~transit providers around the world,
+is an API (application programming interface) specification for transit data
+detailing it should be organised,
+making access easier for application developers.
+Developed and maintained by Google \citep{GoogleDevelopers_2006},
+who make use of it in their Google Maps Transit Directions,
+it is used by over 900~transit providers around the world,
 including here in Auckland, New Zealand
-(source \url{http://transitfeeds.com}),
-allowing an application developed in Auckland to
-be deployed to another GTFS-based public transport system with minimal modification.
+(source \url{http://transitfeeds.com}).
+An advantage of this for us is that,
+provided our application depends solely on GTFS data,
+after developing it locally in Auckland it can be deployed to any other GTFS-based
+public transport system with minimal modification.
 
 
-The two main components of GTFS are \emph{static} and \emph{realtime}.
-Static GTFS includes information about routes, trips, shapes, and stops:
+There are two components to GTFS.
+The first, \emph{GTFS static}, includes information about stops, routes, trips, and shapes:
+a \emph{stop} is a physical location where passengers can embark and disembark the vehicle;
 a \emph{route} is a sequence of two or more stops displayed as a single service;
-a \emph{trip} is an instance of a route occuring at a specific time of day;
-a \emph{shape} is the sequence of points defining a vehicle's path along a route;
-and a \emph{stop} is a physical location where passengers can embark and disembark
-the vehicle \citep{GoogleDevelopers_2006}.
-GTFS realtime feeds provide information such as vehicle positions and trip delays,
-and are usually accessed via an API.
-% The latter is often the only covariate used for predicting arrival time,
-% as previously discussed:
-% while it is a computationally inexpensive method (simply addition),
-% it relies on accurate schedules and cannot respond quickly to realtime events.
+a \emph{trip} is an instance of a route occuring at a specific time of day; and
+a \emph{shape} is the sequence of points defining a vehicle's path along a route
+\citep{GoogleDevelopers_2006}.
+The second component is \emph{GTFS realtime},
+which is only available in a subset of the providers due to the requirement of 
+onboard GPS and a central server.
+It provides a standardised format for sharing vehicle positions and trip delays,
+which are often accessed via an API which developers can use in \rt applications.
+
+
+Before we can develop our application,
+we need to modify the raw GTFS information to make it possible to detect common roads.
+
 
 \subsection{Transit network construction}
 \label{sec:network_build}
@@ -32,10 +41,10 @@ Arguably one of the most important predictors of arrival time is
 the travel time along intermediate roads,
 however in most applications this vital information is unavailable,
 at least directly. 
-Several predictive approaches used \emph{headway},
-the time between consecutive trips along the same route
-\citep{Hans_2015}.
-While this is reasonable for high frequency routes,
+Several predictive approaches using \emph{headway},
+the time between consecutive trips along the same route,
+have been proposed \citep{Hans_2015};
+however, while this is reasonable for high frequency routes,
 low frequncy routes will be unable to react quickly to changes in congestion,
 and it is for these routes which reliable ETAs are arguably more important,
 since the cost of missing a bus is greater.
@@ -43,21 +52,16 @@ since the cost of missing a bus is greater.
 
 One solution would be to use information obtained from
 vehicles servicing other routes but traveling along the same roads
-to estimate arrival times;
-however, there is no direct way of knowing which routes share common roads.
-Here we propose using an algorithm to convert the raw GTFS shape files
-into a \emph{road network},
-as demonstated in Figure~\ref{fig:network_creation}.
-This involves detecting locations where one or more routes meet 
-(intersections or \emph{nodes}),
-and the connecting paths (road segments or \emph{edges}).
-However, in this paper we use bus stops as nodes and the routes between them as edges.
-This captures most overlaps, 
-with the exception of some express services and multiple-stop locations,
-but these are typically in high traffic areas and should be OK.
-Figure~\ref{fig:network_creation_2} demonstrates how several overlapping routes 
+to estimate arrival times.
+The simplest method of identifying overlapping routes is to compare
+the stop sequence: 
+routes with a common sub-sequence of stops must be traveling the same route between them.
+While there are several exceptions, for example express routes 
+and multi-stop locations where there are high numbers of routes,
+it is a viable enough simplication for the purposes of this paper.
+Figure~\ref{fig:network_creation} demonstrates how several overlapping routes 
 are merged to form a road network.
-In section~\ref{sec:kf} we present a model for estimating veihcle travel time
+In section~\ref{sec:kf} we present a model for estimating vehicle travel time
 along a road segment.
 
 \begin{figure}[tb]
@@ -91,19 +95,20 @@ in the transit network.
 The data consists of the time $t_k$ that the observation was made,
 the GPS position of the vehicle, $\bY_k$, 
 and some other information about the trip being serviced.
-Vehicle positions are updated with a frequency of anywhere from 10~seconds to several minutes,
+Vehicle positions are updated with a frequency of anywhere between 10~seconds and several minutes,
 so there is often a lot of uncertainty about the trajectory
-between two observations, particularly when there is a bus stop
+between two observations, particularly when there is one or more bus stop
 or intersection between them.
 
 Another complication with the Auckland Transport realtime feed is that
 the buses are programmed to report their location when arriving at
 bus stops and some major intersections.
-Often these positions appear to be preemptive (i.e., that bus is almost there, 
-but not quite),
-and subsequent observations place the bus \emph{behind} the stop or intersection.
+Often these positions appear to be preemptive 
+(i.e., the bus is almost there, but not quite),
+and subsequent observations place the bus \emph{behind} the stop or intersection
+(e.g., in a queue of traffic at traffic lights).
 To handle this, we compute the approximate distance traveled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
 if this has decreased, the previous observation is rejected and the vehicle reverted
 to its previous state.
-To enable this, vehicles retain the current and previous states (see section~\ref{sec:rt}).
+
