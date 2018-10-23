@@ -48,11 +48,26 @@ so no results for that are shown here.
 
 The simulations we discuss here use a subset of real data from 8~October, 2018.
 This allows us to run the model with different parameters over the same data.
-The parameters varied were the number of particles,
-GPS error $\epsilon^2$, and system noise $\sigma^2$.
+The parameters varied were the number of particles and system noise $\sigma^2$.
 The primary goal is to reduce the rate of degeneration and ``losing'' the bus 
 (i.e., no particles are near the observed location),
 and reducing the variance of parameter estimates; here we use vehicle speed as the example.
+
+
+The one parameter we can determine from the data is GPS error, $\epsilon^2$,
+by looking at the distance between observations and the shape.
+Figure~\ref{fig:gps_dist} shows the distribution of distance between the vehicle
+observation and the \emph{nearest point on the path}.
+Due to the way the observations are reported, 
+many observations will be ``exactly'' on the route at a bus stop,
+and we need to ignore these.
+
+\begin{figure}[tb]
+    \centering
+    % \includegraphics[width=0.7\textwidth]{figures/04_model_results_gps.pdf}
+    \caption{The distance between the observation and the nearest point on the shape.}
+    \label{fig:gps_dist}
+\end{figure}
 
 
 
@@ -75,7 +90,7 @@ Figure~\ref{fig:timings} shows the timing results for varying number of particle
     \includegraphics[width=0.7\textwidth]{figures/04_model_results_timing.pdf}
     \caption{The timings for various parts of the application, and overall. %
         The trend is approximately linear with the number of particles.}
-    \label{fig:figure1}
+    \label{fig:timings}
 \end{figure}
 
 
@@ -93,7 +108,7 @@ Therefore, several tools used to assess the validity of a particle filter
 are unnecessary.
 Instead, we will be comparing the rate of degeneration 
 (i.e., the particle sample loses the actual bus and needs to be reinitialized)
-and the mean distance between the state estimate and the observation.
+and the mean distance between the state estimate and the observation,
 [We also explore the uncertainty of travel time estimates,
 as well as the variability between consecutive buses]\footnote{assuming we can get the results in time}.
 
