@@ -11,10 +11,10 @@ times <- do.call(bind_rows, lapply(list.files("../../transitr/simulations", patt
             timestamp = as.POSIXct(timestamp, origin = "1970-01-01"))
 }))
 
-ggplot(times, aes(x = timestamp)) +
-    geom_point(aes(y = wall/1000, colour = as.factor(n_particles))) +
-    facet_grid(what~., scales = "free_y")
-    # geom_point(aes(y = cpu), colour = "orangered") +
+# ggplot(times, aes(x = timestamp)) +
+#     geom_point(aes(y = wall/1000, colour = as.factor(n_particles))) +
+#     facet_grid(what~., scales = "free_y")
+#     # geom_point(aes(y = cpu), colour = "orangered") +
 
 ## between 13:45 and 14:00
 date <- format(times$timestamp[1], "%Y-%m-%d")
@@ -32,9 +32,9 @@ tsmry <- times %>% bind_rows(ttot) %>%
     ungroup() %>%
     filter(what %in% c("all", "predicting ETAs", "updating vehicle states", "writing ETAs to protobuf feed"))
 
-ggplot(tsmry) +
-    geom_point(aes(n_particles, cpu, color = what)) +
-    ylab("Wall time (seconds)")
+# ggplot(tsmry) +
+#     geom_point(aes(n_particles, cpu, color = what)) +
+#     ylab("Wall time (seconds)")
 
 lvls <- c("predicting ETAs", "updating vehicle states", "writing ETAs to protobuf feed", "all")
 tdat <- bind_rows(times, ttot) %>% filter(what %in% lvls) %>%
@@ -53,12 +53,43 @@ ggplot(tdat %>% summarize(cpu.hat = mean(cpu), cpu.var = sd(cpu))) +
     labs(shape = "")
 dev.off()
 
-## CPU timings
-ggplot(tsmry %>% group_by(what, n_particles) %>% 
-        summarize(wall.hat = mean(wall/1000), wall.var = sd(wall/1000))) +
-    geom_errorbar(aes(n_particles, 
-        ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
-        color = what, shape = what), 
-        width = 100) +
-    xlab("Number of particles") +
-    ylab("CPU Time (seconds)")
+# ## CPU timings
+# ggplot(tsmry %>% group_by(what, n_particles) %>% 
+#         summarize(wall.hat = mean(wall/1000), wall.var = sd(wall/1000))) +
+#     geom_errorbar(aes(n_particles, 
+#         ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
+#         color = what, shape = what), 
+#         width = 100) +
+#     xlab("Number of particles") +
+#     ylab("CPU Time (seconds)")
+
+
+
+
+
+get_sim_files <- function(sim) {
+    x <- try({
+        siminfo <- strsplit(sim, "_")[[1]][-1]
+        if (grepl("e", siminfo[3])) siminfo[3] <- format(as.numeric(siminfo[3]), scientific = FALSE)
+        siminfo <- as.numeric(gsub("-", ".", siminfo))
+        do.call(bind_rows, 
+            lapply(list.files(file.path("../../transitr/simulations", sim, "modeleval"), pattern="vehicle_.*\\.csv", full.names = TRUE), 
+                function(x) 
+                    read_csv(x, 
+                        col_names = c("vehicle_id", "trip_id", "ts", "prior_mse", "posterior_mse", 
+                                      "prior_speed_var", "posterior_speed_var", "dist_to_path", "Neff", "resample", "n_resample"),
+                        col_types = "cciddddddi", progress = FALSE) %>%
+                    mutate(ts = as.POSIXct(ts, origin = "1970-01-01"))
+            )
+        ) %>% mutate(sim = sim, n_particles = siminfo[1], gps_error = siminfo[2], system_noise = siminfo[3])
+    })
+    if (inherits(x, "try-error")) return(NULL)
+    x
+}
+
+res <- get_sim_files(list.files("../../transitr/simulations", pattern = "sim_")[1])
+
+ggplot(res %>% filter(dist_to_path < 5), aes(dist_to_path)) + geom_density()
+ggplot(res %>% filter(dist_to_path < 50 & dist_to_path > 0), aes(dist_to_path)) + geom_density()
+
+min(res$dist_to_path)
