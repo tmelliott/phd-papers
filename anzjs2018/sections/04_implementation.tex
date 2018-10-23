@@ -46,6 +46,62 @@ we do not have any complex arrival time estimation method,
 so no results for that are shown here.
 
 
+The simulations we discuss here use a subset of real data from 8~October, 2018.
+This allows us to run the model with different parameters over the same data.
+The parameters varied were the number of particles,
+GPS error $\epsilon^2$, and system noise $\sigma^2$.
+The primary goal is to reduce the rate of degeneration and ``losing'' the bus 
+(i.e., no particles are near the observed location),
+and reducing the variance of parameter estimates; here we use vehicle speed as the example.
+
+
+
+\subsection{Program Timings}
+\label{sec:timings}
+
+During development of our application,
+our primary concert was the computational faesibility of a particle filter.
+For each iteration, 
+the timings of the individual components in 2a--f above are recorded.
+Since the number of vehicles traveling at any given time changes throughout the day,
+we used the average timings from 13:45--14:00 to compare.
+
+
+Figure~\ref{fig:timings} shows the timing results for varying number of particles.
+
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/04_model_results_timing.pdf}
+    \caption{The timings for various parts of the application, and overall. %
+        The trend is approximately linear with the number of particles.}
+    \label{fig:figure1}
+\end{figure}
+
+
+
+
+\subsection{Model performance}
+\label{sec:model_perf}
+
+To check the model results, 
+we need to realise that we are not trying to accurately predict
+future locations of the vehicle,
+but instead are trying to use a sequence of GPS positions to infer travel
+times along intermediate roads.
+Therefore, several tools used to assess the validity of a particle filter
+are unnecessary.
+Instead, we will be comparing the rate of degeneration 
+(i.e., the particle sample loses the actual bus and needs to be reinitialized)
+and the mean distance between the state estimate and the observation.
+[We also explore the uncertainty of travel time estimates,
+as well as the variability between consecutive buses]\footnote{assuming we can get the results in time}.
+
+
+
+
+
+
 % How we implement it, choice of software (Rcpp = R + C++).
 % R: dealing with data structures is easier, maintainability, interfacing
 % C++: speed

@@ -49,42 +49,42 @@ ggsave("figures/02_network_segments_2.pdf", p2, device = "pdf", width = 6, heigh
 
 
 
-library(RSQLite)
-library(dbplyr)
+# library(RSQLite)
+# library(dbplyr)
 
-DBDIR <- file.path("..", "..", "transitr")
+# DBDIR <- file.path("..", "..", "transitr")
 
-gtfs <- dbConnect(SQLite(), file.path(DBDIR, "fulldata.db"))
+# gtfs <- dbConnect(SQLite(), file.path(DBDIR, "fulldata.db"))
 
-## get some routes
-vmax <- gtfs %>% tbl("routes") %>% 
-    summarize(version = max(version, na.rm = TRUE)) %>% collect %>% pluck('version')
-routes_to_use <- c("22N", "22A", "24B", "27W", "30", "70")
-routes <- gtfs %>% tbl("routes") %>% 
-    filter(route_short_name %in% routes_to_use && version == vmax &&
-           (route_long_name %like% '%To City%' || route_long_name %like% '%To Britomart%')) %>%
-    select(route_id, route_short_name) %>% collect %>%
-    group_by(route_short_name) %>%
-    summarize(route_id = first(route_id))
+# ## get some routes
+# vmax <- gtfs %>% tbl("routes") %>% 
+#     summarize(version = max(version, na.rm = TRUE)) %>% collect %>% pluck('version')
+# routes_to_use <- c("22N", "22A", "24B", "27W", "30", "70")
+# routes <- gtfs %>% tbl("routes") %>% 
+#     filter(route_short_name %in% routes_to_use && version == vmax &&
+#            (route_long_name %like% '%To City%' || route_long_name %like% '%To Britomart%')) %>%
+#     select(route_id, route_short_name) %>% collect %>%
+#     group_by(route_short_name) %>%
+#     summarize(route_id = first(route_id))
 
-trips <- gtfs %>% tbl("trips") %>% filter(route_id %in% routes$route_id) %>% 
-    collect %>% group_by(trip_id) %>% summarize(shape_id = first(shape_id))
+# trips <- gtfs %>% tbl("trips") %>% filter(route_id %in% routes$route_id) %>% 
+#     collect %>% group_by(trip_id) %>% summarize(shape_id = first(shape_id))
 
-shapes <- gtfs %>% tbl("shapes") %>%
-    filter(shape_id %in% trips$shape_id) %>%
-    arrange(shape_id, shape_pt_sequence) %>%
-    collect
+# shapes <- gtfs %>% tbl("shapes") %>%
+#     filter(shape_id %in% trips$shape_id) %>%
+#     arrange(shape_id, shape_pt_sequence) %>%
+#     collect
 
-stop_ids <- gtfs %>% tbl("stop_times") %>%
-    filter(trip_id %in% trips$trip_id) %>%
-    select(stop_id) %>% distinct %>% collect %>% pluck('stop_id')
+# stop_ids <- gtfs %>% tbl("stop_times") %>%
+#     filter(trip_id %in% trips$trip_id) %>%
+#     select(stop_id) %>% distinct %>% collect %>% pluck('stop_id')
 
-stops <- gtfs %>% tbl("stops") %>% 
-    filter(stop_id %in% stop_ids) %>% collect
+# stops <- gtfs %>% tbl("stops") %>% 
+#     filter(stop_id %in% stop_ids) %>% collect
 
-ggplot(shapes, aes(shape_pt_lon, shape_pt_lat, group = shape_id)) +
-    geom_path(alpha = 0.5) +
-    geom_point(aes(stop_lon, stop_lat, group = NULL), data = stops,
-               pch = 21, fill = "white", size = 1) +
-    coord_fixed(ratio = 1.2)+#, xlim = c(174.74, 174.78), ylim = c(-36.88, -36.84)) +
-    theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
+# ggplot(shapes, aes(shape_pt_lon, shape_pt_lat, group = shape_id)) +
+#     geom_path(alpha = 0.5) +
+#     geom_point(aes(stop_lon, stop_lat, group = NULL), data = stops,
+#                pch = 21, fill = "white", size = 1) +
+#     coord_fixed(ratio = 1.2)+#, xlim = c(174.74, 174.78), ylim = c(-36.88, -36.84)) +
+#     theme(axis.title = element_blank(), axis.ticks = element_blank(), axis.text = element_blank())
