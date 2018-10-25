@@ -66,8 +66,10 @@ dev.off()
 
 
 
-
 get_sim_files <- function(sim) {
+    if (file.exists(file.path("../../transitr/simulations", sim, "modeleval.rds"))) {
+        return(readRDS(file.path("../../transitr/simulations", sim, "modeleval.rds")))
+    }
     x <- try({
         siminfo <- strsplit(sim, "_")[[1]][-1]
         if (grepl("e", siminfo[3])) siminfo[3] <- format(as.numeric(siminfo[3]), scientific = FALSE)
@@ -76,20 +78,35 @@ get_sim_files <- function(sim) {
             lapply(list.files(file.path("../../transitr/simulations", sim, "modeleval"), pattern="vehicle_.*\\.csv", full.names = TRUE), 
                 function(x) 
                     read_csv(x, 
-                        col_names = c("vehicle_id", "trip_id", "ts", "prior_mse", "posterior_mse", 
-                                      "prior_speed_var", "posterior_speed_var", "dist_to_path", "Neff", "resample", "n_resample"),
-                        col_types = "cciddddddi", progress = FALSE) %>%
+                        col_names = c("vehicle_id", "trip_id", "ts", "prior_mse", "posterior_mse", #"sumwt", "varwt",
+                                      "post_speed", "prior_speed_var", "posterior_speed_var", "dist_to_path", 
+                                      "Neff", "resample", "n_resample", "bad_sample"),
+                        col_types = "ccidddddddiii", progress = FALSE) %>%
                     mutate(ts = as.POSIXct(ts, origin = "1970-01-01"))
             )
         ) %>% mutate(sim = sim, n_particles = siminfo[1], gps_error = siminfo[2], system_noise = siminfo[3])
     })
     if (inherits(x, "try-error")) return(NULL)
+    saveRDS(x, file.path("../../transitr/simulations", sim, "modeleval.rds"))
     x
 }
 
-res <- get_sim_files(list.files("../../transitr/simulations", pattern = "sim_")[1])
+
+res <- do.call(bind_rows, lapply(list.files("../../transitr/simulations", pattern = "sim_"), get_sim_files))
 
 ggplot(res %>% filter(dist_to_path < 5), aes(dist_to_path)) + geom_density()
-ggplot(res %>% filter(dist_to_path < 50 & dist_to_path > 0), aes(dist_to_path)) + geom_density()
 
-min(res$dist_to_path)
+pdf('figures/04_model_results_dist.pdf', width = 6, height = 3)
+ggplot(res %>% filter(dist_to_path < 20 & dist_to_path > 0), aes(dist_to_path)) + geom_density()
+dev.off()
+
+sims <- res %>% filter(dist_to_path < 20)
+
+pdf('figures/04_model_results_neff.pdf', width = 6, height = 3)
+ggplot(sims %>% filter(Neff <= n_particles & Neff > 0 & bad_sample == 0) %>% 
+    group_by(n_particles, system_noise, gps_error) %>%
+    summarize(Neff = mean(Neff))) + 
+    geom_point(aes(x = factor(system_noise), Neff / n_particles * 100, shape = factor(n_particles), colour = factor(gps_error))) +
+    labs(x = "System Noise", y = "Effective Sample Size (% of Number of Particles)",
+         shape = "Number of Particles", colour = "GPS Error (m)")
+dev.off()
