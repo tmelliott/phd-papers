@@ -4,12 +4,12 @@
 Due to the real-time nature of this application, we are using
 a recursive Bayesian filtering approach as is often used in
 real-time tracking applications.
-We are using two distinct models for the vehicle and network states,
+We are using a separate model for each of the vehicle and network states,
 and in each assume an underlying Markov process with state $\mathcal{X}_k$
 with system noise $\omega_k\sim\mathrm{N}(0,\mathcal{Q})$ 
 of which observations $\mathcal{Y}_k$ are made
 with error $\nu_k\sim\mathrm{N}(0,\mathcal{R})$,
-giving the following general model below.
+giving the following general model:
 \begin{equation}
 \label{eq:rbe_model}
 \begin{split}
@@ -17,17 +17,17 @@ giving the following general model below.
 \mathcal{Y}_k &= h(\mathcal{X}_k, \nu_k)
 \end{split}
 \end{equation}
-The transition function $f$ determines the relationship between consecutive states,
+The transition function $f$ describes the relationship between consecutive states
+(i.e., what we want to model),
 while the measurement function $h$ is a deterministic function describing the
 relationship between the underlying and observed states.
 
 The following sections describe the two models used in this application.
-The first is implemented using a particle filter to estimate vehicle states,
-with the primary objective of infering vehicle travel times along roads
-from a sequence of GPS positions,
-while the second uses these travel times to update road states 
+The first, implemented using a particle filter, estimates vehicle states
+to infer travel times along roads from a sequence of GPS positions;
+the second uses these travel times to update road states 
 and is implemented using an \emph{information filter},
-which is a variant of the Kalman filter \citep{}.
+a variant of the Kalman filter \citep{}.
 
 \subsection{Real-time vehicle model}
 \label{sec:pf}
@@ -37,7 +37,7 @@ the vehicle's distance traveled $x$ in meters along the route and
 it's speed $\dot x$ in meters per second.
 Additionally, travel times along road segments along the route, 
 $\bz = (z_1,\ldots,z_L)^\top$, in seconds,
-are independent of time but included in the state so they can be estimated
+are included in the state and estimated
 sequentially as the vehicle traverses the route.
 These are combined into the state vector,
 \begin{equation}
@@ -59,15 +59,15 @@ giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle,
 We chose to employ a particle filter to estimate $\bX_k$,
 due to do its high flexibility and use in recent 
 transit vehicle modeling applications \citep{Hans_2015}.
-The primary advante of a particle filter is its handling of multimodality,
-as in figure~\ref{fig:pf_state_predict},
+The primary advantage of a particle filter is its handling of multimodality,
+as demonstrated in figure~\ref{fig:pf_state_predict},
 which is a common feature of the proposal distribution, particularly around bus stops.
-A second advantage is the intuitive likelihood function (see section~\ref{sec:pf_update}).
+Another advantage is the intuitive likelihood function (see section~\ref{sec:pf_update}).
 Conversely, particle filter methods are computationally demanding,
 requiring an increasing number of particles as the model complexity and
-number of parameters in increase \citep{}.
+number of parameters increases \citep{}.
 Section~\ref{sec:rt} describes our implementation of the particle filter in real-time 
-and it's timings.
+and its timings.
 
 
 
@@ -111,12 +111,12 @@ and it's timings.
 
 
 
-In a particle filter, the posterior distribution of the state at time $t_{k-1}$,
-is represented by a set of discrete points, or particles, (fig~\ref{fig:pf_state_prev}),
+In a particle filter, the posterior distribution of the state at time $t_{k-1}$
+is represented by a set of discrete points, or particles, (Figure~\ref{fig:pf_state_prev}),
 each with an associated weight $W_{k-1}^{(i)}$
 \begin{equation}
 p(\bX_{k-1} | \bY_{k-1}) \approx \tilde\bX_{k-1|k-1} 
-:= \{\bX_{k-1}^{(i)}, W_{k-1}^{(i)}\}_{i=1}^N
+:= \left\{\bX_{k-1}^{(i)}, W_{k-1}^{(i)}\right\}_{i=1}^N
 \end{equation}
 each of which is independently updated or \emph{mutated} using the transition function $f$ (fig~\ref{fig:pf_state_predict})
 \begin{equation}
@@ -126,8 +126,8 @@ p(\bX_k | \bX_{k-1}) \approx \tilde\bX_{k|k-1} :=
 using parameter vector $\psi$ containing all of the necessary parameters
 for the model (including system noise).
 After mutation, 
-the particles are reweighted using the likelihood $p(\bY_k | \bX_k^{(i)})$ 
-(sec.~\ref{sec:pf_update}) and standardised,
+the state is updated by reweighting the particles using the likelihood $p(\bY_k | \bX_k^{(i)})$ 
+(sec.~\ref{sec:pf_update}) and standardising so $\sum_{i=1}^N W_k^{(i)} = 1$,
 \begin{equation*}
 W_k^{(i)} = \frac{W_{k-1}^{(i)} p(\bY_k | \bX_k^{(i)})}{
     \sum_{j=1}^N W_{k-1}^{(j)} p(\bY_k | \bX_k^{(j)})
@@ -136,49 +136,52 @@ W_k^{(i)} = \frac{W_{k-1}^{(i)} p(\bY_k | \bX_k^{(i)})}{
 generating a posterior estimate of the state
 \begin{equation}
 p(\bX_k | \bY_k) \approx \tilde\bX_{k|k} := 
-\{\bX_{k}^{(i)}, W_{k}^{(i)}\}_{i=1}^N.
+\left\{\bX_{k}^{(i)}, W_{k}^{(i)}\right\}_{i=1}^N.
 \end{equation}
 
-In order to prevvent degeneration of the particle sample,
+In order to prevent degeneration of the particle filter state,
 \emph{importance resampling} is employed whenever the 
 effective sample size $N_{\text{eff}} = 1/(\sum_i (W_k^{(i)})^2)$
 falls below a specified threshold $N_{\text{thres}}$.
 The resampling is performed with replacement using importance weights $W_k^{(i)}$,
 as demonstrated in Figure~\ref{fig:pf_state_update}.
 Afterwards, the weights are reinitialized to $W_k^{(i)} = N^{-1}$.
+Note this is a computationally demanding step,
+so reducing the rate of resampling is favourable.
 
 
 
 \subsubsection{Vehicle transition function}
 \label{sec:pf_prediction}
 
-Using a particle filter allows us to develop a vehicle model in which
-the transition function $f$ implements several key bus behaviours:
+The particle filter lets us to develop a model in which
+the vehicle transition function $f$ implements several key bus behaviours:
 \begin{itemize}
 \item non-constant speed along roads,
 \item optional stopping and waiting at bus stops while passengers board and disembark, and
-\item optional stopping and waiting at intersections/traffic lights (future work).
+\item optional stopping and waiting at intersections or traffic lights (future work).
 \end{itemize}
 
 For each particle, the transition function generates a plausible trajectory,
 using system noise parameter $\sigma^2$ which describes 
-how the vehicle's acceleration changes as a random process.
+how the vehicle's acceleration changes as a Markov process.
 The vehicle does not travel constantly along the route,
-however, as it needs to service bus stops along the way.
-Therefore, the transition function includes 
+however, as it needs to service bus stops along the way,
+so the transition function includes 
 stopping probabilities $\boldsymbol\pi = (\pi_1,\ldots,\pi_J)^\top$ at bus stops,
 dwell times $\boldsymbol\tau = (\tau_1,\ldots,\tau_J)^\top$ for passengers to
 board and disembark (conditional on the bus stopping),
 and the minimum dwell time at stops, $\gamma$,
-for the doors to open and close.
+for the doors to open and close,
+and account for deceleration and acceleration.
 For these parameters, we used constant values for all stops,
-and based the values on those used by \cite{Hans_2015};
+based on the values used by \cite{Hans_2015};
 future work will investigate modeling these in real-time similarly to Section~\ref{sec:kf}.
-No intersection model is implemented here,
-as the segment road segments are between stops,
-and the travel times predicted by the network model at time $t_k$,
-$\btheta(t_k) = (\theta_1(t_k), \ldots, \theta_L(t_k))^\top$
-(see section~\ref{sec:kf}).
+% No intersection model is implemented here,
+% as the segment road segments are between stops,
+% and the travel times predicted by the network model at time $t_k$,
+% $\btheta(t_k) = (\theta_1(t_k), \ldots, \theta_L(t_k))^\top$
+% (see section~\ref{sec:kf}).
 The transition function algorithm is shown in Figure~\ref{fig:algorithm},
 which implements those features discussed above.
 
@@ -188,13 +191,13 @@ which implements those features discussed above.
 \label{sec:pf_update}
 
 After mutating the particle set, the posterior distribution $\tilde\bX_{k|k}$ 
-is updated by reweighting each particle using the likelihood.
+is obtained by reweighting each particle using the likelihood.
 The measurement function $h$,
 and an additional function $g$ which transforms GPS coordinates onto a flat
 surface (the geographical equirectangular projection),
 allow the placement of a bivate normal likelihood on the data
 as shown in figure~\ref{fig:pf_lhood}.
-The model for the observation generation is,
+The model for the observations is,
 assuming GPS error $\epsilon^2$,
 \begin{equation}
 \label{eq:pf_obs_model}
@@ -219,7 +222,7 @@ z_1^2 + z_2^2 \sim \mathrm{Exp}\left(\frac{1}{2}\right)
 \end{equation}
 
 The likelihood of the data given a particle's state estimate 
-is therefore easy to calculate using (\ref{eq:obs_exp})
+is therefore calculated using (\ref{eq:obs_exp})
 \begin{equation}
 p(\bY_k | \bX_k^{(i)}, \epsilon) =
 \frac{1}{2}\exp\left\{
@@ -230,7 +233,7 @@ It is worth noting that this representation of the likelihood is only
 possible due to the discretization of the state provided by the particle filter;
 in other approaches, such as the Kalman filter,
 the likelihood cannot be calculated using the distance as the estimate
-is a distribution, and so instead a reverse non-deterministic transformation,
+is a distribution, and instead a reverse non-deterministic transformation,
 the inverse measurement function,
 is required to estimate the ``observed'' distance traveled $\hat Z_k~=~h^{-1}(\bY_k)$, 
 which introduces additional error and uncertainty into the model.
@@ -240,63 +243,40 @@ which introduces additional error and uncertainty into the model.
 \subsection{Network model}
 \label{sec:kf}
 
-The purpose of the road network model is to provide a way of using
-spatial information about vehicle speeds to inform arrival time predictions.
-The simplest notion would be to map each vehicle speed estimate to a physical road;
-however, this has two problems
-\begin{enumerate}
-\item roads usually have two directions, so vehicle directionality would need to be computed,
-\item road data is not provided in GTFS, and can be difficult to obtain cleanly without
-    manual intervention.
-\end{enumerate}
-The most desirable solution would be to use the GTFS shape data to construct a network
-by merging overlapping routes and using merge points as intersections
-to define road segments.
-Initial efforts at applying this had poor results due to overly long or short segments,
-so for this current work we are approximating the road network by using the stops 
-along a route as intersection, and the legs between them as road segments,
-as shown in Figure~\ref{fig:network_creation}.
+The primary objective of the network model is to estimate the \rt traffic conditions
+(travel time) along roads in the transit network, 
+as well as make short-term predictions for estimating arrival times.
+In this paper,  we apply a very simple model in which each road is treated independently,
+future work will investigate using correlations with adjacend roads and historical data
+to improve the model and subsequent predictions.
 
-
-To obtain reliable ETAs,
-road travel times need to be estimated in \rt,
-as this allows the model to react to congestion changes as detected by preceeding buses.
-Future work will aim to construct a more complex model incorporating historical trends 
-and correlations between roads, 
-however for the current work we are demonstrating our approach
-using a simple model,
-in which each road segment is treated independently.
-
-The model assums a Gaussian state distribution for travel time,
-truncated necessarily at zero;
-this will not be an issue as the state prediction and data will always be non-negative.
-However, the model must be able to handle multiple observations in a single update,
-which often occurs along major bus routes when several buses are traveling together.
-Therefore we have chosen the information filter as our estimation method.
-
-The information filter is a transormation of the Kalman filter in which the
-\emph{information matrix} and \emph{information vector} are used in place of 
-the covariance matrix and state vector, respectively.
-The advantage is that multiple observations can be added together when updating the state.
-Otherwise the information filter follows the same procedure as other recursive Bayesian models.
 
 The network state $\boldsymbol\theta_c = \{\theta_c^\ell\}_{\ell = 1}^L$ is the travel time 
-of transit vehicles along road segment $\ell$ at time $t_c$.
-Observations of the state, $Z_c^\ell$, are obtained from the particle filter 
-in Section~\ref{sec:pf}.
-Due to the simplicity of the model,
-no transition matrix or measurement matrix is required,
-and the model from (\ref{eq:rbe_model}) reduces simply to
+of transit vehicles along road segment $\ell$ at time $t_c$,
+and is assumed to be constant with system noise $v_c^\ell \sim \mathrm{N}(0, \nu^2)$.
+Observations of the state, $Z_c^\ell$, are obtained from the particle filter in Section~\ref{sec:pf},
+and have measurement error $e_c^\ell \sim \mathrm{N}(0, R_c^\ell)$ as estimated 
+using uncertainty of particle estimates.
+The model from (\ref{eq:rbe_model}) now reduces to
 \begin{equation}
 \begin{split}
 \theta_c^\ell &= \theta_{c-1}^\ell + \Delta_c^\ell v_c^\ell \\
 Z_c^\ell &= \theta_c^\ell + e_c^\ell
 \end{split}
 \end{equation}
-where $\Delta_c = t_c - t_{c-1}$,
-$v_c^\ell \sim \mathrm{N}(0, \nu^2)$ is the system noise,
-and $e_c^\ell \sim \mathrm{N}(0, R_c^\ell)$ is the measurement error
-as estimated from the vehicle model using uncertainty of particle estimates.
+where $\Delta_c = t_c - t_{c-1}$.
+
+
+Travel times are assumed to be non-negative but otherwise normally distributed,
+and constant over time---we do not attempt to model peak congestion in this paper.
+Additionally the observations are non-constact and may be multiple as several buses travel
+a road simultaneously.
+The information filter is a transformation of the Kalman filter in which the
+\emph{information matrix} and \emph{information vector} are used in place of 
+the covariance matrix and state vector, respectively.
+This allows multiple observations to be added together to update the state.
+
+
 
 The state is estimated by its mean $\hat \theta_c^\ell = \mathrm{E}(\theta_c^\ell)$
 and uncertainty $P_c^\ell = \mathrm{var}(\theta_c^\ell)$,
@@ -309,32 +289,20 @@ P^\ell_{c|c-1} &= P^\ell_{c-1|c-1} + \Delta_c^\ell \nu_c^\ell
 \end{align*}
 
 For the update step, the parameters are transformed into an information
-space parameterised by the information matrix $U^\ell_c$
-and the information vector $u^\ell_c$,
-\begin{equation}
-\label{eq:information_transform}
-U^\ell_{c|c-1} = \frac{1}{P_{c|c-1}}
-\quad\text{and}\quad
-\hat u^\ell_{c|c-1} = \frac{\hat \theta^\ell_{c|c-1}}{P^\ell_{c|c-1}}
-\end{equation}
-The measurement data obtained from the vehicle model are
-the travel time of vehicle $m$ along segment $\ell$,
-$\bar z_c^{m\ell}$, and the uncertainty $s^{m\ell}_c$.
-These are transformed to a measurement information covariance matrix $B_c^{m\ell}$
-and measurement information vector $b_c^{m\ell}$,
-\begin{equation*}
-B^{m\ell}_c = \frac{1}{(s^{m\ell}_c)^{2}}\quad\text{and}\quad
-b^{m\ell}_c = \frac{\bar z^{m\ell}_c}{(s^{m\ell}_c)^2}
-\end{equation*}
+space parameterised by the information matrix $U^\ell_c = (P_{c|c-1})^{-1}$
+and the information vector $u^\ell_c~=~\hat \theta^\ell_{c|c-1} (P^\ell_{c|c-1})^{-1}$.
+The travel time estimates from the vehicle model for vehicle $m$ along segment $\ell$
+is $\bar z_c^{m\ell}$, with uncertainty $s^{m\ell}_c$,
+can be transformed to a measurement information covariance matrix 
+$B_c^{m\ell} = (s^{m\ell}_c)^{-2}$
+and measurement information vector $b_c^{m\ell}~=~\bar z^{m\ell}_c (s^{m\ell}_c)^{-2}$.
 The information update is now the sum of the information over all $M$ vehicles
-that traversed the segment since the last update, so
+that traversed segment $\ell$ since the last update, so
 \begin{align*}
 U^\ell_{c|c} &= U^\ell_{c|c-1} + \sum_{m=1}^M B^{m\ell}_{c} \\
 \hat u^\ell_{c|c} &= \hat u^\ell_{c|c-1} + \sum_{m=1}^M b^{m\ell}_{c}
 \end{align*}
-which are back transformed
-using the inverse of (\ref{eq:information_transform})
-to obtain the desired parameter estimates
+which are back transformed to obtain the desired parameter estimates
 \begin{equation*}
 \hat \theta^\ell_{c|c} = \frac{\hat u^\ell_{c|c}}{U^\ell_{c|c}} 
 \quad\text{and}\quad

@@ -1,20 +1,18 @@
 \section{Real-time implementation and preliminary results}
 \label{sec:rt}
 
-There are two components to the application:
-the static GTFS~schedule and network data,
-and the real-time modeling and prediction.
-We chose \verb+Rcpp+ to develop our program,
-giving us the advantages of an R~package for data manipulation 
-(notably \verb+RSQLite+ and \verb+dplyr+)
-and distribution, 
+The application consists of a
+static GTFS~schedule and network data component,
+and a \rt modeling and prediction component.
+We chose \verb+Rcpp+ to develop the program,
+providing access to other R packages for data manipulation 
+(notably \verb+RSQLite+ and \verb+dplyr+),
 as well as the speed and memory management capabilities of \verb|C++|. 
-As a result, all of the following has been implemented in the R package
+The following has been implemented in the R package
 \verb+transitr+, available on Github (\url{https://github.com/tmelliott/transitr}).
-Here our focus is on the real-time aplication, so we are only discussing the real-time 
-features of model's implementation.
+In this section, we discuss the features of the \rt component.
 
-The general structure of the main function is:
+The general structure of the \rt component is:
 \begin{enumerate}
 \item Load GTFS data from database
 \item Indefinitely repeat when new data recieved \ldots
@@ -22,13 +20,13 @@ The general structure of the main function is:
     \item Update or create new vehicle objects from new data
     \item Run particle filter on each vehicle to estimate update state
     \item Collect travel time information for each vehicle for any completed roads
-    \item Update road network with any completed road segments
-    \item Generate ETAs for vehicles
+    \item Update road network for any completed road segments
+    \item Generate ETAs for vehicles uing combination of particle filter and network state
     \item Write ETAs to extended Google Protobuf binary file for distribution
 \end{enumerate}
 \end{enumerate}
 
-The main concern is speed: 
+The primary concern is speed: 
 we desire ETAs to be available as soon as possible after obtaining the data.
 To do this, we use raw pointers to read-only GTFS objects,
 and particles are only copied when resampling is required.
