@@ -1,9 +1,30 @@
 \section{Discussion and Future Work}
 \label{sec:discussion}
 
-It all seems to work (hopefully I don't need to change this D:)
+The main goal of this work was to explore the faesibility
+of a particle filter as a \rt estimation method for transit vehicle states,
+and the use of estimated states to determine traffic conditions
+throughout the network.
+This allows vehicles to inform others---irrespective of route---of 
+how long it will take to reach future stops.
 
-Next steps include
-- generating useful priors for ``fall back'' (i.e., no data, future) prediction
-- develop and implement a more complex network update model (correlations, etc)
-- prediction estimates (point vs interval)
+
+Not only is the particle filter a viable choice in terms of speed,
+it has shown it can handle most situations without losing the vehicle,
+with the exception of when the vehicle is not traveling along
+the specified route.
+Hopefully with future development,
+the stopping behaviour can be more accurately modeled,
+perhaps incorporating trip updates into the likelihood function.
+
+
+The network model is still in the early stages of development,
+but given that the implementation is running quickly---twice as fast as our target---%
+there is room for developing a more complex model.
+Future work will explore the use of historical data to develop informative priors
+for travel times,
+which will provide a useful fallback in the case of no data,
+or for making more accurate long-term predictions.
+Once such a model has been developed, we plan to explore prediction estimates,
+particuarly comparing point and intervals as a means of communicating 
+uncertainty to commuters.

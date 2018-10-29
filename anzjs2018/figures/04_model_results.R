@@ -106,7 +106,9 @@ res <- do.call(bind_rows, lapply(list.files("../../transitr/simulations", patter
 ggplot(res %>% filter(dist_to_path < 5), aes(dist_to_path)) + geom_density()
 
 pdf('figures/04_model_results_dist.pdf', width = 6, height = 3)
-ggplot(res %>% filter(dist_to_path < 20 & dist_to_path > 0), aes(dist_to_path)) + geom_density()
+ggplot(res %>% filter(dist_to_path < 20 & dist_to_path > 0), aes(dist_to_path)) + 
+    geom_density() +
+    xlab("Distance to path (m)") + ylab("Density")
 dev.off()
 
 sims <- res %>% filter(dist_to_path < 20)
@@ -118,4 +120,70 @@ ggplot(sims %>% filter(Neff <= n_particles & Neff > 0 & bad_sample == 0) %>%
     geom_point(aes(x = factor(system_noise), Neff / n_particles * 100, shape = factor(n_particles), colour = factor(gps_error))) +
     labs(x = "System Noise", y = "Effective Sample Size (% of Number of Particles)",
          shape = "Number of Particles", colour = "GPS Error (m)")
+dev.off()
+
+
+
+
+pdf('figures/04_model_results_degen.pdf', width = 10, height = 5)
+ggplot(sims %>% group_by(n_particles, gps_error, system_noise) %>%
+        summarize(p_bad = mean(bad_sample), p_good = mean(Neff < 1000),
+            Neff = mean(Neff))) + 
+    geom_point(aes(100 * Neff / n_particles, 100*p_bad, shape = as.factor(system_noise))) +
+    facet_grid(gps_error ~ n_particles) +
+    xlab("Effective Sample Size (% of N)") + ylab("Degeneration Rate (% of Iterations)") +
+    labs(shape = "System noise")
+# ggplot(sims %>% group_by(n_particles, gps_error, system_noise) %>%
+#         summarize(p_bad = mean(bad_sample))) + 
+#     geom_col(aes(as.factor(n_particles), y = p_bad, fill = as.factor(system_noise)), position = "dodge") +
+#     facet_grid( ~ gps_error) +
+#     xlab("Numer of particles") + ylab("Degeneration Rate") +
+#     labs(fill = "System Noise")
+dev.off()
+
+
+
+
+get_nw_times <- function(sim) {
+    siminfo <- strsplit(sim, "_")[[1]][-1]
+    if (grepl("e", siminfo[3])) siminfo[3] <- format(as.numeric(siminfo[3]), scientific = FALSE)
+    siminfo <- as.numeric(gsub("-", ".", siminfo))
+    read_csv(file.path("../../transitr/simulations", sim, "segment_states.csv"),
+        col_names = c("segment_id", "timestamp", "mean", "var"), col_types = "cinn") %>%
+        mutate(timestamp = as.POSIXct(timestamp, origin = "1970-01-01"),
+               segment_id = factor(segment_id),
+               sim = sim, n_particles = siminfo[1], gps_error = siminfo[2], system_noise = siminfo[3])
+}
+
+get_all_nw_times <- function() {
+    sims <- list.files("../../transitr/simulations", pattern = "sim_")
+    sims <- sims[sapply(sims, function(s) file.exists(file.path("../../transitr/simulations", s, "timings.csv")))]
+    lapply(sims, get_nw_times) %>% bind_rows
+}
+
+if (file.exists("nwtimes.rda")) {
+    load("nwtimes.rda")
+} else {
+    nwtimes <- get_all_nw_times()
+    save(nwtimes, file = "nwtimes.rda")
+}
+
+
+nwtimes.smry1 <- nwtimes %>% group_by(n_particles, gps_error, system_noise, segment_id) %>%
+    summarize(sd.time = sd(var, na.rm = TRUE), mean.var = mean(var, na.rm = TRUE)) %>% ungroup
+
+nwtimes.smry <- nwtimes.smry1 %>% group_by(n_particles, gps_error, system_noise) %>%
+    summarize(mean = mean(sd.time, na.rm = TRUE), sd = mean(mean.var, na.rm = TRUE)) %>% ungroup()
+
+# ggplot(nwtimes.smry) +
+#     geom_point(aes(sqrt(mean.var/n_particles), var.var, color = as.factor(system_noise))) +
+#     facet_grid(~n_particles)
+
+pdf('figures/04_model_results_times.pdf', width = 10, height = 5)
+ggplot(nwtimes.smry) +
+    geom_point(aes(mean / sqrt(n_particles), sd / sqrt(n_particles), 
+        shape = as.factor(system_noise))) +
+    facet_grid(gps_error~n_particles) +
+    xlab("Standard deviation of travel times") + ylab("Uncertainty of travel time estimates") +
+    labs(color = "GPS Error (m)", shape = "System noise")
 dev.off()

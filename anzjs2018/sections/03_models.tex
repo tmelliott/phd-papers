@@ -141,7 +141,11 @@ p(\bX_k | \bY_k) \approx \tilde\bX_{k|k} :=
 
 In order to prevent degeneration of the particle filter state,
 \emph{importance resampling} is employed whenever the 
-effective sample size $N_{\text{eff}} = 1/(\sum_i (W_k^{(i)})^2)$
+effective sample size 
+\begin{equation}
+\label{eq:neff}
+N_{\text{eff}} = \frac{1}{\sum_i (W_k^{(i)})^2}
+\end{equation}
 falls below a specified threshold $N_{\text{thres}}$.
 The resampling is performed with replacement using importance weights $W_k^{(i)}$,
 as demonstrated in Figure~\ref{fig:pf_state_update}.

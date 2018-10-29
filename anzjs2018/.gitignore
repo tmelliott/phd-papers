@@ -1,2 +1,3 @@
 *.sublime-workspace
 !figures/*.pdf
+*.rda

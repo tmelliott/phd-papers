@@ -99,88 +99,81 @@ is not too large, and there are enough cores.
 \label{sec:model_perf}
 
 
-The parameters varied were the number of particles,
+The model was evaluated using several statistics,
+each calculated using a range of parameter values.
+The first is effective sample size,
+defined in (\ref{eq:neff}),
+which is used to determined if resampling is required.
+Another important statistic is the \emph{degeneration rate},
+or the percent of iterations where the particle filter
+is unable to find any plausible states given the observation,
+and the vehicle is reinitialised.
+Note, however, that the lower limit of this value 
+is attributed to \emph{invalid trips},
+however there is no simple way of filtering these trips.
+The last statistic we compute is the variance of road segment travel times
+over time.
+For this example, we varied the number of particles $N$,
 GPS error $\epsilon$, and system noise $\sigma^2$.
-The primary goal is to reduce the rate of degeneration and ``losing'' the bus 
-(i.e., no particles are near the observed location),
-and reducing the variance of parameter estimates; here we use vehicle speed as the example.
 
 
 The one parameter we can determine from the data is GPS error, $\epsilon^2$,
 by looking at the distance between observations and the shape.
-Figure~\ref{fig:gps_dist} shows the distribution of distance between the vehicle
+Figure~\ref{fig:dist_to_route} shows the distribution of distance between the vehicle
 observation and the \emph{nearest point on the path}.
 Due to the way the observations are reported, 
 many observations will be ``exactly'' on the route at a bus stop,
-and we need to ignore these.
-
-
-To check the model results, 
-we need to realise that we are not trying to accurately predict
-future locations of the vehicle,
-but instead are trying to use a sequence of GPS positions to infer travel
-times along intermediate roads.
-Therefore, several tools used to assess the validity of a particle filter
-are unnecessary.
-Instead, we will be comparing the rate of degeneration 
-(i.e., the particle sample loses the actual bus and needs to be reinitialized)
-and the mean distance between the state estimate and the observation; 
-we will use the distance between the observation and the route (cross track distance) 
-to determine how well the posterior distribution fits the data---%
-if the ratio between the CTD and RMSE is large,
-then the fit is ``bad''.
-[We also explore the uncertainty of travel time estimates,
-as well as the variability between consecutive buses]\footnote{assuming we can get the results in time}.
+which explains the spike at just above zero~meters.
 
 \begin{figure}[tb]
     \centering
     \includegraphics[width=0.7\textwidth]{figures/04_model_results_dist.pdf}
-    \caption{The timings for various parts of the application, and overall. %
-        The trend is approximately linear with the number of particles.}
+    \caption{The distance between the observation and the nearest point on the shape.}
     \label{fig:dist_to_route}
 \end{figure}
 
+
+For the effective sample size, 
+increasing GPS error and system error both tend to
+increase $N_\text{eff}$, as shown in Figure~\ref{fig:degen_rate}.
+Increasing the GPS error distributes the weights more evenly,
+while increasing system noise allows more particles to reach
+the necessary speed,
+so these are as expected.
+
 \begin{figure}[tb]
     \centering
-    \includegraphics[width=0.7\textwidth]{figures/04_model_results_neff.pdf}
-    \caption{The timings for various parts of the application, and overall. %
-        The trend is approximately linear with the number of particles.}
-    \label{fig:neff}
+    \includegraphics[width=0.9\textwidth]{figures/04_model_results_degen.pdf}
+    \caption{The effective sample size and degeneration rate for a range of parameter 
+        values. The columns are of increasing number of particles,
+        and the rows are for increasing (downwards) GPS error.}
+    \label{fig:degen_rate}
 \end{figure}
 
+The degeneration rate, 
+shown on the $y$-axis of Figure~\ref{fig:degen_rate},
+decreases as GPS error increases,
+as anomolous observations where the bus is far from the route
+are more likely.
+It also decreases with the number of particles,
+while system noise has no apparent effect.
 
 
-
-From the Figure~X, 
-we see a trade-off between some of the parameters.
-Larger values of GPS error decrease the degeneration rate
-as well as the rate of resampling (which increases speed);
-however, the cost of this is that the mean distance between the posterior distribution
-and the observed location increases, giving a less precise estimate of the vehicle's state.
-Conversely, the system noise does not have the same effect,
-and only slightly effects the values.
-
+Lastly is the variability of travel times and their uncertainties.
+These are shown in Figure~\ref{fig:travel_times}.
+System noise again shows no effect on the variability of travel time estimates,
+however increasing GPS error tends to increase travel time variability.
+This means that there is a trade-off between the models performance
+and how well it estimates the main parameter of interest:
+larger values of $\epsilon$ result in less degeneration and larger $N_\text{eff}$,
+at the cost of more variable travel time estimates.
 
 
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/04_model_results_times.pdf}
+    \caption{Travel times.}
+    \label{fig:travel_times}
+\end{figure}
 
-
-% How we implement it, choice of software (Rcpp = R + C++).
-% R: dealing with data structures is easier, maintainability, interfacing
-% C++: speed
-
-% Overall structure:
-% - load
-% - fetch positions
-% - initialize or mutate+update
-% - update network
-% - make ETA predictions (vehicle state + network state)
-
-% Some of the key things:
-% - minimise copy, parallelisation using OMP
-% - moving as much computation ``outside'' of the main loop as possible
-%   (e.g., ``pre''-predict vehicle/network states so only update required)
-%   so ETAs are generated ASAP after retrieving data
-% - keeping the GTFS database up-to-date by fetching new data each morning
-% - distribution - a cloud database vs a single protobuf file with everything 
-%   (maintenance/reliability/speed/size)
 
