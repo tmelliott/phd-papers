@@ -36,42 +36,42 @@ tsmry <- times %>% bind_rows(ttot) %>%
 #     geom_point(aes(n_particles, cpu, color = what)) +
 #     ylab("Wall time (seconds)")
 
-lvls <- c("predicting ETAs", "updating vehicle states", "writing ETAs to protobuf feed", "all")
+lvls <- c("updating vehicle states", "predicting ETAs", "writing ETAs to protobuf feed", "all")
 tdat <- bind_rows(times, ttot) %>% filter(what %in% lvls) %>%
     mutate(what = factor(what, levels = lvls)) %>%
     group_by(what, n_particles)
 
 
-## Wall timings
+# Wall timings
 pdf('figures/04_model_results_timing.pdf', width = 6, height = 3)
-gridExtra::grid.arrange(
-ggplot(tdat %>% summarize(cpu.hat = mean(cpu), cpu.var = sd(cpu))) +
-    geom_pointrange(aes(n_particles, cpu.hat,
-        ymin = cpu.hat - cpu.var, ymax = cpu.hat + cpu.var, 
-        shape = what)) +
-    xlab("Number of particles") +
-    ylab("Wall Time (seconds)") +
-    labs(shape = ""),
-ggplot(tdat %>% summarize(wall.hat = mean(wall), wall.var = sd(wall))) +
+# gridExtra::grid.arrange(
+# ggplot(tdat %>% summarize(cpu.hat = mean(cpu), cpu.var = sd(cpu))) +
+#     geom_pointrange(aes(n_particles, cpu.hat,
+#         ymin = cpu.hat - cpu.var, ymax = cpu.hat + cpu.var, 
+#         shape = what)) +
+#     theme(legend.position = "none") +
+#     xlab("Number of particles") +
+#     ylab("Wall Time (seconds)") +
+#     labs(shape = ""),
+# ggplot(tdat %>% summarize(wall.hat = mean(wall), wall.var = sd(wall))) +
+#     geom_pointrange(aes(n_particles, wall.hat,
+#         ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
+#         shape = what)) +
+#     xlab("Number of particles") +
+#     ylab("CPU Time (seconds)") +
+#     labs(shape = ""),
+#     nrow = 1, widths = c(3, 4))
+# dev.off()
+
+ggplot(tsmry %>% group_by(what, n_particles) %>% 
+        summarize(wall.hat = mean(wall/1000), wall.var = sd(wall/1000))) +
     geom_pointrange(aes(n_particles, wall.hat,
         ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
-        shape = what)) +
+        color = what, shape = what)) +
     xlab("Number of particles") +
-    ylab("CPU Time (seconds)") +
-    labs(shape = ""),
-    nrow = 1, widths = c(3, 2))
+    ylab("Total Time (seconds)") +
+    labs(shape = "", color = "")
 dev.off()
-
-# ## CPU timings
-# ggplot(tsmry %>% group_by(what, n_particles) %>% 
-#         summarize(wall.hat = mean(wall/1000), wall.var = sd(wall/1000))) +
-#     geom_errorbar(aes(n_particles, 
-#         ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
-#         color = what, shape = what), 
-#         width = 100) +
-#     xlab("Number of particles") +
-#     ylab("CPU Time (seconds)")
-
 
 
 
