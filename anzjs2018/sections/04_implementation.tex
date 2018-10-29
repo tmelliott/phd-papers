@@ -26,39 +26,30 @@ The general structure of the \rt component is:
 \end{enumerate}
 \end{enumerate}
 
-The primary concern is speed: 
-we desire ETAs to be available as soon as possible after obtaining the data.
-To do this, we use raw pointers to read-only GTFS objects,
-and particles are only copied when resampling is required.
-This is also why we chose to use protobuf as the output format,
-since this is fast to write and distribute.
-Steps 2b--e are performed in parallel, 
-which in our test environment of a virtual machine with 8~cores, 
-significantly speeds up computation.
+
+During the development of the application,
+we were primarly concerned with ensuring each component of the program
+is as efficient as possible,
+allowing ETAs to be generated and distributed fast enough---our initial goal was 30~seconds.
+Using \verb|C++| provides enough control over memory management
+to ensure the program runs fast enough in \rt 
+while still implementing the models.
+We could also use OpenMP for parallelisation,
+allowing us to process multiple vehicles simultaneously
+depending on the number of cores available.
 
 
-As far as results, we have two categories:
-implementation and faesibility,
-and model performance;
-we do not have any complex arrival time estimation method,
-so no results for that are shown here.
-
-
-The simulations we discuss here use a subset of real data from 8~October, 2018.
-This allows us to run the model with different parameters over the same data.
-The parameters varied were the number of particles and system noise $\sigma^2$.
-The primary goal is to reduce the rate of degeneration and ``losing'' the bus 
-(i.e., no particles are near the observed location),
-and reducing the variance of parameter estimates; here we use vehicle speed as the example.
-
-
-The one parameter we can determine from the data is GPS error, $\epsilon^2$,
-by looking at the distance between observations and the shape.
-Figure~\ref{fig:gps_dist} shows the distribution of distance between the vehicle
-observation and the \emph{nearest point on the path}.
-Due to the way the observations are reported, 
-many observations will be ``exactly'' on the route at a bus stop,
-and we need to ignore these.
+The particle filter requires thousands of particles per vehicle,
+so it is necessary to explore the performance of the application
+with varying number of particles.
+It is also necessary to assess the performance of the particle filter,
+and compare values for the fixed model parameters.
+To do so, we implemented a simulated \rt environment
+in which we could analyse the same subset of real vehicle data from 8~October, 2018
+using a range of settings.
+These simulations were carried out of a Virtual Machine 
+with 8~cores and 32~Gb of memory, 
+running Ubuntu~16.04 and using R~3.4.1.
 
 \begin{figure}[tb]
     \centering
@@ -77,10 +68,12 @@ our primary concert was the computational faesibility of a particle filter.
 For each iteration, 
 the timings of the individual components in 2a--f above are recorded.
 Since the number of vehicles traveling at any given time changes throughout the day,
-we used the average timings from 13:45--14:00 to compare.
+we used the average timings over a 15~minute window to compare.
 
 
 Figure~\ref{fig:timings} shows the timing results for varying number of particles.
+As expected, 
+
 Nothing too exciting going on here, 
 except that writing ETAs takes up the largest chunk of time,
 as this involves calculating quantiles which require the estimated ETAs to be sorted,
@@ -106,6 +99,23 @@ and all run on a single core to avoid mutex locks.
 
 \subsection{Model performance}
 \label{sec:model_perf}
+
+
+The parameters varied were the number of particles,
+GPS error $\epsilon$, and system noise $\sigma^2$.
+The primary goal is to reduce the rate of degeneration and ``losing'' the bus 
+(i.e., no particles are near the observed location),
+and reducing the variance of parameter estimates; here we use vehicle speed as the example.
+
+
+The one parameter we can determine from the data is GPS error, $\epsilon^2$,
+by looking at the distance between observations and the shape.
+Figure~\ref{fig:gps_dist} shows the distribution of distance between the vehicle
+observation and the \emph{nearest point on the path}.
+Due to the way the observations are reported, 
+many observations will be ``exactly'' on the route at a bus stop,
+and we need to ignore these.
+
 
 To check the model results, 
 we need to realise that we are not trying to accurately predict
