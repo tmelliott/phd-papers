@@ -44,13 +44,22 @@ tdat <- bind_rows(times, ttot) %>% filter(what %in% lvls) %>%
 
 ## Wall timings
 pdf('figures/04_model_results_timing.pdf', width = 6, height = 3)
+gridExtra::grid.arrange(
 ggplot(tdat %>% summarize(cpu.hat = mean(cpu), cpu.var = sd(cpu))) +
     geom_pointrange(aes(n_particles, cpu.hat,
         ymin = cpu.hat - cpu.var, ymax = cpu.hat + cpu.var, 
         shape = what)) +
     xlab("Number of particles") +
     ylab("Wall Time (seconds)") +
-    labs(shape = "")
+    labs(shape = ""),
+ggplot(tdat %>% summarize(wall.hat = mean(wall), wall.var = sd(wall))) +
+    geom_pointrange(aes(n_particles, wall.hat,
+        ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
+        shape = what)) +
+    xlab("Number of particles") +
+    ylab("CPU Time (seconds)") +
+    labs(shape = ""),
+    nrow = 1, widths = c(3, 2))
 dev.off()
 
 # ## CPU timings
