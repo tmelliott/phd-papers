@@ -72,25 +72,23 @@ we used the average timings over a 15~minute window to compare.
 
 
 Figure~\ref{fig:timings} shows the timing results for varying number of particles.
-As expected, 
-
-Nothing too exciting going on here, 
-except that writing ETAs takes up the largest chunk of time,
-as this involves calculating quantiles which require the estimated ETAs to be sorted,
-which is computationally demanding. 
-The vehicle update takes the second longest time,
-and involves copying particles during the update resampling step.
-Finally, predicting the ETAs is pretty quick.
-The remaining parts of the application take negligible time,
-and all run on a single core to avoid mutex locks.
-
+We see that there is a very slight quadratic trend to run times,
+as several steps are not of complexity $O(N)$,
+the main one being the estimation of ETA quantiles.
+While not discussed in this paper,
+the application generates ETAs for each particle
+and calculates ETA quantiles for each vehicle to demonstrate the computational faesibility.
+This step requires sorting a vector, which is $O(N\log(N))$.
+Clearly, our initial target of 30~seconds is obtainable given the number of particles
+is not too large, and there are enough cores.
 
 
 \begin{figure}[tb]
     \centering
     \includegraphics[width=0.7\textwidth]{figures/04_model_results_timing.pdf}
     \caption{The timings for various parts of the application, and overall. %
-        The trend is approximately linear with the number of particles.}
+        The trend is slightly non-linear due to the complexity of the ETA generation step, %
+        which requires sorting of the particle ETAs to obtain quantile estimates.}
     \label{fig:timings}
 \end{figure}
 
