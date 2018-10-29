@@ -54,7 +54,7 @@ ggplot(tdat %>% summarize(cpu.hat = mean(cpu), cpu.var = sd(cpu))) +
     labs(shape = ""),
 ggplot(tdat %>% summarize(wall.hat = mean(wall), wall.var = sd(wall))) +
     geom_pointrange(aes(n_particles, wall.hat,
-        ymin = wall.hat - cpu.var, ymax = wall.hat + wall.var, 
+        ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
         shape = what)) +
     xlab("Number of particles") +
     ylab("CPU Time (seconds)") +
