@@ -6,20 +6,19 @@ of a particle filter as a \rt estimation method for transit vehicle states,
 and the use of estimated states to determine traffic conditions
 throughout the network.
 This allows vehicles to inform others---irrespective of route---of 
-how long it will take to reach future stops.
+current \rt traffic conditions,
+and provide a means of obtaining more reliable ETAs.
 
 
-Not only is the particle filter a viable choice in terms of speed,
-it has shown it can handle most situations without losing the vehicle,
-with the exception of when the vehicle is not traveling along
-the specified route.
-Hopefully with future development,
-the stopping behaviour can be more accurately modeled,
-perhaps incorporating trip updates into the likelihood function.
+We have shown that the particle filter a viable \rt option in terms of speed,
+and while it occasionally loses the bus,
+a lot of this is attributed to invalid data (incorrect route, direction, etc).
+Future development will incorporate more accurate stopping behaviour,
+perhaps using GTFS arrival and departure times in the likelihood function.
 
 
 The network model is still in the early stages of development,
-but given that the implementation is running quickly---twice as fast as our target---%
+but given that the implementation is running well within our 30~second target,
 there is room for developing a more complex model.
 Future work will explore the use of historical data to develop informative priors
 for travel times,

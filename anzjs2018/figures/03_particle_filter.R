@@ -69,7 +69,7 @@ grid.text("h(x)", 0.5, 0.5, gp = gpar(fontface = 3, fontfamily = 'HersheySerif')
 dev.off()
 
 
-x2 <- x + runif(N, 10, 20) * 120
+x2 <- x + runif(N, c(10, 20), c(20, 25)) * 120
 
 pdf('figures/03_particle_filter_2.pdf', width = WIDTH, height = HEIGHT)
 gridExtra::grid.arrange(
@@ -103,12 +103,12 @@ x3 <- sample(x2, replace = TRUE, prob = wt)
 pdf('figures/03_particle_filter_4.pdf', width = WIDTH, height = HEIGHT)
 gridExtra::grid.arrange(
     p0 + 
-        geom_point(aes(lon, lat), data = h(x), colour = 'gray') +
+        # geom_point(aes(lon, lat), data = h(x), colour = 'gray') +
         geom_point(aes(lon, lat), data = h(x2), colour = 'gray') +
         geom_point(aes(lon, lat), data = h(x3)) +
         geom_point(aes(lon, lat), data = y, col = "orangered", pch = 4, size = 2, stroke = 1.3),
     d0 + 
-        geom_dotplot(aes(x), data = tibble(x = x), binwidth = 50, color = 'gray', fill = 'gray') +
+        # geom_dotplot(aes(x), data = tibble(x = x), binwidth = 50, color = 'gray', fill = 'gray') +
         geom_dotplot(aes(x), data = tibble(x = x2), binwidth = 50, color = 'gray', fill = 'gray') +
         geom_dotplot(aes(x), data = tibble(x = x3), binwidth = 50),
     ncol = 1)
@@ -139,7 +139,8 @@ ggplot() +
     theme(panel.grid = element_blank(), axis.text = element_blank()) +
     scale_x_continuous(position = 'top') +
     ylab("Latitude") + xlab("Longitude") +
-    geom_point(aes(lon, lat), data = h(x2), col = ifelse(1:N == 1, 'black', 'gray')) +
+    geom_point(aes(lon, lat), data = h(x2[x2 < 11500]), col = 'black') +
+    # geom_point(aes(lon, lat), data = h(x2[x2 < 11500][1]), col = 'black') +
     geom_point(aes(lon, lat), data = y, col = "orangered", pch = 4, size = 2, stroke = 1.3) +
     geom_segment(aes(lon, lat, xend = y$lon, yend = y$lat), data = h(x2)[1,], lty = 2)
 dev.off()

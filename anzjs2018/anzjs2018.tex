@@ -8,10 +8,11 @@
 \usepackage[UKenglish]{isodate}
 \usepackage{float}
 \usepackage{subcaption}
-\usepackage{listings}
-\newfloat{lstfloat}{htbp}{lop}
-\floatname{lstfloat}{Listing}
-\def\lstfloatautorefname{Listing}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+% \newfloat{lstfloat}{htbp}{lop}
+% \floatname{lstfloat}{Listing}
+% \def\lstfloatautorefname{Listing}
 
 % \doublespace
 
@@ -32,8 +33,8 @@
 
 \begin{document}
 \cleanlookdateon
-\runningheads{Short title of paper}{TOM~ELLIOTT AND THOMAS~LUMLEY}
-\title{Long name of the paper}
+\runningheads{Modeling transit vehicles in real-time}{TOM~ELLIOTT AND THOMAS~LUMLEY}
+\title{A real-time particle filter for modeling travel times of transit vehicles through a GTFS-based road network}
 \author{Tom Elliott\corrauth~and~Thomas~Lumley}
 \affiliation{University of Auckland}
 \address{
@@ -43,30 +44,40 @@
 }
 
 \begin{abstract}
-Predicting transit vehicle arrival time is a somewhat complex procress.
-Road networks are dynamic, and can change from free-flowing to highly congested
-very quickly.
-Any reliable prediction framework needs to be able to respond to these changes,
-but also to future trends, such as typical changes to traffic flow
-at peak times, based on hisorical data.
-Of course, the major constraint on any prediction framework is going to be
-computational efficiency.
-Due to the realtime nature of the problem, predictions need to be 
-available as soon as possible after observing the vehicles' positions,
-which are updated approximately every 30~seconds.
-In this paper, we describe our C++ implementation of a particle filter to estimate
-vehicle state in combination with a network state model,
-allowing us to model transit vehicle flow through the network.
-While our application here is being testing in Auckland, New Zealand,
-we hope that our methods are general enough to be applied to any
-transit network that uses GTFS.
-Preliminary results show that, with suitable hardware,
-the framework is fast enough while retaining the complexity necessary
-to incorporate as much information as necessary to predict arrival times.
+Predicting the arrival time of a transit vehicle involves not only
+knowledge of its current position and schedule adherance,
+but also information about traffic conditions along the remainder of its route.
+Road networks are dynamic, 
+and can change from free-flowing to highly congested very quickly,
+which can effect the arrival time of transit vehicles, 
+buses in particular,
+% This in turn leads to commuter frustration when they have to wait longer than
+% initially anticipated,
+so any reliable prediction framework needs to account for \rt traffic conditions.
+In this paper,
+we propose a particle filter that can be used to estimate travel times
+along roads within a transit network based solely on GTFS data.
+Due to the \rt nature of the problem and computational demands of such an approach,
+we demonstrate the faesibility of our program, 
+written in the R programming language and making extensive use of C++.
+The application provides the basis from which future work will be based,
+most notably for combining the \rt travel times with historical data and a 
+formal road network model to make reliable arrival time predictions.
+% Of course, the major constraint on any prediction framework is going to be
+% computational efficiency.
+% Due to the realtime nature of the problem, predictions need to be 
+% available as soon as possible after observing the vehicles' positions,
+% which are updated approximately every 30~seconds.
+% In this paper, we describe our C++ implementation of a particle filter to estimate
+% vehicle state in combination with a network state model,
+% allowing us to model transit vehicle flow through the network.
+Development and testing has taken place here in Auckland, New Zealand,
+although we expect our methods are general enough to be applied to any
+transit network using GTFS.
 \end{abstract}
 
-\keywords{particle filter; Kalman filter; transit modeling;
-          transit networks; statistical computing; applications; gtfs}
+\keywords{particle filter; transit modeling;
+          transit networks; applications; gtfs}
 
 \maketitle
 \input{sections/01_introduction}

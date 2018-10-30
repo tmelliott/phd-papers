@@ -1,4 +1,4 @@
-\section{Real-time implementation and preliminary results}
+\section{Real-time implementation}
 \label{sec:rt}
 
 The application consists of a
@@ -12,15 +12,16 @@ The following has been implemented in the R package
 \verb+transitr+, available on Github (\url{https://github.com/tmelliott/transitr}).
 In this section, we discuss the features of the \rt component.
 
-The general structure of the \rt component is:
+The general structure of the \rt component is shown below,
+with the bold steps being those discussed in this paper.
 \begin{enumerate}
 \item Load GTFS data from database
 \item Indefinitely repeat when new data recieved \ldots
 \begin{enumerate}
     \item Update or create new vehicle objects from new data
-    \item Run particle filter on each vehicle to estimate update state
-    \item Collect travel time information for each vehicle for any completed roads
-    \item Update road network for any completed road segments
+    \item \textbf{Run particle filter on each vehicle to update state}
+    \item \textbf{Update state of any roads for which vehicles 
+        have completed travel}
     \item Generate ETAs for vehicles uing combination of particle filter and network state
     \item Write ETAs to extended Google Protobuf binary file for distribution
 \end{enumerate}
@@ -30,20 +31,22 @@ The general structure of the \rt component is:
 During the development of the application,
 we were primarly concerned with ensuring each component of the program
 is as efficient as possible,
-allowing ETAs to be generated and distributed fast enough---our initial goal was 30~seconds.
-Using \verb|C++| provides enough control over memory management
+allowing ETAs to be generated and distributed fast enough to be faesible in real-time,
+with a target of 30~seconds or faster at peak time.
+Using C++ provides enough control over memory management
 to ensure the program runs fast enough in \rt 
 while still implementing the models.
-We could also use OpenMP for parallelisation,
-allowing us to process multiple vehicles simultaneously
-depending on the number of cores available.
+We also use OpenMP for parallelisation,
+allowing us to process multiple vehicles simultaneously,
+which are each independent so threadsafety is a non-issue.
 
 
 The particle filter requires thousands of particles per vehicle,
 so it is necessary to explore the performance of the application
 with varying number of particles.
-It is also necessary to assess the performance of the particle filter,
-and compare values for the fixed model parameters.
+We also assess the performance of the particle filter
+for a range of fixed model parameters values,
+such as system noise and GPS error.
 To do so, we implemented a simulated \rt environment
 in which we could analyse the same subset of real vehicle data from 8~October, 2018
 using a range of settings.
@@ -51,12 +54,12 @@ These simulations were carried out of a Virtual Machine
 with 8~cores and 32~Gb of memory, 
 running Ubuntu~16.04 and using R~3.4.1.
 
-\begin{figure}[tb]
-    \centering
-    % \includegraphics[width=0.7\textwidth]{figures/04_model_results_gps.pdf}
-    \caption{The distance between the observation and the nearest point on the shape.}
-    \label{fig:gps_dist}
-\end{figure}
+% \begin{figure}[tb]
+%     \centering
+%     % \includegraphics[width=0.7\textwidth]{figures/04_model_results_gps.pdf}
+%     \caption{The distance between the observation and the nearest point on the shape.}
+%     \label{fig:gps_dist}
+% \end{figure}
 
 
 
@@ -64,9 +67,9 @@ running Ubuntu~16.04 and using R~3.4.1.
 \label{sec:timings}
 
 During development of our application,
-our primary concert was the computational faesibility of a particle filter.
+our primary concern was the computational faesibility of a particle filter.
 For each iteration, 
-the timings of the individual components in 2a--f above are recorded.
+the timings of the individual components are recorded.
 Since the number of vehicles traveling at any given time changes throughout the day,
 we used the average timings over a 15~minute window to compare.
 
@@ -108,22 +111,26 @@ Another important statistic is the \emph{degeneration rate},
 or the percent of iterations where the particle filter
 is unable to find any plausible states given the observation,
 and the vehicle is reinitialised.
-Note, however, that the lower limit of this value 
-is attributed to \emph{invalid trips},
-however there is no simple way of filtering these trips.
+Note, however, that some observations are \emph{invalid trips},
+in which the vehicle is logged in to the wrong trip,
+or ``off duty'' while still transmitting for a trip.
+Some of these can be filtered for being excessively far from the route,
+but others---for example traveling the wrong direction---cannot be.
 The last statistic we compute is the variance of road segment travel times
 over time.
 For this example, we varied the number of particles $N$,
 GPS error $\epsilon$, and system noise $\sigma^2$.
 
 
-The one parameter we can determine from the data is GPS error, $\epsilon^2$,
+The one parameter we can investigate from the data is GPS error, $\epsilon^2$,
 by looking at the distance between observations and the shape.
 Figure~\ref{fig:dist_to_route} shows the distribution of distance between the vehicle
 observation and the \emph{nearest point on the path}.
-Due to the way the observations are reported, 
-many observations will be ``exactly'' on the route at a bus stop,
-which explains the spike at just above zero~meters.
+We see two peaks,
+one at about 1m, and another at 2.5m.
+The first of these is possibly an artefact of the data,
+for example automated waypoints at intersections.
+We have explored a range of GPS error values from 1 to 5~m.
 
 \begin{figure}[tb]
     \centering
@@ -159,8 +166,8 @@ It also decreases with the number of particles,
 while system noise has no apparent effect.
 
 
-Lastly is the variability of travel times and their uncertainties.
-These are shown in Figure~\ref{fig:travel_times}.
+Lastly is the uncertainty of travel time estimates,
+as shown in Figure~\ref{fig:travel_times}.
 System noise again shows no effect on the variability of travel time estimates,
 however increasing GPS error tends to increase travel time variability.
 This means that there is a trade-off between the models performance
@@ -172,7 +179,7 @@ at the cost of more variable travel time estimates.
 \begin{figure}[tb]
     \centering
     \includegraphics[width=0.9\textwidth]{figures/04_model_results_times.pdf}
-    \caption{Travel times.}
+    \caption{The within-segment posterior travel time uncertainty (standard error), subset by number of particles.}
     \label{fig:travel_times}
 \end{figure}
 

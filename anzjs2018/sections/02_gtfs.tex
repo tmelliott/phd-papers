@@ -6,7 +6,7 @@ is an API (application programming interface) specification for transit data
 detailing how it should be organised,
 making access easier for application developers.
 Developed and maintained by Google \citep{GoogleDevelopers_2006},
-who make use of it in their Google Maps Transit Directions,
+who use it in Google Maps Transit Directions,
 it is used by over 900~transit providers around the world,
 including here in Auckland, New Zealand
 (source \url{http://transitfeeds.com}).
@@ -33,48 +33,49 @@ It provides a standardised format for sharing vehicle positions and trip delays,
 and are typically accessed by developers via an API can be used in \rt applications.
 
 As mentioned in Section~\ref{sec:intro},
-there are some major issues with the current ETA generation method.
+there are some major issues with the current prediction method in Auckland.
 These are almost directly attributed to GTFS-realtime trip updates,
-which are currently the sole source of data for ETAs (in Auckland).
+which are currently the sole source of data for ETAs.
 Trip updates are reported whenever a vehicle arrives or departs a stop,
-and includes most importantly the delay between the scheduled and actual arrival times.
-This delay is then propagated on to all future stops to adjust the ETA.
+and includes the delay between the scheduled and actual arrival times,
+and is propagated to all future stops to adjust their ETAs.
 This assumes that the schedule is well calibrated and the time between scheduled arrivals
 is representative of the real-world travel time between stops. 
-Even more problematic is that, in the absense of trip updates,
-the delay defaults to zero,
-and unless the trip is manually cancelled,
-appears on-time to passengers waiting at the stop.
-If the bus is late or cancelled,
-the trip disappears from the \rt board and passengers
-are unable to distingush the two scenarios.
+In many places in Auckland, 
+traffic congestion is highly dynamic and changes from day to day,
+so even a well-calibrated schedule is an unreliable baseline.
 
 
 \subsection{Transit network construction}
 \label{sec:network_build}
 
-Arguably the most important predictor of arrival time is
-the cumulative travel time along intermediate roads.
+The primary predictor of arrival time is 
+the travel time along roads between where the bus is \emph{now},
+and the stop at which the passenger is waiting.
 In most applications, however, this vital information is unavailable,
 at least directly,
-so here we attempt to construct a transit road network of intersections
-and the roads between them, 
-and map each route to a sequence of road segments.
+so here we construct a transit road network consisting of intersections
+and the roads between them.
+By generalising to physical roads,
+we remove any route-dependency,
+which increases the quantity of data available for each road.
+Then, each route can instead be represented as a sequence of road segments,
+each with a travel time state.
 
 
-The simplest way to construct such a network is to use the stop sequence:
-routes with a common sub-sequence of stops must be traveling the same route between them,
-so by defining a road as the path between two consecutive stops 
-we can obtain travel time estimates along that road segment.
-There are several places where this doesn't quite work, for example express routes 
-and multi-stop locations where there are high numbers of routes,
-resulting in some overlap between road segments,
-it is a viable enough simplication for the purposes of this paper.
-Figure~\ref{fig:network_creation} demonstrates how several overlapping routes 
-are merged to form a road network.
+To construct the network,
+we use stops as nodes, so that
+routes with a common sub-sequence of stops will share the roads between them;
+roads are then defined as the links between stops,
+as demonstrated in Figure~\ref{fig:network_creation}.
 In section~\ref{sec:kf} we present a model for estimating vehicle travel time
 along a road segment.
-Future work will look at using physical intersections as nodes in the network to improve it.
+There are several places where this doesn't quite work, 
+for example express routes which do not service certain stops,
+and multi-stop locations,
+which results in overlapping road segments.
+Future work will look at using intersection points of the route shapes
+as nodes in the network to improve the coverage and reduce overlap.
 
 \begin{figure}[tb]
     \centering
@@ -102,28 +103,30 @@ Future work will look at using physical intersections as nodes in the network to
 \subsection{Realtime vehicle locations}
 \label{sec:realtime_data}
 
-GTFS \rt allows developers to query the current positions of vehicles
-in the transit network.
+GTFS-realtime provides the current positions of vehicles in a transit network.
 The data consists of the time $t_k$ that the observation was made,
 the GPS position of the vehicle, $\bY_k$, 
-and some other information about the trip being serviced.
-Vehicle positions are updated with a frequency of anywhere between 10~seconds and several minutes,
-so there is often a lot of uncertainty about the trajectory
-between two observations, particularly when there is one or more bus stop
-or intersection between them.
+and information about the trip being serviced.
+In Auckland, vehicle positions are updated with a frequency of anywhere between 10~seconds and several minutes,
+so there is often a lot of uncertainty about a vehicle's intermediate trajectory,
+particularly when there are one or more bus stops along the way.
 It is also possible for a bus to remain stationary,
-so the possible vehicle positions rapidly increases with the time between observations.
+for example due to heavy congestion,
+so the number of possible trajectories rapidly increases with 
+the time between observations.
 
 
-Another complication with the Auckland Transport realtime feed is that
-the buses are programmed to report their location when arriving at
-bus stops and some major intersections.
-Often these updates are preemptive 
+One important consideration regarding the Auckland Transport's \rt implementation is that
+buses are programmed to report their location when arriving at or departing from
+bus stops, as well as some major intersections.
+To further complicate this,
+these positions can be preemtive,
 (i.e., the bus is almost there, but not quite),
-and subsequent observations place the bus \emph{behind} the stop or intersection
-(e.g., in a queue of traffic at traffic lights).
+so consecutive observations can show a bus traveling backwards.
 To handle this, we compute the approximate distance traveled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
 if this has decreased, the current state is rejected and the vehicle reverted
-to its previous state.
+to its previous state become continuing.
+This way, we avoid degeneration of the particle fitler (Section~\ref{sec:model_perf})
+at the cost of losing one observation that is most likely invalid anyway.
 
