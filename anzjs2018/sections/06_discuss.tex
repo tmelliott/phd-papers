@@ -1,29 +1,56 @@
 \section{Discussion and Future Work}
 \label{sec:discussion}
 
-The main goal of this work was to explore the faesibility
-of a particle filter as a \rt estimation method for transit vehicle states,
-and the use of estimated states to determine traffic conditions
-throughout the network.
-This allows vehicles to inform others---irrespective of route---of 
-current \rt traffic conditions,
-and provide a means of obtaining more reliable ETAs.
+In this paper we have described an approach to transit vehicle modeling
+that enables the \rt estimation of road state from vehicle position data,
+which will in future be used to make what will hopefully be more reliable 
+arrival time predictions.
+The vehicle model, implemented using a particle filter,
+allows complex bus behaviours to be modeled,
+with future work planned to explore the other parameters---dwell time and stopping probabilities---%
+as well as to extend the model to also account for intersections.
+The travel times estimated from the particle filter then allow us to model \rt road state.
 
 
-We have shown that the particle filter a viable \rt option in terms of speed,
-and while it occasionally loses the bus,
-a lot of this is attributed to invalid data (incorrect route, direction, etc).
-Future development will incorporate more accurate stopping behaviour,
-perhaps using GTFS arrival and departure times in the likelihood function.
+The network model presented here is of the simplest nature,
+but provides the foundation for future work which will involve
+deveoping a formal model that combines \rt information with
+historical data, allowing predictions of future road state to be more accurate,
+for example incorporating peak time congestion forecasts.
+This in turn provides the basis for an arrival time prediction model,
+which will be a combination of vehicle state and road state forecasts.
 
 
-The network model is still in the early stages of development,
-but given that the implementation is running well within our 30~second target,
-there is room for developing a more complex model.
-Future work will explore the use of historical data to develop informative priors
-for travel times,
-which will provide a useful fallback in the case of no data,
-or for making more accurate long-term predictions.
-Once such a model has been developed, we plan to explore prediction estimates,
-particuarly comparing point and intervals as a means of communicating 
-uncertainty to commuters.
+The primary purpose of this paper was to present our approach and 
+explore and demonstrate tis faesibility as a \rt option for RTI in transit systems.
+We have been able to construct an application that runs in \rt and capable
+of producing estimates within 30~seconds---although this can be reduced 
+by using fewer particles or, if necessary, increasing the number of cores.
+
+
+% The main goal of this work was to explore the faesibility
+% of a particle filter as a \rt estimation method for transit vehicle states,
+% and the use of estimated states to determine traffic conditions
+% throughout the network.
+% This allows vehicles to inform others---irrespective of route---of 
+% current \rt traffic conditions,
+% and provide a means of obtaining more reliable ETAs.
+
+
+% We have shown that the particle filter a viable \rt option in terms of speed,
+% and while it occasionally loses the bus,
+% a lot of this is attributed to invalid data (incorrect route, direction, etc).
+% Future development will incorporate more accurate stopping behaviour,
+% perhaps using GTFS arrival and departure times in the likelihood function.
+
+
+% The network model is still in the early stages of development,
+% but given that the implementation is running well within our 30~second target,
+% there is room for developing a more complex model.
+% Future work will explore the use of historical data to develop informative priors
+% for travel times,
+% which will provide a useful fallback in the case of no data,
+% or for making more accurate long-term predictions.
+% Once such a model has been developed, we plan to explore prediction estimates,
+% particuarly comparing point and intervals as a means of communicating 
+% uncertainty to commuters.

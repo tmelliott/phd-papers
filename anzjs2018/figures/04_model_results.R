@@ -168,7 +168,56 @@ if (file.exists("nwtimes.rda")) {
     save(nwtimes, file = "nwtimes.rda")
 }
 
-segids <- table(nwtimes$segment_id) %>% sort %>% tail(100) %>% names
+segids <- table(nwtimes$segment_id) %>% sort %>% tail(50) %>% names
+
+## plot just one segment
+# sdata <- nwtimes %>% filter(segment_id %in% segids) %>%
+#     group_by(n_particles, gps_error, system_noise) %>%
+#     do((.) %>% filter(timestamp > min((.)$timestamp))) %>%
+#     ungroup %>% group_by(segment_id, timestamp) %>% 
+#     do((.) %>% mutate(overall.mean = mean(mean))) %>% 
+#     ungroup %>% group_by(n_particles, gps_error, system_noise, segment_id) %>%
+#     summarize(meansqr = mean(((mean - overall.mean) / var)^2)) %>%
+#     ungroup %>% group_by(n_particles, gps_error, system_noise) %>%
+#     summarize(med.sqr = median(meansqr, na.rm = TRUE),
+#         low.sqr = quantile(meansqr, 0.05, na.rm = TRUE),
+#         high.sqr = quantile(meansqr, 0.75, na.rm = TRUE))
+
+# ggplot(sdata) +
+#     geom_pointrange(aes(as.factor(gps_error), med.sqr, ymin = low.sqr, ymax = high.sqr)) +
+#     facet_grid(n_particles~system_noise, scales = "free_y")
+
+# ## old
+# ggplot(sdata) + 
+#     geom_path(aes(timestamp, mean, colour = as.factor(n_particles))) +
+#     geom_linerange(aes(timestamp, ymin = mean - var, ymax = mean + var, colour = as.factor(n_particles))) +
+#     facet_grid(gps_error ~ system_noise)
+
+# ggplot(sdata) + 
+#     geom_path(aes(timestamp, mean, colour = as.factor(gps_error))) +
+#     geom_linerange(aes(timestamp, ymin = mean - 2*var, ymax = mean + 2*var, colour = as.factor(gps_error))) +
+#     facet_grid(n_particles ~ system_noise)
+
+# ggplot(sdata) + 
+#     geom_path(aes(timestamp, mean, colour = as.factor(system_noise))) +
+#     geom_linerange(aes(timestamp, ymin = mean - 2*var, ymax = mean + 2*var, colour = as.factor(system_noise))) +
+#     facet_grid(n_particles ~ gps_error)
+
+# ## "how many SDs away from overall mean"
+# ggplot(sdata) + 
+#     geom_path(aes(timestamp, (mean - overall.mean) / var, colour = as.factor(n_particles))) +
+#     facet_grid(gps_error ~ system_noise)
+
+# ggplot(sdata) + 
+#     geom_path(aes(timestamp, (mean - overall.mean) / var, colour = as.factor(gps_error))) +
+#     facet_grid(n_particles ~ system_noise)
+
+# ggplot(sdata) + 
+#     geom_path(aes(timestamp, (mean - overall.mean) / var, colour = as.factor(system_noise))) +
+#     facet_grid(n_particles ~ gps_error)
+
+
+
 
 nwtimes.smry1 <- nwtimes %>% filter(segment_id %in% segids) %>% 
     group_by(n_particles, gps_error, system_noise, segment_id) %>%
