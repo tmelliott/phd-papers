@@ -168,24 +168,30 @@ if (file.exists("nwtimes.rda")) {
     save(nwtimes, file = "nwtimes.rda")
 }
 
-segids <- table(nwtimes$segment_id) %>% sort %>% tail(50) %>% names
+segids <- table(nwtimes$segment_id) %>% sort %>% tail(10) %>% names
 
 ## plot just one segment
-# sdata <- nwtimes %>% filter(segment_id %in% segids) %>%
-#     group_by(n_particles, gps_error, system_noise) %>%
-#     do((.) %>% filter(timestamp > min((.)$timestamp))) %>%
-#     ungroup %>% group_by(segment_id, timestamp) %>% 
-#     do((.) %>% mutate(overall.mean = mean(mean))) %>% 
-#     ungroup %>% group_by(n_particles, gps_error, system_noise, segment_id) %>%
-#     summarize(meansqr = mean(((mean - overall.mean) / var)^2)) %>%
-#     ungroup %>% group_by(n_particles, gps_error, system_noise) %>%
-#     summarize(med.sqr = median(meansqr, na.rm = TRUE),
-#         low.sqr = quantile(meansqr, 0.05, na.rm = TRUE),
-#         high.sqr = quantile(meansqr, 0.75, na.rm = TRUE))
+sdata <- nwtimes %>% #filter(segment_id %in% segids) %>%
+    group_by(n_particles, gps_error, system_noise) %>%
+    do((.) %>% filter(timestamp > min((.)$timestamp))) %>%
+    ungroup %>% group_by(segment_id) %>% 
+    do((.) %>% mutate(tt.sd = sd(mean, na.rm = TRUE))) %>% 
+    ungroup %>% group_by(n_particles, gps_error, system_noise, segment_id) %>%
+    summarize(varp = sd(mean, na.rm = TRUE) / first(tt.sd)) %>%
+    ungroup %>% group_by(n_particles, gps_error, system_noise) %>%
+    summarize(varp.mean = mean(varp, na.rm = TRUE), varp.sd = sd(varp, na.rm = TRUE) / sqrt(n()))
 
-# ggplot(sdata) +
-#     geom_pointrange(aes(as.factor(gps_error), med.sqr, ymin = low.sqr, ymax = high.sqr)) +
-#     facet_grid(n_particles~system_noise, scales = "free_y")
+pdf('figures/04_model_results_times.pdf', width = 10, height = 2)
+ggplot(sdata) +
+    geom_pointrange(aes(as.numeric(as.factor(gps_error)) + as.numeric(as.factor(system_noise)) / 10 - 0.3, varp.mean, 
+        ymin = varp.mean - 1.96*varp.sd, ymax = varp.mean + 1.96*varp.sd,
+        shape = as.factor(system_noise))) +
+    facet_grid(~n_particles) +
+    scale_x_continuous(breaks = 1:4, labels = levels(as.factor(sdata$gps_error))) +
+    xlab("GPS Error (m)") +
+    ylab("Relative variance of travel times") +
+    labs(shape = "System Noise")
+dev.off()
 
 # ## old
 # ggplot(sdata) + 
@@ -219,13 +225,13 @@ segids <- table(nwtimes$segment_id) %>% sort %>% tail(50) %>% names
 
 
 
-nwtimes.smry1 <- nwtimes %>% filter(segment_id %in% segids) %>% 
-    group_by(n_particles, gps_error, system_noise, segment_id) %>%
-    summarize(mean.tt = mean(mean, na.rm = TRUE), var.tt = sd(mean, na.rm = TRUE),
-        sd.time = sd(var, na.rm = TRUE), mean.var = mean(var, na.rm = TRUE)) %>% ungroup
+# nwtimes.smry1 <- nwtimes %>% filter(segment_id %in% segids) %>% 
+#     group_by(n_particles, gps_error, system_noise, segment_id) %>%
+#     summarize(mean.tt = mean(mean, na.rm = TRUE), var.tt = sd(mean, na.rm = TRUE),
+#         sd.time = sd(var, na.rm = TRUE), mean.var = mean(var, na.rm = TRUE)) %>% ungroup
 
-nwtimes.smry <- nwtimes.smry1 %>% group_by(n_particles, gps_error, system_noise) %>%
-    summarize(mean = mean(sd.time, na.rm = TRUE), sd = mean(mean.var, na.rm = TRUE/mean.tt)) %>% ungroup()
+# nwtimes.smry <- nwtimes.smry1 %>% group_by(n_particles, gps_error, system_noise) %>%
+#     summarize(mean = mean(sd.time, na.rm = TRUE), sd = mean(mean.var, na.rm = TRUE/mean.tt)) %>% ungroup()
 
 # smry2 <- 
 #     nwtimes %>% filter(segment_id %in% segids) %>%
@@ -243,13 +249,13 @@ nwtimes.smry <- nwtimes.smry1 %>% group_by(n_particles, gps_error, system_noise)
 #     geom_point(aes(as.factor(system_noise), log(sd), color = as.factor(n_particles))) +
 #     facet_grid(~gps_error)
 
-ggplot(nwtimes.smry1) +
-    geom_point(aes(mean.tt, log(var.tt/sqrt(n_particles)),
-        shape = as.factor(system_noise))) +
-    facet_grid(n_particles ~ gps_error) +
-    xlab("Mean travel time (seconds)") +
-    ylab("Travel time uncertainty") +
-    labs(color = "GPS Error (m)", shape = "System noise")
+# ggplot(nwtimes.smry1) +
+#     geom_point(aes(mean.tt, log(var.tt/sqrt(n_particles)),
+#         shape = as.factor(system_noise))) +
+#     facet_grid(n_particles ~ gps_error) +
+#     xlab("Mean travel time (seconds)") +
+#     ylab("Travel time uncertainty") +
+#     labs(color = "GPS Error (m)", shape = "System noise")
 
 pdf('figures/04_model_results_times.pdf', width = 10, height = 2)
 ggplot(nwtimes.smry) +
