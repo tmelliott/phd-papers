@@ -14,7 +14,7 @@
 % \floatname{lstfloat}{Listing}
 % \def\lstfloatautorefname{Listing}
 
-% \doublespace
+\doublespace
 
 \input{../glossary.tex}
 
@@ -52,34 +52,23 @@
 \begin{abstract}
 Predicting the arrival time of a transit vehicle involves not only
 knowledge of its current position and schedule adherance,
-but also information about traffic conditions along the remainder of its route.
+but also of traffic conditions along the remainder of the route.
 Road networks are dynamic, 
 and can change from free-flowing to highly congested very quickly,
-which can effect the arrival time of transit vehicles, 
-buses in particular,
-% This in turn leads to commuter frustration when they have to wait longer than
-% initially anticipated,
-so any reliable prediction framework needs to account for \rt traffic conditions.
-In this paper,
-we propose a particle filter that can be used to estimate travel times
-along roads within a transit network based solely on GTFS data.
-Due to the \rt nature of the problem and computational demands of such an approach,
-we demonstrate the faesibility of our program, 
-written in the R programming language and making extensive use of C++.
-The application provides the basis from which future work will be based,
-most notably for combining the \rt travel times with historical data and a 
-formal road network model to make reliable arrival time predictions.
-% Of course, the major constraint on any prediction framework is going to be
-% computational efficiency.
-% Due to the realtime nature of the problem, predictions need to be 
-% available as soon as possible after observing the vehicles' positions,
-% which are updated approximately every 30~seconds.
-% In this paper, we describe our C++ implementation of a particle filter to estimate
-% vehicle state in combination with a network state model,
-% allowing us to model transit vehicle flow through the network.
-Development and testing has taken place here in Auckland, New Zealand,
-although we expect our methods are general enough to be applied to any
-transit network using GTFS.
+which impacts the arrival time of transit vehicles,
+particularly buses which often share the road with other vehicles,
+so reliable predictions need to account for \rt and future traffic conditions.
+The first step in this process is to construct a framework with which road state
+(traffic conditions) can be estimated using \rt transit vehicle position data.
+We propose a framework which implements a vehicle model using a particle filter
+to estimate travel times along roads,
+used by a second model to estimate \rt traffic conditions which can
+later be used for arrival time prediction.
+We demonstrate the \rt faesibility of such an approach in \rt,
+and detail our implementation in R and C++.
+Development and testing took place in Auckland, New Zealand,
+with future work planned to incorporate historical data into the network model
+to improve the reliability of ETAs.
 \end{abstract}
 
 \keywords{particle filter; transit modeling;

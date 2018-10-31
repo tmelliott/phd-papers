@@ -41,9 +41,9 @@ and includes the delay between the scheduled and actual arrival times,
 and is propagated to all future stops to adjust their ETAs.
 This assumes that the schedule is well calibrated and the time between scheduled arrivals
 is representative of the real-world travel time between stops. 
-In many places in Auckland, 
-traffic congestion is highly dynamic and changes from day to day,
-so even a well-calibrated schedule is an unreliable baseline.
+Therefore, an alternative estimation approach using \rt travel times 
+between stops is more adequate.
+
 
 
 \subsection{Transit network construction}
@@ -59,23 +59,24 @@ and the roads between them.
 By generalising to physical roads,
 we remove any route-dependency,
 which increases the quantity of data available for each road.
-Then, each route can instead be represented as a sequence of road segments,
-each with a travel time state.
+Each route is then represeted as a sequence of road segments,
+each with an associated travel time.
 
 
-To construct the network,
-we use stops as nodes, so that
-routes with a common sub-sequence of stops will share the roads between them;
-roads are then defined as the links between stops,
-as demonstrated in Figure~\ref{fig:network_creation}.
-In section~\ref{sec:kf} we present a model for estimating vehicle travel time
-along a road segment.
-There are several places where this doesn't quite work, 
-for example express routes which do not service certain stops,
-and multi-stop locations,
-which results in overlapping road segments.
-Future work will look at using intersection points of the route shapes
-as nodes in the network to improve the coverage and reduce overlap.
+The transit network is constructed by splitting each route
+into spatially identifiable segments,
+each representative of a physical road.
+The simplest way to do this is to use bus stops as nodes in the network
+(Figure~\ref{fig:network_creation_1}),
+and connecting roads as edges.
+In this way, routes that serice the same subsequence of stops
+will all contribute to congestion information for the connecting roads,
+as shown in Figure~\ref{fig:network_creation_2}.
+There are several drawbacks to this method,
+for example routes merge at physical intersections, not bus stops,
+so some overlap will occur as shown.
+However, this is minimal, and our simplification is sufficent for the current work.
+
 
 \begin{figure}[tb]
     \centering
@@ -116,17 +117,17 @@ so the number of possible trajectories rapidly increases with
 the time between observations.
 
 
-One important consideration regarding the Auckland Transport's \rt implementation is that
+One important consideration regarding Auckland Transport's \rt implementation is that
 buses are programmed to report their location when arriving at or departing from
 bus stops, as well as some major intersections.
 To further complicate this,
-these positions can be preemtive,
+these positions can be pre-emtive,
 (i.e., the bus is almost there, but not quite),
 so consecutive observations can show a bus traveling backwards.
 To handle this, we compute the approximate distance traveled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
 if this has decreased, the current state is rejected and the vehicle reverted
-to its previous state become continuing.
+to its previous state before continuing.
 This way, we avoid degeneration of the particle fitler (Section~\ref{sec:model_perf})
 at the cost of losing one observation that is most likely invalid anyway.
 
