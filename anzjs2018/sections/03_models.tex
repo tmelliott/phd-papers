@@ -74,48 +74,68 @@ and its timings.
 
 
 
-\begin{figure}[tb]
+\begin{figure}[p]
     \centering
-    \begin{subfigure}[t]{0.48\textwidth}
+    \begin{subfigure}[t]{0.9\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/03_particle_filter_1.pdf}
-        \caption{The vehicle state represented by a sample of discrete points is related to the observable state (GPS position) through the transition function $h$.}
+        \includegraphics[width=0.7\textwidth]{figures/03_particle_filter_1.pdf}
+        \caption{
+            Vehicle state is mapped to observation space by the
+            measurement function $h$.   
+        }
+        % The vehicle state represented by a sample of discrete points is related to the observable state (GPS position) through the transition function $h$.}
         \label{fig:pf_state_prev}
-    \end{subfigure}\;\;
-    \begin{subfigure}[t]{0.48\textwidth}
+    \end{subfigure}\\
+    \begin{subfigure}[t]{0.9\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/03_particle_filter_2.pdf}
-        \caption{The transition function $f$ models the behaviour of each particle,
-            including changes in acceleration and stopping behaviour at bus stops,
-            which can result in multiple modes.}
+        \includegraphics[width=0.7\textwidth]{figures/03_particle_filter_2.pdf}
+        \caption{
+            The transition function $f$ predicts the future state 
+            of each particle.
+        }
+            % The transition function $f$ models the behaviour of each particle,
+            % including changes in acceleration and stopping behaviour at bus stops,
+            % which can result in multiple modes.}
         \label{fig:pf_state_predict}
     \end{subfigure}\\
-    \begin{subfigure}[t]{0.48\textwidth}
+    % \begin{subfigure}[t]{0.48\textwidth}
+    %     \centering
+    %     \includegraphics[width=\textwidth]{figures/03_particle_filter_6.pdf}
+    %     \caption{Each particle's distance from the true observation (red cross) 
+    %         is calculated using
+    %         the geographic distance between two coordinates, which can then be used
+    %         to calculate it's weight.}
+    %     \label{fig:pf_state_update}
+    % \end{subfigure}\;\;
+    \begin{subfigure}[t]{0.9\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/03_particle_filter_6.pdf}
-        \caption{Each particle's distance from the true observation (red cross) 
-            is calculated using
-            the geographic distance between two coordinates, which can then be used
-            to calculate it's weight.}
-        \label{fig:pf_state_update}
-    \end{subfigure}\;\;
-    \begin{subfigure}[t]{0.48\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{figures/03_particle_filter_4.pdf}
-        \caption{Resampling occurs using likelihood weights that use the distance
-            between the particle's location and the vehicles reported location (red cross),
-            resulting in the updated state.}
+        \includegraphics[width=0.7\textwidth]{figures/03_particle_filter_4.pdf}
+        \caption{
+            The state is updated by weighted resampling based on distance
+            of particle to observation.
+        }
+        % Resampling occurs using likelihood weights that use the distance
+        %     between the particle's location and the vehicles reported location (red cross),
+        %     resulting in the updated state.}
         \label{fig:pf_state_predict2}
     \end{subfigure}
-    \caption{The vehicles state is estimated using a set of discrete points, or particles,
-        each of which is independently mutated to make predictions of the future state.
-        Multimodality is easily handled, as demonstrated here,
-        without degeneration of the filter.}
+    \caption{
+        The particle filter approximates vehicle state using a set of 
+        discrete points (a), which are each mutated indepently (b)
+        to predict the next state.
+        The measurement function $h$ allows state particle state
+        to be mapped to a GPS coordinate (a),
+        which can be compared to the observed location (c)
+        to calculate each particles likelihood and perform resampling.
+    }
+        % The vehicles state is estimated using a set of discrete points, or particles,
+        % each of which is independently mutated to make predictions of the future state.
+        % Multimodality is easily handled, as demonstrated here,
+        % without degeneration of the filter.}
     \label{fig:pf_state}
 \end{figure}
 
-
-
+\afterpage{\clearpage}
 
 In a particle filter, the posterior distribution of the state at time $t_{k-1}$
 is represented by a set of discrete points, or particles, (Figure~\ref{fig:pf_state_prev}),

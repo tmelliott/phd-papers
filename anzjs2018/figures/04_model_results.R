@@ -20,6 +20,7 @@ times <- do.call(bind_rows, lapply(list.files("../../transitr/simulations", patt
 date <- format(times$timestamp[1], "%Y-%m-%d")
 trange <- as.POSIXct(paste(date, c("13:30", "14:00")))
 
+olvls <- c("all", "predicting ETAs", "updating vehicle states", "writing ETAs to protobuf feed")
 ttot <- times %>% group_by(sim, iteration) %>%
     summarize(cpu = sum(cpu), wall = sum(wall), timestamp = first(timestamp), nvehicles = first(nvehicles),
         n_particles = first(n_particles), gps_error = first(gps_error), system_noise = first(system_noise)) %>%
@@ -30,15 +31,16 @@ tsmry <- times %>% bind_rows(ttot) %>%
     summarize(cpu = mean(cpu), wall = mean(wall),
         n_particles = first(n_particles), gps_error = first(gps_error), system_noise = first(system_noise)) %>%
     ungroup() %>%
-    filter(what %in% c("all", "predicting ETAs", "updating vehicle states", "writing ETAs to protobuf feed"))
+    filter(what %in% olvls)
 
 # ggplot(tsmry) +
 #     geom_point(aes(n_particles, cpu, color = what)) +
 #     ylab("Wall time (seconds)")
 
-lvls <- c("updating vehicle states", "predicting ETAs", "writing ETAs to protobuf feed", "all")
-tdat <- bind_rows(times, ttot) %>% filter(what %in% lvls) %>%
-    mutate(what = factor(what, levels = lvls)) %>%
+ordlvls <- olvls[c(3,2,4,1)]
+lvls <- c("Updating Vehicle States", "Predict ETAs", "Write ETAs to file", "Total")
+tdat <- bind_rows(times, ttot) %>% filter(what %in% olvls) %>%
+    mutate(what = factor(what, levels = ordlvls, labels = lvls)) %>%
     group_by(what, n_particles)
 
 
@@ -64,13 +66,15 @@ pdf('figures/04_model_results_timing.pdf', width = 6, height = 3)
 # dev.off()
 
 ggplot(tsmry %>% group_by(what, n_particles) %>% 
-        summarize(wall.hat = mean(wall/1000), wall.var = sd(wall/1000))) +
+        summarize(wall.hat = mean(wall/1000), wall.var = sd(wall/1000)) %>%
+        ungroup() %>%
+        mutate(what = factor(what, levels = ordlvls, labels = lvls))) +
     geom_pointrange(aes(n_particles, wall.hat,
         ymin = wall.hat - wall.var, ymax = wall.hat + wall.var, 
-        color = what, shape = what)) +
+        shape = what)) +
     xlab("Number of particles") +
     ylab("Total Time (seconds)") +
-    labs(shape = "", color = "")
+    labs(shape = "Program component")
 dev.off()
 
 
@@ -103,7 +107,7 @@ get_sim_files <- function(sim) {
 
 res <- do.call(bind_rows, lapply(list.files("../../transitr/simulations", pattern = "sim_"), get_sim_files))
 
-ggplot(res %>% filter(dist_to_path < 5), aes(dist_to_path)) + geom_density()
+# ggplot(res %>% filter(dist_to_path < 5), aes(dist_to_path)) + geom_density()
 
 pdf('figures/04_model_results_dist.pdf', width = 6, height = 3)
 ggplot(res %>% filter(dist_to_path < 20 & dist_to_path > 0), aes(dist_to_path)) + 
@@ -113,26 +117,45 @@ dev.off()
 
 sims <- res %>% filter(dist_to_path < 20)
 
-pdf('figures/04_model_results_neff.pdf', width = 6, height = 3)
-ggplot(sims %>% filter(Neff <= n_particles & Neff > 0 & bad_sample == 0) %>% 
-    group_by(n_particles, system_noise, gps_error) %>%
-    summarize(Neff = mean(Neff))) + 
-    geom_point(aes(x = factor(system_noise), Neff / n_particles * 100, shape = factor(n_particles), colour = factor(gps_error))) +
-    labs(x = "System Noise", y = "Effective Sample Size (% of Number of Particles)",
-         shape = "Number of Particles", colour = "GPS Error (m)")
+pdf('figures/04_model_results_neff.pdf', width = 14, height = 3)
+ggplot(sims %>% group_by(n_particles, gps_error, system_noise) %>%
+        summarize(Neff.hat = mean(Neff, na.rm = TRUE), 
+                  Neff.sd = sd(Neff, na.rm = TRUE) / sqrt(n()))) +
+    geom_pointrange(aes(as.numeric(as.factor(gps_error)) + as.numeric(as.factor(n_particles)) / 10 - 0.25, 
+        100*Neff.hat / n_particles, 
+        ymin = 100*(Neff.hat - 2*Neff.sd) / n_particles, 
+        ymax = 100*(Neff.hat + 2*Neff.sd) / n_particles,
+        shape = as.factor(n_particles))) +
+    facet_grid(~system_noise) +
+    scale_x_continuous(breaks = 1:4, labels = levels(as.factor(sims$gps_error))) +
+    theme(panel.grid.major.x = element_blank()) +
+    xlab("GPS Error (m)") +
+    ylab("Effective sample size") +
+    labs(shape = "Number of particles")
 dev.off()
 
 
 
 
-pdf('figures/04_model_results_degen.pdf', width = 10, height = 5)
+
+pdf('figures/04_model_results_degen.pdf', width = 14, height = 3)
 ggplot(sims %>% group_by(n_particles, gps_error, system_noise) %>%
-        summarize(p_bad = mean(bad_sample), p_good = mean(Neff < 1000),
-            Neff = mean(Neff))) + 
-    geom_point(aes(100 * Neff / n_particles, 100*p_bad, shape = as.factor(system_noise))) +
-    facet_grid(gps_error ~ n_particles) +
-    xlab("Effective Sample Size (% of N)") + ylab("Degeneration Rate (% of Iterations)") +
-    labs(shape = "System noise")
+        summarize(p_bad = mean(bad_sample), n = n())) + 
+    geom_pointrange(aes(as.numeric(as.factor(gps_error)) + as.numeric(as.factor(n_particles)) / 10 - 0.25, 
+        100*p_bad,
+        ymin = 100 * (p_bad - 2*sqrt(p_bad * (1 - p_bad) / n)),
+        ymax = 100 * (p_bad + 2*sqrt(p_bad * (1 - p_bad) / n)),
+        shape = as.factor(n_particles))) +
+    facet_grid(~system_noise) +
+    scale_x_continuous(breaks = 1:4, labels = levels(as.factor(sims$gps_error))) +
+    theme(panel.grid.major.x = element_blank()) +
+    xlab("GPS Error (m)") +
+    ylab("Degeneration rate (% of iterations)") +
+    labs(shape = "Number of particles")
+    # geom_point(aes(100 * Neff / n_particles, 100*p_bad, shape = as.factor(system_noise))) +
+    # facet_grid(gps_error ~ n_particles) +
+    # xlab("Effective Sample Size (% of N)") + ylab("Degeneration Rate (% of Iterations)") +
+    # labs(shape = "System noise")
 # ggplot(sims %>% group_by(n_particles, gps_error, system_noise) %>%
 #         summarize(p_bad = mean(bad_sample))) + 
 #     geom_col(aes(as.factor(n_particles), y = p_bad, fill = as.factor(system_noise)), position = "dodge") +
@@ -181,13 +204,14 @@ sdata <- nwtimes %>% #filter(segment_id %in% segids) %>%
     ungroup %>% group_by(n_particles, gps_error, system_noise) %>%
     summarize(varp.mean = mean(varp, na.rm = TRUE), varp.sd = sd(varp, na.rm = TRUE) / sqrt(n()))
 
-pdf('figures/04_model_results_times.pdf', width = 10, height = 2)
+pdf('figures/04_model_results_times.pdf', width = 15, height = 3)
 ggplot(sdata) +
     geom_pointrange(aes(as.numeric(as.factor(gps_error)) + as.numeric(as.factor(system_noise)) / 10 - 0.3, varp.mean, 
-        ymin = varp.mean - 1.96*varp.sd, ymax = varp.mean + 1.96*varp.sd,
+        ymin = varp.mean - 2*varp.sd, ymax = varp.mean + 2*varp.sd,
         shape = as.factor(system_noise))) +
     facet_grid(~n_particles) +
     scale_x_continuous(breaks = 1:4, labels = levels(as.factor(sdata$gps_error))) +
+    theme(panel.grid.major.x = element_blank()) +
     xlab("GPS Error (m)") +
     ylab("Relative variance of travel times") +
     labs(shape = "System Noise")
@@ -257,15 +281,15 @@ dev.off()
 #     ylab("Travel time uncertainty") +
 #     labs(color = "GPS Error (m)", shape = "System noise")
 
-pdf('figures/04_model_results_times.pdf', width = 10, height = 2)
-ggplot(nwtimes.smry) +
-    geom_point(aes(sd, as.factor(gps_error), 
-        shape = as.factor(system_noise))) +
-    facet_grid(~n_particles,scales="free_x") +
-    ylab("GPS Error (m)") +
-    xlab("Travel time uncertainty") +
-    labs(color = "GPS Error (m)", shape = "System noise")
-dev.off()
+# pdf('figures/04_model_results_times.pdf', width = 10, height = 2)
+# ggplot(nwtimes.smry) +
+#     geom_point(aes(sd, as.factor(gps_error), 
+#         shape = as.factor(system_noise))) +
+#     facet_grid(~n_particles,scales="free_x") +
+#     ylab("GPS Error (m)") +
+#     xlab("Travel time uncertainty") +
+#     labs(color = "GPS Error (m)", shape = "System noise")
+# dev.off()
 
 # library(lme4)
 

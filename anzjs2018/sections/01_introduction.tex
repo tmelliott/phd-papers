@@ -6,6 +6,8 @@
 In public transport, \rt information (RTI), such as estimated times of arrival (ETAs),
 keeps transport users informed about their journey,
 and potentially make decisions on the best route to take.
+It has also been shown that perceived waiting time is less
+when arrival time information is available \citep{TCRP_2003b}.
 Unfortunately, here in Auckland, RTI is highly unreliable,
 and succumbs to several problems that public transport users
 are all too familiar with.
@@ -36,9 +38,8 @@ This behaviour is exaggerated when there is a large distance between stops,
 as the ETA is only updated at stops so there can be a long time between updates.
 
 
-To avoid the problems associated with the arrival time predictions
-based solely on reported delays,
-a more robus modeling and prediction framework is required.
+To avoid the problems discussed above,
+a more robust modeling and prediction framework is required.
 This should consist of a robust vehicle model to estimate the position and speed
 of transit vehicles from \rt GPS data;
 and a way to incorporate road congestion information 

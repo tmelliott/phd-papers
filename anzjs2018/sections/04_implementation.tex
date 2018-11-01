@@ -88,9 +88,20 @@ to allow finding the optimal number.
 \begin{figure}[tb]
     \centering
     \includegraphics[width=0.7\textwidth]{figures/04_model_results_timing.pdf}
-    \caption{The timings for various parts of the application, and overall. %
-        The trend is slightly non-linear due to the complexity of the ETA generation step, %
-        which requires sorting of the particle ETAs to obtain quantile estimates.}
+    \caption{
+        Application timings were recorded for each component of each
+        iteration, and averages over a 15~minute window are shown here.
+        The timings shown are \emph{wall time}, the actual time passed,
+        not CPU time which would be approximately 8~times larger 
+        (for using 8~cores).
+        Steps that only involve particle calculations are approximately
+        of complexity $O(N)$,
+        however some steps are a little more complex, 
+        so there is a slightly exponential trend.
+    }
+        % The timings for various parts of the application, and overall. %
+        % The trend is slightly non-linear due to the complexity of the ETA generation step, %
+        % which requires sorting of the particle ETAs to obtain quantile estimates.}
     \label{fig:timings}
 \end{figure}
 
@@ -101,30 +112,34 @@ to allow finding the optimal number.
 \label{sec:model_perf}
 
 
-For each simulation, 
-the model was evaluated using several statistics.
+To evaluate the performance of the model,
+the simulation was run using a range of values of GPS error, $\epsilon$,
+and system noise, $\sigma^2$.
+Figure \ref{fig:dist_to_route} shows the distribution of the distance
+between each observation and the route using a nearest point algorithm,
+so we chose to use GPS error values $\epsilon \in \{1,2,3,5\}$. 
+For the system noise we use values of $\sigma^2\in \{1e^{-4},1e^{-3},1e^{-2},0.05\}$,
+which correspond to the average vehicle speed having a variance between 0.1 and 45~meters per second
+over a period of 30~seconds.
+For each of the combination of these parameter values, along with varying $N$,
+several values were computed.
 These were effective sample size, $N_\text{eff}$ calculated using (\ref{eq:neff});
 degeneration rate, the percentage of iterations in which the vehicle was lost
 (no plausible particles);
 and the variance of segment travel time estimates.
 
 
-The GPS error parameter values were chosen by examining the distribution
-of the distance between observations and the nearest point on the route.
-This is shown in Figure~\ref{fig:dist_to_route},
-in which we see a peak at about 1m and another at 2.5m,
-so we have chosen GPS error values of $\epsilon \in \{1,2,3,5\}$.
-System error is the variation of speed per second,
-or acceleration rate,
-so our chosen values of $\sigma^2\in \{1e^{-4},1e^{-3},1e^{-2},0.05\}$ 
-correspond to a variance of 0.09, 0.9, 9, and 45 meters per second over 
-30~seconds.
-
-
 \begin{figure}[tb]
     \centering
     \includegraphics[width=0.7\textwidth]{figures/04_model_results_dist.pdf}
-    \caption{The distance between the observation and the nearest point on the shape.}
+    \caption{
+        The distance between the observation and the nearest point on the shape
+        is calculated by finding the shortest distance between point and path.
+        This gives an approximate idea of GPS error, however it should be noted
+        that many observations are made automatically at waypoints,
+        which accounts for the peak at 1m.
+        Note also that these observations have been truncated at 20m.
+    }
     \label{fig:dist_to_route}
 \end{figure}
 
@@ -144,29 +159,66 @@ but show that the model is working as expected.
 
 \begin{figure}[tb]
     \centering
+    \includegraphics[width=0.9\textwidth]{figures/04_model_results_neff.pdf}
+    \caption{
+        The effective sample size is an approximate measure of the variance
+        of the particle weights.
+        When all particles have equal weights, $N_\text{eff} = N$,
+        while if all the weight is on one particle, $N_\text{eff} = 1$. 
+        The figure is subset by system noise, which shows how $N_\text{eff}$ 
+        decreases as system noise increases,
+        while increasing GPS error (on the $x$-axis) increases $N_\text{eff}$.
+        Increasing $N$ has a negative effect on $N_\text{eff}$ but this is
+        only evident when $N_\text{eff}$ is larger.
+        The error bars show $\pm 2$SE.
+    }
+    \label{fig:neff}
+\end{figure}
+
+\begin{figure}[tb]
+    \centering
     \includegraphics[width=0.9\textwidth]{figures/04_model_results_degen.pdf}
-    \caption{The effective sample size and degeneration rate for a range of parameter 
-        values. The columns are of increasing number of particles,
-        and the rows are for increasing (downwards) GPS error.}
+    \caption{
+        The degeneration rate is the percentage of iterations where there were no
+        plausible particles, so the vehicle was ``lost'' by the model.
+        This decreases as GPS error and number of particles increase,
+        but there is no visible effect of system noise.
+        The error bars show $\pm 2$SE.
+    }
     \label{fig:degen_rate}
 \end{figure}
 
 
-The last measure of performance is the variance of segment travel times.
-This is calculated by \_\_\_.
-Figure~\ref{fig:travel_times} shows that variance increases with GPS error,
-and decreases with $N$,
-with little effect made by system noise.
-There is therefore a tradeoff between particle filter performance
-($N_\text{eff}$ and degeneration rate) and parameter estimation,
-although the true test will be calculating the prediction error
-of ETAs once the prediction model has been implemented.
+The last measure of performance is the relative variance of segment travel times.
+This is calculated by computing the average variance of travel times over all simulations,
+and then for each simulation, 
+taking the average (over road segments) of the ratio between variance for that simulations
+and variance for all simualtions.
+Figure~\ref{fig:travel_times} shows that simulations with larger GPS error
+result in a higher relative variance,
+while simulations with more particles have lower relative variance.
+There is no visible effect of system noise on travel time variation.
+
+
+The results of the simulations
+demonstrate a tradeoff between particle filter performance
+($N_\text{eff}$ and degeneration rate) and parameter estimation.
+However, until the arrival time prediction model has been completed,
+it is difficult to make decisions about the optimal values to use:
+we are unable to say whether a higher variation of travel time estimates
+is going to have a significant effect on the final ETAs,
+particularly when compared to the uncertainty of forecasting road state.
 
 
 \begin{figure}[tb]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/04_model_results_times.pdf}
-    \caption{The within-segment posterior travel time uncertainty (standard error), subset by number of particles.}
+    \includegraphics[width=\textwidth]{figures/04_model_results_times.pdf}
+    \caption{
+        The variability of travel time within a segment increases with GPS error,
+        and decreases slightly with increasing number of particles.
+        There is no visible effect of system noise on travel time variability.
+        The error bars show $\pm 2$SE.
+    }
     \label{fig:travel_times}
 \end{figure}
 

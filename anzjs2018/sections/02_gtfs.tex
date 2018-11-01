@@ -92,11 +92,20 @@ However, this is minimal, and our simplification is sufficent for the current wo
         \caption{GTFS-based road network}
         \label{fig:network_creation_2}
     \end{subfigure}
-    \caption{Construction of a route network involves combining routes at nodes %
-        (here we are using stops) which are connected by edges (roads). %
-        In (a), the three unique routes, represented by different line types, clearly %
-        overlap in several places. In (b) these have been merged, and the width of each line %
-        represents how many routes use that link.}
+    \caption{
+        Constructing a route network from the stops (dots) of three separate
+        routes (lines), as shown in (a).
+        Routes using the same subsequence of stops are assigned the same
+        road segments, so the road network shown 
+        consists of nodes (stops) and edges (roads),
+        as shown in (b), where the thickness of each lines
+        corresponds to how many routes share that road.
+    }
+    % Construction of a route network involves combining routes at nodes %
+    %     (here we are using stops) which are connected by edges (roads). %
+    %     In (a), the three unique routes, represented by different line types, clearly %
+    %     overlap in several places. In (b) these have been merged, and the width of each line %
+    %     represents how many routes use that link.}
     \label{fig:network_creation}
 \end{figure}
 
