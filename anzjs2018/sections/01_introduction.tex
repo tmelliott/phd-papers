@@ -39,12 +39,12 @@ as the ETA is only updated at stops so there can be a long time between updates.
 
 
 To avoid the problems discussed above,
-a more robust modeling and prediction framework is required.
+a more robust modelling and prediction framework is required.
 This should consist of a robust vehicle model to estimate the position and speed
 of transit vehicles from \rt GPS data;
 and a way to incorporate road congestion information 
 into the arrival time predictions.
-Several vehicle modeling approaches were explored, 
+Several vehicle modelling approaches were explored, 
 including the Kalman filter \citep{Dailey_2001,Cathey_2003},
 machine learning models \citep{Yu_2006,Chang_2010},
 and a particle filter \citep{Hans_2015}.
@@ -52,10 +52,10 @@ The last of these was chosen for several reasons
 which are discussed in Section~\ref{sec:pf}.
 
 The next step is to construct a method of estimating traffic conditions.
-This can be done by using the travel time of preceeding buses along the road
+This can be done by using the travel time of preceding buses along the road
 to predict travel times for the current bus.
 \cite{Yu_2010} obtained improved prediction accuracy by using travel times
-from preceeding buses servicing the same route.
+from preceding buses servicing the same route.
 \cite{Hans_2015} used a similar approach,
 instead referring to headway, the time between consecutive vehicles
 at a point on the route.
@@ -63,19 +63,19 @@ However, this approach only works well for high frequency routes.
 \cite{Yu_2011} showed further improvements by combining travel times 
 from several routes which converged,
 but is limited to predefined, converging routes.
-In general, however, no comprehensive network modeling approach has been proposed using
+In general, however, no comprehensive network modelling approach has been proposed using
 solely GPS position data to accounting for congestion when estimating arrival times.
 We describe a simple method of constructing a road network
 from GTFS data (section~\ref{sec:gtfs}),
-which allows all transit vehicles traveling along a road to contribute to tis state,
+which allows all transit vehicles travelling along a road to contribute to its state,
 regardless of which route they are serving.
 
 In this paper, we describe a \rt vehicle and network state
-model which uses the vehicles traveling throughout the transit road network
+model which uses the vehicles travelling throughout the transit road network
 to update congestion information in real-time.
 As the vehicle model is implemented using a particle filter,
 a computationally intensive method,
-we demonstrate its faesibility as a valid real-time option.
+we demonstrate its feasibility as a valid real-time option.
 The vehicle model provides estimates of travel times along roads,
 which can be used to update the road network's state.
 Future work is planned to use this travel time information 

@@ -18,28 +18,28 @@ The general structure of the \rt component is shown below,
 with the bold steps being those discussed in this paper.
 \begin{enumerate}
 \item Load GTFS data from database
-\item Each time new data are recieved \ldots
+\item Each time new data are received \ldots
 \begin{enumerate}
     \item Update or create new vehicle objects from the new data
     \item \textbf{Run particle filter on each vehicle to update or initialise state}
     \item \textbf{Update state of any roads for which vehicles 
         have completed travel}
-    \item Generate ETAs for vehicles uing combination of particle filter and network state
+    \item Generate ETAs for vehicles using combination of particle filter and network state
     \item Write ETAs to extended Google Protobuf binary file for distribution
 \end{enumerate}
 \end{enumerate}
 
 
 During the development of the application,
-we were primarly concerned with ensuring each component of the program
+we were primarily concerned with ensuring each component of the program
 is as efficient as possible,
-allowing ETAs to be generated and distributed fast enough to be faesible in real-time,
+allowing ETAs to be generated and distributed fast enough to be feasible in real-time,
 with a target of 30~seconds or faster at peak time.
 Using C++ provides the memory management control necessary to make the application
 viable in real-time.
-We also make use of OpenMP for parallisation,
+We also make use of OpenMP for parallelisation,
 since each vehicle is modelled independently so it is trivial to scale up without
-worrying about threadsafety.
+worrying about thread safety.
 
 
 The number of particles needed per vehicle 
@@ -62,7 +62,7 @@ running Ubuntu~16.04 and using R~3.4.1.
 
 In each iteration, 
 the timing of the various program components is recorded.
-Since the number of vehicles traveling at any given time changes throughout the day,
+Since the number of vehicles travelling at any given time changes throughout the day,
 we used the average timings over an off-peak 15~minute window.
 Figure~\ref{fig:timings} shows the average timings for 
 varying numbers of particles, $N$.
@@ -136,7 +136,7 @@ and the variance of segment travel time estimates.
         The distance between the observation and the nearest point on the shape
         is calculated by finding the shortest distance between point and path.
         This gives an approximate idea of GPS error, however it should be noted
-        that many observations are made automatically at waypoints,
+        that many observations are made automatically at way points,
         which accounts for the peak at 1m.
         Note also that these observations have been truncated at 20m.
     }
@@ -151,7 +151,7 @@ but is relatively unaffected by system noise.
 Large GPS error affects the likelihood,
 and gives more weight to particles farther from the observation
 than does a smaller GPS error.
-Conversesly, increasing system noise spreads out the particle cloud,
+Conversely, increasing system noise spreads out the particle cloud,
 so fewer particles will be near the vehicle.
 Thus, these results are not surprising, 
 but show that the model is working as expected.
@@ -193,7 +193,7 @@ The last measure of performance is the relative variance of segment travel times
 This is calculated by computing the average variance of travel times over all simulations,
 and then for each simulation, 
 taking the average (over road segments) of the ratio between variance for that simulations
-and variance for all simualtions.
+and variance for all simulations.
 Figure~\ref{fig:travel_times} shows that simulations with larger GPS error
 result in a higher relative variance,
 while simulations with more particles have lower relative variance.

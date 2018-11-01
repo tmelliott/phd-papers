@@ -1,22 +1,22 @@
 \section{Discussion and Future Work}
 \label{sec:discussion}
 
-In this paper we have described an approach to transit vehicle modeling
+In this paper we have described an approach to transit vehicle modelling
 that enables the \rt estimation of road state from vehicle position data,
 which can later be used to make arrival time predictions
 that account for \rt traffic conditions.
 The vehicle model, implemented using a particle filter,
-allows complex bus behaviours to be modeled,
+allows complex bus behaviours to be modelled,
 with future work planned to extend the model to handle physical intersections,
 such as traffic lights.
 From the particle filter,
 vehicle travel times along roads are estimated which are in turn used 
-in the modeling of the road network state.
+in the modelling of the road network state.
 
 
 The network model presented here is simple,
 but provides the foundation for future work to
-devel a formal model combining \rt travel time information with historical data, 
+develop a formal model combining \rt travel time information with historical data, 
 allowing short- and medium-term forecasts of road state,
 for example incorporating peak time congestion.
 This in turn will provide the basis for an arrival time prediction model
@@ -30,7 +30,7 @@ and many other factors.
 
 
 
-% The main goal of this work was to explore the faesibility
+% The main goal of this work was to explore the feasibility
 % of a particle filter as a \rt estimation method for transit vehicle states,
 % and the use of estimated states to determine traffic conditions
 % throughout the network.
@@ -54,5 +54,5 @@ and many other factors.
 % which will provide a useful fallback in the case of no data,
 % or for making more accurate long-term predictions.
 % Once such a model has been developed, we plan to explore prediction estimates,
-% particuarly comparing point and intervals as a means of communicating 
+% particularly comparing point and intervals as a means of communicating 
 % uncertainty to commuters.

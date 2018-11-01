@@ -21,14 +21,14 @@ The first, \emph{GTFS static}, includes information about
 \begin{itemize}
 \item \emph{stops}, a physical location where passengers can embark and disembark the vehicle;
 \item \emph{routes}, a sequence of two or more stops displayed as a single service;
-\item \emph{trips}, an instance of a route occuring at a specific time of day;
+\item \emph{trips}, an instance of a route occurring at a specific time of day;
 \item \emph{schedules}, specifying the arrival (and departure) times for each bus at each of its stops; 
 \item \emph{shapes}, the sequence of points defining a vehicle's path along a route
 \end{itemize}
 \citep{GoogleDevelopers_2006}.
 The second component is \emph{GTFS realtime},
 which is only available in a subset of the providers due to the requirement of 
-onboard GPS tracking devices and a central server.
+on board GPS tracking devices and a central server.
 It provides a standardised format for sharing vehicle positions and trip delays,
 and are typically accessed by developers via an API can be used in \rt applications.
 
@@ -59,7 +59,7 @@ and the roads between them.
 By generalising to physical roads,
 we remove any route-dependency,
 which increases the quantity of data available for each road.
-Each route is then represeted as a sequence of road segments,
+Each route is then represented as a sequence of road segments,
 each with an associated travel time.
 
 
@@ -69,13 +69,13 @@ each representative of a physical road.
 The simplest way to do this is to use bus stops as nodes in the network
 (Figure~\ref{fig:network_creation_1}),
 and connecting roads as edges.
-In this way, routes that serice the same subsequence of stops
+In this way, routes that service the same subsequence of stops
 will all contribute to congestion information for the connecting roads,
 as shown in Figure~\ref{fig:network_creation_2}.
 There are several drawbacks to this method,
 for example routes merge at physical intersections, not bus stops,
 so some overlap will occur as shown.
-However, this is minimal, and our simplification is sufficent for the current work.
+However, this is minimal, and our simplification is sufficient for the current work.
 
 
 \begin{figure}[tb]
@@ -110,7 +110,7 @@ However, this is minimal, and our simplification is sufficent for the current wo
 \end{figure}
 
 
-\subsection{Realtime vehicle locations}
+\subsection{Real-time vehicle locations}
 \label{sec:realtime_data}
 
 GTFS-realtime provides the current positions of vehicles in a transit network.
@@ -130,13 +130,13 @@ One important consideration regarding Auckland Transport's \rt implementation is
 buses are programmed to report their location when arriving at or departing from
 bus stops, as well as some major intersections.
 To further complicate this,
-these positions can be pre-emtive,
+these positions can be preemptive,
 (i.e., the bus is almost there, but not quite),
-so consecutive observations can show a bus traveling backwards.
-To handle this, we compute the approximate distance traveled, $\tilde x_k$,
+so consecutive observations can show a bus travelling backwards.
+To handle this, we compute the approximate distance travelled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
 if this has decreased, the current state is rejected and the vehicle reverted
 to its previous state before continuing.
-This way, we avoid degeneration of the particle fitler (Section~\ref{sec:model_perf})
+This way, we avoid degeneration of the particle filter (Section~\ref{sec:model_perf})
 at the cost of losing one observation that is most likely invalid anyway.
 

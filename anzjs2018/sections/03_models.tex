@@ -35,7 +35,7 @@ a variant of the Kalman filter \citep{Anderson_2012}.
 \label{sec:pf}
 
 The underlying vehicle state at time $t_k$ consists of
-the vehicle's distance traveled $x$ in meters along the route and
+the vehicle's distance travelled $x$ in meters along the route and
 its speed $\dot x$ in meters per second.
 Additionally, travel times along road segments along the route, 
 $\bz = (z_1,\ldots,z_L)^\top$, in seconds,
@@ -60,7 +60,7 @@ giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle,
 
 We use a particle filter to estimate $\bX_k$,
 due to do its high flexibility and use in recent 
-transit vehicle modeling applications \citep{Hans_2015}.
+transit vehicle modelling applications \citep{Hans_2015}.
 The primary advantage of a particle filter is its handling of multimodality,
 as demonstrated in figure~\ref{fig:pf_state_predict},
 which is a common feature of the proposal distribution, particularly around bus stops.
@@ -121,7 +121,7 @@ and its timings.
     \end{subfigure}
     \caption{
         The particle filter approximates vehicle state using a set of 
-        discrete points (a), which are each mutated indepently (b)
+        discrete points (a), which are each mutated independently (b)
         to predict the next state.
         The measurement function $h$ allows state particle state
         to be mapped to a GPS coordinate (a),
@@ -153,7 +153,7 @@ using parameter vector $\psi$ containing all of the necessary parameters
 for the model (including system noise).
 After mutation, 
 the state is updated by reweighting the particles using the likelihood $p(\bY_k | \bX_k^{(i)})$ 
-(sec.~\ref{sec:pf_update}) and standardising so $\sum_{i=1}^N W_k^{(i)} = 1$,
+(Section~\ref{sec:pf_update}) and standardising so $\sum_{i=1}^N W_k^{(i)} = 1$,
 \begin{equation*}
 W_k^{(i)} = \frac{W_{k-1}^{(i)} p(\bY_k | \bX_k^{(i)})}{
     \sum_{j=1}^N W_{k-1}^{(j)} p(\bY_k | \bX_k^{(j)})
@@ -176,7 +176,7 @@ falls below a specified threshold $N_{\text{thres}}$
 \citep{}.
 The resampling is performed with replacement using importance weights $W_k^{(i)}$,
 as demonstrated in Figure~\ref{fig:pf_state_predict2}.
-Afterwards, the weights are reinitialized to $W_k^{(i)} = N^{-1}$.
+Afterwards, the weights are reinitialised to $W_k^{(i)} = N^{-1}$.
 Note this is a computationally demanding step,
 so reducing the rate of resampling is favourable.
 
@@ -206,14 +206,14 @@ for the doors to open and close,
 and account for deceleration and acceleration.
 For these parameters, we used constant values for all stops,
 based on the values used by \cite{Hans_2015};
-future work will investigate modeling these in real-time similarly to Section~\ref{sec:kf}.
+future work will investigate modelling these in real-time similarly to Section~\ref{sec:kf}.
 
 The transition function algorithm is shown in Algorithm~\ref{fig:algorithm},
 which implements those features discussed above.
 The stop positions are represented by their distance into trip,
 $\boldsymbol{S} = (S_1, \ldots, S_J)^\top$.
 The $stop\_index$ function returns the index of a stop,
-given a distance traveled and set of stop distances.
+given a distance travelled and set of stop distances.
 Lines~2--9 are necessary to decrease the degeneration rate of the filter,
 which can occur when there is a long delay between observations
 simply because the bus has not moved due to traffic or other reasons. 
@@ -241,7 +241,7 @@ Once complete, the particle's new state is returned (line 29).
     \label{fig:algorithm}
     \begin{algorithmic}[2]
     \Require $x_{k-1}, \dot x_{k-1}, \boldsymbol z$\\
-    Initialization $\delta \gets t_k - t_{k-1}$, 
+    Initialisation $\delta \gets t_k - t_{k-1}$, 
         $j \gets stop\_index(x, \boldsymbol{S})$
     \If {$u \sim \mathrm{U}(0,1) < 0.5$ and $x = S_j$}
         \Comment{Remain longer at stop}
@@ -256,7 +256,7 @@ Once complete, the particle's new state is returned (line 29).
     \EndIf
     \While {$\delta > 0$ and $x < S_J$} 
         \State $\dot x \sim \mathrm{N}(\dot x, \sigma^2)$
-        \Comment{System noise, trunctated to be non-negative}
+        \Comment{System noise, truncated to be non-negative}
         \State $x \leftarrow x + \dot x$
         \If {$x \geq S_{j+1}$}
             \If {$j+1 = J$}
@@ -292,7 +292,7 @@ is obtained by reweighting each particle using the likelihood.
 The measurement function $h$,
 and an additional function $g$ which transforms GPS coordinates onto a flat
 surface (the geographical equirectangular projection, \cite{Snyder_1998}),
-allow the placement of a bivate normal likelihood on the data.
+allow the placement of a bivariate normal likelihood on the data.
 The model for the observations is,
 assuming GPS error $\epsilon^2$,
 \begin{equation}
@@ -326,11 +326,11 @@ p(\bY_k | \bX_k^{(i)}, \epsilon) =
 \right\}
 \end{equation}
 It is worth noting that this representation of the likelihood is only
-possible due to the discretization of the state provided by the particle filter;
+possible due to the discrete nature of the particle filter state estimate;
 in other approaches, such as the Kalman filter,
 a reverse non-deterministic transformation,
 the inverse measurement function,
-is required to estimate the ``observed'' distance traveled $\hat Z_k~=~h^{-1}(\bY_k)$, 
+is required to estimate the ``observed'' distance travelled $\hat Z_k~=~h^{-1}(\bY_k)$, 
 which introduces additional error and uncertainty into the model.
 
 
