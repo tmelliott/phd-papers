@@ -34,8 +34,13 @@
 
 \begin{document}
 \cleanlookdateon
-\runningheads{Modeling transit vehicles in real-time}{TOM~ELLIOTT AND THOMAS~LUMLEY}
-\title{A real-time particle filter for modeling travel times of transit vehicles through a GTFS-based road network}
+\runningheads{Modelling the travel time of transit vehicles}{TOM~ELLIOTT AND THOMAS~LUMLEY}
+\title{
+    Modelling the travel time of transit vehicles in \rt through a GTFS-based road network
+    using GPS vehicle locations
+} 
+
+% Modelling transit vehicles to estimate the \rt traffic conditions in a public transport network}
 \author{Tom Elliott\corrauth~and~Thomas~Lumley}
 \affiliation{University of Auckland}
 \address{
@@ -61,15 +66,17 @@ particularly buses which often share the road with other vehicles,
 so reliable predictions need to account for \rt and future traffic conditions.
 The first step in this process is to construct a framework with which road state
 (traffic conditions) can be estimated using \rt transit vehicle position data.
-We propose a framework which implements a vehicle model using a particle filter
-to estimate travel times along roads,
-used by a second model to estimate \rt traffic conditions which can
-later be used for arrival time prediction.
-We demonstrate the \rt feasibility of such an approach in \rt,
-and detail our implementation in R and C++.
+Our proposed framework implements a vehicle model using a particle filter
+to estimate road travel times,
+which are used in a second model to estimate \rt traffic conditions.
 Development and testing took place in Auckland, New Zealand,
-with future work planned to incorporate historical data into the network model
-to improve the reliability of ETAs.
+although attempts were made at generalising each component so 
+it will be compatible with other public transport systems around the world.
+We demonstrate the \rt feasibility and performance of our approach in real-time,
+where a combination of R and C++ was used to obtain the necessary performance results.
+Future work will use these estimated traffic conditions 
+in combination with historical data to obtain reliable
+arrival time predictions of transit vehicles.
 \end{abstract}
 
 \keywords{particle filter; transit modeling;

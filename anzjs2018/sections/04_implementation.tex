@@ -4,14 +4,14 @@
 The application consists of two components:
 the first handles importing static GTFS data and constructing the network,
 while the second implements the \rt models and prediction.
-We chose \verb+Rcpp+ to develop the program,
+We used Rcpp \citep{Rcpp}
+to develop the program,
 which provides access to other R packages for data manipulation 
-(notably \verb+RSQLite+ and \verb+dplyr+),
-as well as the speed and memory management capabilities of \verb|C++|. 
+as well as the speed and memory management capabilities of C++.
 The program is implemented in the R package
 \verb+transitr+, available on Github (\url{https://github.com/tmelliott/transitr}).
 In this section, we discuss the features of the \rt component
-and assess its performance in \rt,
+and assess its performance 
 both with respect to timing and parameter estimation.
 
 The general structure of the \rt component is shown below,
@@ -21,30 +21,29 @@ with the bold steps being those discussed in this paper.
 \item Each time new data are received \ldots
 \begin{enumerate}
     \item Update or create new vehicle objects from the new data
-    \item \textbf{Run particle filter on each vehicle to update or initialise state}
+    \item \textbf{Run particle filter on each vehicle to update or initialise its state}
     \item \textbf{Update state of any roads for which vehicles 
         have completed travel}
-    \item Generate ETAs for vehicles using combination of particle filter and network state
-    \item Write ETAs to extended Google Protobuf binary file for distribution
+    \item Generate ETAs for vehicles using combination of vehicle and network state
+    \item Write ETAs to a file for distribution
 \end{enumerate}
 \end{enumerate}
 
 
 During the development of the application,
 we were primarily concerned with ensuring each component of the program
-is as efficient as possible,
+was as efficient as possible,
 allowing ETAs to be generated and distributed fast enough to be feasible in real-time,
 with a target of 30~seconds or faster at peak time.
-Using C++ provides the memory management control necessary to make the application
-viable in real-time.
-We also make use of OpenMP for parallelisation,
+Using C++ provided the memory management control necessary to make this possible.
+We also made use of OpenMP for parallelisation,
 since each vehicle is modelled independently so it is trivial to scale up without
-worrying about thread safety.
+issues with thread safety.
 
 
 The number of particles needed per vehicle 
 depends on many factors,
-so it is necessary to explore the performance of the application
+so it was necessary to explore the performance of the application
 with varying number of particles.
 Application performance is also assessed
 for a range of fixed model parameter values,
@@ -61,28 +60,26 @@ running Ubuntu~16.04 and using R~3.4.1.
 \label{sec:timings}
 
 In each iteration, 
-the timing of the various program components is recorded.
+the timing of the various program components was recorded.
 Since the number of vehicles travelling at any given time changes throughout the day,
 we used the average timings over an off-peak 15~minute window.
 Figure~\ref{fig:timings} shows the average timings for 
 varying numbers of particles, $N$.
 
 
-The most time consuming component is ETA writing,
-which involves summarising the individual ETAs estimated for each particle.
-While not discussed here this involves quantiles which use a sorting algorithm,
-which has complexity $O(N \log N)$ 
+The most time consuming component was ETA writing,
+which involved summarising the individual ETAs estimated for each particle.
+While not discussed here this involved computing quantiles which uses a sorting algorithm
+with complexity $O(N \log N)$,
 which explains the slightly quadratic trend in the timings.
 
 
-The next most intensive step is vehicle updating,
-and takes about 5~seconds for 8000 particles.
-The ETA prediction step only takes a few seconds,
+The next most intensive step was vehicle updating,
+which took about 5~seconds for 8000 particles.
+The ETA prediction step only took a few seconds,
 although this may increase once a more comprehensive model is developed.
 On our 8-core virtual machine the entire process is completed within 20~seconds
 when 8000~particles are used.
-In the next section we explore the effect of changing $N$
-to allow finding the optimal number.
 
 
 \begin{figure}[tb]
@@ -92,11 +89,10 @@ to allow finding the optimal number.
         Application timings were recorded for each component of each
         iteration, and averages over a 15~minute window are shown here.
         The timings shown are \emph{wall time}, the actual time passed,
-        not CPU time which would be approximately 8~times larger 
-        (for using 8~cores).
+        not CPU time.
         Steps that only involve particle calculations are approximately
         of complexity $O(N)$,
-        however some steps are a little more complex, 
+        however some steps are a little more complex (writing ETAs involves computing quantiles), 
         so there is a slightly exponential trend.
     }
         % The timings for various parts of the application, and overall. %
@@ -117,16 +113,16 @@ the simulation was run using a range of values of GPS error, $\epsilon$,
 and system noise, $\sigma^2$.
 Figure \ref{fig:dist_to_route} shows the distribution of the distance
 between each observation and the route using a nearest point algorithm,
-so we chose to use GPS error values $\epsilon \in \{1,2,3,5\}$. 
-For the system noise we use values of $\sigma^2\in \{1e^{-4},1e^{-3},1e^{-2},0.05\}$,
-which correspond to the average vehicle speed having a variance between 0.1 and 45~meters per second
+which led us to use the values $\epsilon \in \{1,2,3,5\}$ for GPS error. 
+For the system noise we used values of $\sigma^2\in \{1e^{-4},1e^{-3},1e^{-2},0.05\}$,
+which correspond to an average vehicle speed variance of between 0.1 and 45~meters per second
 over a period of 30~seconds.
-For each of the combination of these parameter values, along with varying $N$,
-several values were computed.
-These were effective sample size, $N_\text{eff}$ calculated using (\ref{eq:neff});
+For each of combination of these parameter values, including varying $N$,
+the following values were calculated:
+effective sample size, $N_\text{eff}$;
 degeneration rate, the percentage of iterations in which the vehicle was lost
 (no plausible particles);
-and the variance of segment travel time estimates.
+and the (relative) variance of segment travel time estimates.
 
 
 \begin{figure}[tb]
@@ -144,12 +140,14 @@ and the variance of segment travel time estimates.
 \end{figure}
 
 
-From Figure~\ref{fig:degen_rate}, we see that $N_\text{eff}$ increases
-with GPS error and decreases with system noise.
-The degeneration rate decreases with GPS error and increases with $N$,
-but is relatively unaffected by system noise.
+Figure~\ref{fig:neff} shows that $N_\text{eff}$ increased
+with GPS error and decreased with system noise,
+while remaining unaffected by changing $N$.
+The degeneration rate decreased with GPS error and increased with $N$,
+and was unaffected by system noise,
+as seen in Figure~\ref{fig:degen_rate}.
 Large GPS error affects the likelihood,
-and gives more weight to particles farther from the observation
+giving more weight to particles farther from the observation
 than does a smaller GPS error.
 Conversely, increasing system noise spreads out the particle cloud,
 so fewer particles will be near the vehicle.
@@ -183,6 +181,8 @@ but show that the model is working as expected.
         plausible particles, so the vehicle was ``lost'' by the model.
         This decreases as GPS error and number of particles increase,
         but there is no visible effect of system noise.
+        Note, however, that some of these can be attributed to invalid data,
+        for example if the driver has entered the wrong trip direction.
         The error bars show $\pm 2$SE.
     }
     \label{fig:degen_rate}
@@ -190,14 +190,15 @@ but show that the model is working as expected.
 
 
 The last measure of performance is the relative variance of segment travel times.
-This is calculated by computing the average variance of travel times over all simulations,
-and then for each simulation, 
-taking the average (over road segments) of the ratio between variance for that simulations
-and variance for all simulations.
+We used relative variance as each segment has a very different travel time distribution,
+so to compare the variability between simulations we needed to 
+compute the average variance of travel times over all simulations,
+taking the average (over road segments) of the ratio between variance for
+each individual simulation and variance over all simulations.
 Figure~\ref{fig:travel_times} shows that simulations with larger GPS error
-result in a higher relative variance,
-while simulations with more particles have lower relative variance.
-There is no visible effect of system noise on travel time variation.
+resulted in a higher relative variance,
+while simulations with more particles had lower relative variance.
+There was no visible effect of system noise on the variability of travel times.
 
 
 The results of the simulations
@@ -207,7 +208,9 @@ However, until the arrival time prediction model has been completed,
 it is difficult to make decisions about the optimal values to use:
 we are unable to say whether a higher variation of travel time estimates
 is going to have a significant effect on the final ETAs,
-particularly when compared to the uncertainty of forecasting road state.
+particularly when compared to the uncertainty of forecasting road state,
+or whether reducing the degeneration rate, 
+or increasing $N_\text{eff}$, would be more advantageous.
 
 
 \begin{figure}[tb]

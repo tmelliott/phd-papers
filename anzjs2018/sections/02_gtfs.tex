@@ -26,7 +26,7 @@ The first, \emph{GTFS static}, includes information about
 \item \emph{shapes}, the sequence of points defining a vehicle's path along a route
 \end{itemize}
 \citep{GoogleDevelopers_2006}.
-The second component is \emph{GTFS realtime},
+The second component is \emph{GTFS-realtime},
 which is only available in a subset of the providers due to the requirement of 
 on board GPS tracking devices and a central server.
 It provides a standardised format for sharing vehicle positions and trip delays,
@@ -34,15 +34,16 @@ and are typically accessed by developers via an API can be used in \rt applicati
 
 As mentioned in Section~\ref{sec:intro},
 there are some major issues with the current prediction method in Auckland.
-These are almost directly attributed to GTFS-realtime trip updates,
+These are almost directly attributed to \emph{GTFS-realtime} trip updates,
 which are currently the sole source of data for ETAs.
 Trip updates are reported whenever a vehicle arrives or departs a stop,
 and includes the delay between the scheduled and actual arrival times,
-and is propagated to all future stops to adjust their ETAs.
-This assumes that the schedule is well calibrated and the time between scheduled arrivals
-is representative of the real-world travel time between stops. 
-Therefore, an alternative estimation approach using \rt travel times 
-between stops is more adequate.
+which is propagated to all future stops to update their ETAs.
+This assumes that the schedule is well calibrated 
+and the scheduled travel time between stops
+is representative of the real-world travel time between them. 
+Therefore, an alternative estimation approach that uses \rt travel times 
+between stops would seem more adequate.
 
 
 
@@ -54,28 +55,27 @@ the travel time along roads between where the bus is \emph{now},
 and the stop at which the passenger is waiting.
 In most applications, however, this vital information is unavailable,
 at least directly,
-so here we construct a transit road network consisting of intersections
+so here we describe how we constructed a transit road network consisting of intersections
 and the roads between them.
-By generalising to physical roads,
-we remove any route-dependency,
-which increases the quantity of data available for each road.
-Each route is then represented as a sequence of road segments,
-each with an associated travel time.
+Generalising to physical roads removes route dependencies,
+which increases the quantity of data available for each road
+and allows each route to be represented as a sequence of road segments,
+which have individual travel time distributions (Section~\ref{sec:kf}).
 
 
-The transit network is constructed by splitting each route
+The transit network was constructed by splitting each route
 into spatially identifiable segments,
-each representative of a physical road.
-The simplest way to do this is to use bus stops as nodes in the network
-(Figure~\ref{fig:network_creation_1}),
-and connecting roads as edges.
+each representative of a physical road,
+by using bus stops as nodes in the network
+and the connecting roads as edges
+(Figure~\ref{fig:network_creation}).
 In this way, routes that service the same subsequence of stops
-will all contribute to congestion information for the connecting roads,
-as shown in Figure~\ref{fig:network_creation_2}.
-There are several drawbacks to this method,
-for example routes merge at physical intersections, not bus stops,
-so some overlap will occur as shown.
-However, this is minimal, and our simplification is sufficient for the current work.
+all contribute to congestion information for the connecting roads.
+Although there are several drawbacks to this method,
+such as road segment overlaps where routes merge between stops,
+this is minimal and our approach is sufficient for the current work.
+Future work will investigate methods of detecting where routes merge
+(physical intersections) and using these as nodes in the network.
 
 
 \begin{figure}[tb]
@@ -101,11 +101,6 @@ However, this is minimal, and our simplification is sufficient for the current w
         as shown in (b), where the thickness of each lines
         corresponds to how many routes share that road.
     }
-    % Construction of a route network involves combining routes at nodes %
-    %     (here we are using stops) which are connected by edges (roads). %
-    %     In (a), the three unique routes, represented by different line types, clearly %
-    %     overlap in several places. In (b) these have been merged, and the width of each line %
-    %     represents how many routes use that link.}
     \label{fig:network_creation}
 \end{figure}
 
@@ -113,8 +108,8 @@ However, this is minimal, and our simplification is sufficient for the current w
 \subsection{Real-time vehicle locations}
 \label{sec:realtime_data}
 
-GTFS-realtime provides the current positions of vehicles in a transit network.
-The data consists of the time $t_k$ that the observation was made,
+\emph{GTFS-realtime} provides the positions of vehicles in a transit network.
+The data consists of the time $t_k$ that the position was last updated,
 the GPS position of the vehicle, $\bY_k$, 
 and information about the trip being serviced.
 In Auckland, vehicle positions are updated with a frequency of anywhere between 10~seconds and several minutes,
@@ -131,12 +126,13 @@ buses are programmed to report their location when arriving at or departing from
 bus stops, as well as some major intersections.
 To further complicate this,
 these positions can be preemptive,
-(i.e., the bus is almost there, but not quite),
+for example when approaching a queue of traffic at an intersection
+and the way-point is triggered before the bus physically gets there,
 so consecutive observations can show a bus travelling backwards.
 To handle this, we compute the approximate distance travelled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
 if this has decreased, the current state is rejected and the vehicle reverted
 to its previous state before continuing.
-This way, we avoid degeneration of the particle filter (Section~\ref{sec:model_perf})
+We are available to avoid degeneration of the particle filter (Section~\ref{sec:model_perf})
 at the cost of losing one observation that is most likely invalid anyway.
 

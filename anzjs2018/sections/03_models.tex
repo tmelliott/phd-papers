@@ -41,25 +41,27 @@ Additionally, travel times along road segments along the route,
 $\bz = (z_1,\ldots,z_L)^\top$, in seconds,
 are included in the state and estimated
 sequentially as the vehicle traverses the route.
-These are combined into the state vector,
-\begin{equation}
-\label{eq:vehicle_state}
-\bX_k = 
-\begin{bmatrix}
-    x_k \\ \dot x_k \\ \bz
-\end{bmatrix}.
-\end{equation}
+These are combined into the state vector
+$\bX_k = \left[x_k\ \dot x_k\ \bz\right]^\top$.
+% \begin{equation*}
+% \label{eq:vehicle_state}
+% \bX_k = 
+% \begin{bmatrix}
+%     x_k \\ \dot x_k \\ \bz
+% \end{bmatrix}.
+% \end{equation*}
 Observations $\bY_k$ of the vehicle are made using a GPS at time $t_k$
 with GPS error $\epsilon^2$,
-giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle,
-\begin{equation}
-\label{eq:vehicle_obs}
-\bY_k = \begin{bmatrix} \lambda_k \\ \phi_k \end{bmatrix}.
-\end{equation}
+giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle
+as $\bY_k = \left[\lambda_k\ \phi_k \right]^\top$
+% \begin{equation}
+% \label{eq:vehicle_obs}
+% \bY_k = \begin{bmatrix} \lambda_k \\ \phi_k \end{bmatrix}.
+% \end{equation}
 
 
 We use a particle filter to estimate $\bX_k$,
-due to do its high flexibility and use in recent 
+due to its high flexibility and use in recent 
 transit vehicle modelling applications \citep{Hans_2015}.
 The primary advantage of a particle filter is its handling of multimodality,
 as demonstrated in figure~\ref{fig:pf_state_predict},
@@ -123,10 +125,10 @@ and its timings.
         The particle filter approximates vehicle state using a set of 
         discrete points (a), which are each mutated independently (b)
         to predict the next state.
-        The measurement function $h$ allows state particle state
+        The measurement function $h$ allows each particle state
         to be mapped to a GPS coordinate (a),
         which can be compared to the observed location (c)
-        to calculate each particles likelihood and perform resampling.
+        to calculate each particle's likelihood to compute resampling weights.
     }
         % The vehicles state is estimated using a set of discrete points, or particles,
         % each of which is independently mutated to make predictions of the future state.
@@ -140,15 +142,15 @@ and its timings.
 In a particle filter, the posterior distribution of the state at time $t_{k-1}$
 is represented by a set of discrete points, or particles, (Figure~\ref{fig:pf_state_prev}),
 each with an associated weight $W_{k-1}^{(i)}$
-\begin{equation}
+\begin{equation*}
 p(\bX_{k-1} | \bY_{k-1}) \approx \tilde\bX_{k-1|k-1} 
 := \left\{\bX_{k-1}^{(i)}, W_{k-1}^{(i)}\right\}_{i=1}^N
-\end{equation}
+\end{equation*}
 each of which is independently updated or \emph{mutated} using the transition function $f$ (fig~\ref{fig:pf_state_predict})
-\begin{equation}
+\begin{equation*}
 p(\bX_k | \bX_{k-1}) \approx \tilde\bX_{k|k-1} := 
 \left\{f(\bX_{k-1}^{(i)}, \psi), W_{k-1}^{(i)}\right\}_{i=1}^N
-\end{equation}
+\end{equation*}
 using parameter vector $\psi$ containing all of the necessary parameters
 for the model (including system noise).
 After mutation, 
@@ -160,20 +162,15 @@ W_k^{(i)} = \frac{W_{k-1}^{(i)} p(\bY_k | \bX_k^{(i)})}{
 }
 \end{equation*}
 generating a posterior estimate of the state
-\begin{equation}
+\begin{equation*}
 p(\bX_k | \bY_k) \approx \tilde\bX_{k|k} := 
 \left\{\bX_{k}^{(i)}, W_{k}^{(i)}\right\}_{i=1}^N.
-\end{equation}
+\end{equation*}
 
 In order to prevent degeneration of the particle filter state,
 \emph{importance resampling} is employed whenever the 
-effective sample size 
-\begin{equation}
-\label{eq:neff}
-N_{\text{eff}} = \frac{1}{\sum_i (W_k^{(i)})^2}
-\end{equation}
-falls below a specified threshold $N_{\text{thres}}$
-\citep{}.
+effective sample size $N_{\text{eff}} = 1 / \sum_i (W_k^{(i)})^2$
+falls below a specified threshold $N_{\text{thres}}$.
 The resampling is performed with replacement using importance weights $W_k^{(i)}$,
 as demonstrated in Figure~\ref{fig:pf_state_predict2}.
 Afterwards, the weights are reinitialised to $W_k^{(i)} = N^{-1}$.
@@ -205,15 +202,15 @@ and the minimum dwell time at stops, $\gamma$,
 for the doors to open and close,
 and account for deceleration and acceleration.
 For these parameters, we used constant values for all stops,
-based on the values used by \cite{Hans_2015};
+based on those used by \cite{Hans_2015};
 future work will investigate modelling these in real-time similarly to Section~\ref{sec:kf}.
 
 The transition function algorithm is shown in Algorithm~\ref{fig:algorithm},
 which implements those features discussed above.
 The stop positions are represented by their distance into trip,
-$\boldsymbol{S} = (S_1, \ldots, S_J)^\top$.
-The $stop\_index$ function returns the index of a stop,
-given a distance travelled and set of stop distances.
+$\boldsymbol{S} = (S_1, \ldots, S_J)^\top$, and
+the $stop\_index$ function returns the index of a stop,
+given a distance travelled and set of stop distances $\boldsymbol{S}$.
 Lines~2--9 are necessary to decrease the degeneration rate of the filter,
 which can occur when there is a long delay between observations
 simply because the bus has not moved due to traffic or other reasons. 
@@ -227,7 +224,7 @@ it has a chance of stopping (lines~18--19),
 in which case the dwell time is sampled and subtracted from the 
 time remaining to travel (lines~20--21).
 Finally, to track travel time along segments,
-at each point where the vehicle travels (lines 9 and 26),
+at each point where the vehicle travels (lines 7 and 26),
 the travel time for the current segment, $z_j$, is incremented.
 The mutation ends once the travel time $\delta$ reaches zero,
 or when the vehicle reaches the end of the route (lines 10, 14).
@@ -236,7 +233,7 @@ Once complete, the particle's new state is returned (line 29).
 \renewcommand{\algorithmicrequire}{\textbf{Start:}}
 \newcommand{\algorithmicbreak}{\textbf{break}}
 \newcommand{\Break}{\State \algorithmicbreak}
-\begin{algorithm}[tb]
+\begin{algorithm}[t]
     \caption{Particle mutation function.}
     \label{fig:algorithm}
     \begin{algorithmic}[2]
@@ -282,6 +279,7 @@ Once complete, the particle's new state is returned (line 29).
     \end{algorithmic}
 \end{algorithm}
 
+\afterpage{\clearpage}
 
 
 \subsubsection{Updating state using the observation likelihood}
@@ -295,36 +293,37 @@ surface (the geographical equirectangular projection, \cite{Snyder_1998}),
 allow the placement of a bivariate normal likelihood on the data.
 The model for the observations is,
 assuming GPS error $\epsilon^2$,
-\begin{equation}
+\begin{equation*}
 \label{eq:pf_obs_model}
 g(\bY_k) = g(h(\bX_k)) + \br_k,
 \quad \br_k \sim \mathrm{N}(\boldsymbol{0}, \epsilon^2\boldsymbol{I})
-\end{equation}
+\end{equation*}
 The geographical distance between the observation and the true vehicle can be expressed
 in terms of two independent random variables $z_1, z_2 \sim \mathrm{N}(0,1)$
-\begin{equation}
+\begin{equation*}
 \label{eq:obs_dist}
 dist(\bY_k, h(\bX_k)) = \sqrt{r_{k1}^2 + r_{k2}^2} 
     = \sqrt{(\epsilon z_1)^2 + (\epsilon z_2)^2}.
-\end{equation}
+\end{equation*}
 The sum of two independent, standard normal random variables 
 is $\chi^2$ distributed with 2~degrees of freedom,
 which is itself exponential,
-so rearranging (\ref{eq:obs_dist}) yields
-\begin{equation}
+so rearranging gives
+\begin{equation*}
 \label{eq:obs_exp}
 \left(\frac{dist(\bY_k, h(\bX_k))}{\epsilon}\right)^2 =
-z_1^2 + z_2^2 \sim \mathrm{Exp}\left(\frac{1}{2}\right)
-\end{equation}
+z_1^2 + z_2^2 \sim \mathrm{Exp}\left(\frac{1}{2}\right).
+\end{equation*}
+
 
 The likelihood of the data given a particle's state estimate 
-is calculated using (\ref{eq:obs_exp})
-\begin{equation}
+can now be calculated as
+\begin{equation*}
 p(\bY_k | \bX_k^{(i)}, \epsilon) =
 \frac{1}{2}\exp\left\{
 -\frac{1}{2} \left(\frac{dist(\bY_k, h(\bX_k^{(i)}))}{\epsilon}\right)^2
 \right\}
-\end{equation}
+\end{equation*}
 It is worth noting that this representation of the likelihood is only
 possible due to the discrete nature of the particle filter state estimate;
 in other approaches, such as the Kalman filter,
@@ -353,18 +352,18 @@ with system noise $v_c^\ell \sim \mathrm{N}(0, \nu^2)$.
 Observations of the state, $Z_c^\ell$, are obtained from the particle filter in Section~\ref{sec:pf},
 and have measurement error $e_c^\ell \sim \mathrm{N}(0, R_c^\ell)$ as estimated 
 using the uncertainty of particle estimates.
-The model from (\ref{eq:rbe_model}) now reduces to
-\begin{equation}
+The model from (\ref{eq:rbe_model}) reduces to
+\begin{equation*}
 \begin{split}
 \theta_c^\ell &= \theta_{c-1}^\ell + \Delta_c^\ell v_c^\ell \\
 Z_c^\ell &= \theta_c^\ell + e_c^\ell
 \end{split}
-\end{equation}
+\end{equation*}
 where $\Delta_c = t_c - t_{c-1}$.
 
 
 Since multiple vehicles can travel along a road simultaneously,
-we have used an information filter to implement the network model.
+we used an information filter to implement the network model.
 The information filter is a transformation of the Kalman filter in which the
 \emph{information matrix} and \emph{information vector} are used in place of 
 the covariance matrix and state vector, respectively.

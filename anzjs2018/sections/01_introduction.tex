@@ -2,26 +2,26 @@
 \label{sec:intro}
 
 
-
 In public transport, \rt information (RTI), such as estimated times of arrival (ETAs),
 keeps transport users informed about their journey,
-and potentially make decisions on the best route to take.
+and enabled them to make decisions about the best route.
 It has also been shown that perceived waiting time is less
 when arrival time information is available \citep{TCRP_2003b}.
 Unfortunately, here in Auckland, RTI is highly unreliable,
 and succumbs to several problems that public transport users
 are all too familiar with.
-One of these is inaccurate ETAs,
-which tend to either increase or decrease over time as the bus gets progressively later or earlier
-due to traffic congestion, or  because the schedule is poorly calibrated.
-Another is that buses are shown as \emph{on-time} if they are not present
-in the \rt system,
-regardless of whether this is due to technical problems,
-or the bus failing to show up;
-in either case, schedule times are used to determine ETAs and, 
-if the bus doesn't show up on time,
-the service is removed from the \rt board 
-and we get what passengers have described as ``Ghost Buses''.
+Inaccurate ETAs are a major source of frustration,
+as they tend to either increase or decrease over time 
+as the bus gets progressively later or earlier due to traffic congestion, 
+or simply due to poor schedule calibration.
+Furthermore, buses are shown as \emph{on-time} 
+if they are not present in the \rt system and have not been cancelled,
+so ETAs are based solely on scheduled arrival times;
+if the bus does not show up on time
+the service is removed from the \rt board,
+leaving passengers unsure as to when---if at all---their bus will show up,
+a phenomenon termed by bus users as ``ghost buses''.
+
 
 Arrival time prediction is only as reliable as the underlying model,
 and while a lot of work has gone into developing public transport vehicle models
@@ -34,53 +34,46 @@ and that there is no unusual congestion along the route,
 neither of which are valid assumptions,
 particularly in our test area of Auckland, New Zealand,
 where infrastructure for buses (such as priority lanes) is limited.
-This behaviour is exaggerated when there is a large distance between stops,
-as the ETA is only updated at stops so there can be a long time between updates.
 
 
-To avoid the problems discussed above,
+To avoid the problems mentioned above,
 a more robust modelling and prediction framework is required.
 This should consist of a robust vehicle model to estimate the position and speed
-of transit vehicles from \rt GPS data;
+of transit vehicles from \rt GPS data,
 and a way to incorporate road congestion information 
 into the arrival time predictions.
 Several vehicle modelling approaches were explored, 
 including the Kalman filter \citep{Dailey_2001,Cathey_2003},
 machine learning models \citep{Yu_2006,Chang_2010},
 and a particle filter \citep{Hans_2015}.
-The last of these was chosen for several reasons
+We chose to use a particle filter for several reasons,
 which are discussed in Section~\ref{sec:pf}.
 
-The next step is to construct a method of estimating traffic conditions.
-This can be done by using the travel time of preceding buses along the road
-to predict travel times for the current bus.
-\cite{Yu_2010} obtained improved prediction accuracy by using travel times
-from preceding buses servicing the same route.
-\cite{Hans_2015} used a similar approach,
-instead referring to headway, the time between consecutive vehicles
-at a point on the route.
-However, this approach only works well for high frequency routes.
+
+The next step involves estimating traffic conditions throughtout the transport network
+using the information obtained from the GPS data. 
+\cite{Yu_2010} improved prediction accuracy by using the travel times
+of buses travelling along the same route.
+A similar method presented by \cite{Hans_2015}
+used headway, the time between consecutive vehicles at a point on the route,
+as a predictor of travel time.
+Since these approaches only work well on high frequency routes,
 \cite{Yu_2011} showed further improvements by combining travel times 
-from several routes which converged,
-but is limited to predefined, converging routes.
+from several routes;
+however, this was limited to predefined converging routes.
 In general, however, no comprehensive network modelling approach has been proposed using
-solely GPS position data to accounting for congestion when estimating arrival times.
-We describe a simple method of constructing a road network
-from GTFS data (section~\ref{sec:gtfs}),
-which allows all transit vehicles travelling along a road to contribute to its state,
-regardless of which route they are serving.
+solely GPS position data to model and account for congestion when estimating arrival times.
 
-In this paper, we describe a \rt vehicle and network state
-model which uses the vehicles travelling throughout the transit road network
-to update congestion information in real-time.
-As the vehicle model is implemented using a particle filter,
-a computationally intensive method,
-we demonstrate its feasibility as a valid real-time option.
-The vehicle model provides estimates of travel times along roads,
-which can be used to update the road network's state.
-Future work is planned to use this travel time information 
-in combination with historical data to develop an arrival time prediction model.
 
+In Section~\ref{sec:models} of this paper, 
+we describe the \rt vehicle and network state models
+used to estimate traffic congestion using the transit vehicles
+travelling through the network in real-time,
+and in Section~\ref{sec:rt} we demonstrate the feasibility of using a particle filter
+in \rt to model transit vehicles,
+and evaluate its performance.
+First, however, we descibe how we construct a
+road network from GTFS data in Section~\ref{sec:gtfs}.
 
 
 
