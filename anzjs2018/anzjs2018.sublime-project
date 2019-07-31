@@ -9,11 +9,11 @@
     [
         {
             "name": "compile",
-            "shell_cmd": "cd ${project_path} && latexmk -pdf anzjs2018.tex"
+            "shell_cmd": "cd ${project_path} && latexmk -pdf anzjs.tex"
         },
         {
             "name": "clean",
-            "shell_cmd": "cd ${project_path} && latexmk -c -pdf anzjs2018.tex"
+            "shell_cmd": "cd ${project_path} && latexmk -c -pdf anzjs2.tex"
         }
     ]
 }
