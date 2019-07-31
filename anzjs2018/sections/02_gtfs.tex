@@ -7,9 +7,9 @@ detailing how it should be organised,
 making access easier for application developers.
 Developed and maintained by Google \citep{GoogleDevelopers_2006},
 who use it in Google Maps Transit Directions,
-it is used by over 900~transit providers around the world,
-including here in Auckland, New Zealand
-(source \url{http://transitfeeds.com}).
+it is used by over 1100~transit providers around the world\footnote{%
+source: \url{http://transitfeeds.com} as of August 2019},
+including here in Auckland, New Zealand.
 An advantage of this standardised format is that,
 provided an application depends solely on GTFS data,
 after developing it locally in Auckland it can be deployed to any other GTFS-based
@@ -23,9 +23,8 @@ The first, \emph{GTFS static}, includes information about
 \item \emph{routes}, a sequence of two or more stops displayed as a single service;
 \item \emph{trips}, an instance of a route occurring at a specific time of day;
 \item \emph{schedules}, specifying the arrival (and departure) times for each bus at each of its stops; 
-\item \emph{shapes}, the sequence of points defining a vehicle's path along a route
+\item and \emph{shapes}, the sequence of points defining a vehicle's path along a route.
 \end{itemize}
-\citep{GoogleDevelopers_2006}.
 The second component is \emph{GTFS-realtime},
 which is only available in a subset of the providers due to the requirement of 
 on board GPS tracking devices and a central server.
@@ -53,14 +52,15 @@ between stops would seem more adequate.
 The primary predictor of arrival time is 
 the travel time along roads between where the bus is \emph{now},
 and the stop at which the passenger is waiting.
-In most applications, however, this vital information is unavailable,
-at least directly,
-so here we describe how we constructed a transit road network consisting of intersections
-and the roads between them.
-Generalising to physical roads removes route dependencies,
-which increases the quantity of data available for each road
-and allows each route to be represented as a sequence of road segments,
-which have individual travel time distributions (Section~\ref{sec:kf}).
+In most applications, however, this vital information is unavailable, at least directly.
+In order to compute travel times efficiently
+and make use of all available data pooled across multiple routes,
+we constructed a \emph{road network},
+allowing us to model each physical road as a unique entity.
+In this way, every bus travelling along a road contributes to its state,
+and can be used to predice travel times for all upcoming buses 
+travelling along the road,
+irrespective of the route they are servicing.
 
 
 The transit network was constructed by splitting each route
@@ -74,8 +74,7 @@ all contribute to congestion information for the connecting roads.
 Although there are several drawbacks to this method,
 such as road segment overlaps where routes merge between stops,
 this is minimal and our approach is sufficient for the current work.
-Future work will investigate methods of detecting where routes merge
-(physical intersections) and using these as nodes in the network.
+
 
 
 \begin{figure}[tb]

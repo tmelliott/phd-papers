@@ -7,21 +7,26 @@ or recursive Bayesian estimation,
 in which the data is processed sequentially instead of all at once,
 reducing computational demands
 \citep{Anderson_2012}.
-These models assume an underlying Markov process with state $\mathcal{X}_k$
-and system noise $\omega_k\sim\mathrm{N}(0,\mathcal{Q})$ 
-of which observations $\mathcal{Y}_k$ are made
-with error $\nu_k\sim\mathrm{N}(0,\mathcal{R})$,
+These models assume an underlying Markov process with state $\boldsymbol{\mathcal{X}}_k$,
+an $n\times1$ column vector,
+and system noise $\boldsymbol{\omega}_k\sim\mathrm{N}(\boldsymbol{0},\mathcal{Q})$ 
+of which observations $\boldsymbol{\mathcal{Y}}_k$,
+an $m\times1$ column vector, are made
+with error $\boldsymbol{\nu}_k\sim\mathrm{N}(\boldsymbol{0},\mathcal{R})$,
 giving the following general model:
 \begin{equation}
 \label{eq:rbe_model}
 \begin{split}
-\mathcal{X}_k &= f(\mathcal{X}_{k-1}, \omega_k) \\
-\mathcal{Y}_k &= h(\mathcal{X}_k, \nu_k)
+\boldsymbol{\mathcal{X}}_k &= f(\boldsymbol{\mathcal{X}}_{k-1}, \boldsymbol{\omega}_k) \\
+\boldsymbol{\mathcal{Y}}_k &= h(\boldsymbol{\mathcal{X}}_k) + \boldsymbol{\nu}_k
 \end{split}
 \end{equation}
-The transition function $f$ describes the relationship between consecutive states,
-while the measurement function $h$ is a deterministic function describing the
-relationship between the underlying and observed states.
+The transition function $f:\mathbb{R}^n\mapsto\mathbb{R}^n$ 
+describes the relationship between consecutive states,
+while the measurement function $h:\mathbb{R}^n\mapsto\mathbb{R}^m$ is a deterministic function
+mapping the underlying state to the observable state.
+
+
 
 The following sections describe the two models used in this application,
 both of which are examples of a Bayesian filter.
@@ -37,37 +42,29 @@ a variant of the Kalman filter \citep{Anderson_2012}.
 The underlying vehicle state at time $t_k$ consists of
 the vehicle's distance travelled $x$ in meters along the route and
 its speed $\dot x$ in meters per second.
-Additionally, travel times along road segments along the route, 
-$\bz = (z_1,\ldots,z_L)^\top$, in seconds,
-are included in the state and estimated
-sequentially as the vehicle traverses the route.
+% The travel times along road segments, $\bz = (z_1,\ldots,z_L)^\top$, in seconds,
+% are estimated sequentially as the vehicle traverses the route,
+% and are not included explicitely in the state.
 These are combined into the state vector
-$\bX_k = \left[x_k\ \dot x_k\ \bz\right]^\top$.
-% \begin{equation*}
-% \label{eq:vehicle_state}
-% \bX_k = 
-% \begin{bmatrix}
-%     x_k \\ \dot x_k \\ \bz
-% \end{bmatrix}.
-% \end{equation*}
-Observations $\bY_k$ of the vehicle are made using a GPS at time $t_k$
+$\bX_k = \left[x_k\ \dot x_k\right]^\top$,
+of which observations $\bY_k$ are made using a GPS at time $t_k$
 with GPS error $\epsilon^2$,
 giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle
-as $\bY_k = \left[\lambda_k\ \phi_k \right]^\top$
-% \begin{equation}
-% \label{eq:vehicle_obs}
-% \bY_k = \begin{bmatrix} \lambda_k \\ \phi_k \end{bmatrix}.
-% \end{equation}
-
+as $\bY_k = \left[\lambda_k\ \phi_k \right]^\top$.
 
 We use a particle filter to estimate $\bX_k$,
 due to its high flexibility and use in recent 
-transit vehicle modelling applications \citep{Hans_2015}.
+transit vehicle modelling applications \citep{Hans_2015},
+as well as providing an easy way to estimate travel times
+$\bz = (z_1,\ldots,z_L)^\top$, in seconds, along road segments
+as the vehicle traverses the route.
 The primary advantage of a particle filter is its handling of multimodality,
-as demonstrated in figure~\ref{fig:pf_state_predict},
+as demonstrated in Figure~\ref{fig:pf_state_predict},
 which is a common feature of the proposal distribution, particularly around bus stops.
-Another advantage is the intuitive likelihood function, 
-discussed in section~\ref{sec:pf_update}.
+Another advantage is that the likelihood function is intuitively based
+on the physical distance between the vehicle observation and the state's
+estimate of the true location, $h(\bX_k)$ (Section~\ref{sec:pf_update}),
+rather than the reverse of first estimating the ``observed'' distance travelled.
 Conversely, particle filter methods are computationally demanding,
 requiring an increasing number of particles as the model complexity and
 number of parameters increases \citep{Carpenter_1999}.
@@ -141,15 +138,17 @@ and its timings.
 
 In a particle filter, the posterior distribution of the state at time $t_{k-1}$
 is represented by a set of discrete points, or particles, (Figure~\ref{fig:pf_state_prev}),
-each with an associated weight $W_{k-1}^{(i)}$
+each with an associated weight $W_{k-1}^{(i)}$.
+The state can then be expressed using the Dirac delta function $\dot\delta_X(x)$ \citep{cn},
+so that
 \begin{equation*}
-p(\bX_{k-1} | \bY_{k-1}) \approx \tilde\bX_{k-1|k-1} 
-:= \left\{\bX_{k-1}^{(i)}, W_{k-1}^{(i)}\right\}_{i=1}^N
+p(\bX_{k-1} | \bY_{1:k-1}) \approx 
+    \sum_{i=1}^N W_{k-1} \dot\delta_{\bX_{k-1}}(\bX_{k-1}^{(i)})
 \end{equation*}
-each of which is independently updated or \emph{mutated} using the transition function $f$ (fig~\ref{fig:pf_state_predict})
+each of which is independently updated or \emph{mutated} using the transition function $f$ (Figure~\ref{fig:pf_state_predict})
 \begin{equation*}
-p(\bX_k | \bX_{k-1}) \approx \tilde\bX_{k|k-1} := 
-\left\{f(\bX_{k-1}^{(i)}, \psi), W_{k-1}^{(i)}\right\}_{i=1}^N
+p(\bX_k | \bX_{k-1}) \approx 
+    \sum_{i=1}^N W_{k-1} \dot\delta_{\bX_{k}}(f(\bX_{k-1}^{(i)}, \psi))
 \end{equation*}
 using parameter vector $\psi$ containing all of the necessary parameters
 for the model (including system noise).
@@ -163,21 +162,32 @@ W_k^{(i)} = \frac{W_{k-1}^{(i)} p(\bY_k | \bX_k^{(i)})}{
 \end{equation*}
 generating a posterior estimate of the state
 \begin{equation*}
-p(\bX_k | \bY_k) \approx \tilde\bX_{k|k} := 
-\left\{\bX_{k}^{(i)}, W_{k}^{(i)}\right\}_{i=1}^N.
+p(\bX_k | \bY_k) \approx  
+    \sum_{i=1}^N W_{k} \dot\delta_{\bX_{k}}(\bX_{k}^{(i)})
 \end{equation*}
 
-In order to prevent degeneration of the particle filter state,
-\emph{importance resampling} is employed whenever the 
+One problem with particle filters is degeneration,
+which occurs when the particle sample no longer approximates the target distribution
+due to the particles becoming too diverse
+and all of the weight falling onto only a small number of them.
+This occurs naturally over time, but the rate at which it occurs depends 
+on a relationship between how well the transition function predicts future states,
+and the variance of those predictions (system noise).
+To avoid degeneration,
+particle filters use \emph{importance resampling}
+using importance weights $\{W_k^{(1)}, \ldots, W_k^{(N)}\}$,
+which removes improbable particles and replaces them with more probable ones,
+as demonstrated in Figure~\ref{fig:pf_state_predict2}.
+However, resampling requires sorting $N$ particles,
+which is of $\mathcal{O}(N\log N)$ complexity,
+so we can reduce computational costs by only resampling when required.
+To prevent degeneration of the particle filter state,
+the sample is resampled whenever the
 effective sample size $N_{\text{eff}} = 1 / \sum_i (W_k^{(i)})^2$
 falls below a specified threshold $N_{\text{thres}}$.
-The resampling is performed with replacement using importance weights $W_k^{(i)}$,
-as demonstrated in Figure~\ref{fig:pf_state_predict2}.
-Afterwards, the weights are reinitialised to $W_k^{(i)} = N^{-1}$.
-Note this is a computationally demanding step,
-so reducing the rate of resampling is favourable.
-
-
+We used a fixed threshold value of $N_{\text{thres}} = N/10$
+for the current work.
+\textbf{Check this}.
 
 \subsubsection{Vehicle transition function}
 \label{sec:pf_prediction}

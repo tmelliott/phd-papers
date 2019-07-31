@@ -30,7 +30,7 @@ d0 <- ggplot() +
     geom_path(aes(x = xx, y = yy), data = tibble(xx = c(8000, 15000), yy = c(0, 0))) +
     theme_minimal() + 
     theme(panel.grid = element_blank(), axis.text = element_blank()) +
-    xlab("Distance Traveled") + ylab("") +
+    xlab("Distance Travelled") + ylab("") +
     xlim(8000, 15000)
 
 h <- function(x, shape = shapef) {
