@@ -1,0 +1,17 @@
+#!/bin/sh
+
+ZIP=anzjs2018_tomelliott.zip
+
+zip $ZIP anzjs2018.tex anzsauth.cls anzsj.bst
+
+zip -r $ZIP sections
+zip -r $ZIP figures/02_*.pdf
+zip -r $ZIP figures/03_particle_filter_{1,2,4}.pdf
+zip -r $ZIP figures/04_*.pdf
+
+# fetch the bibliography
+bibexport -o reflist2.bib anzjs2018.aux
+mv reflist2.bib reflist.bib
+zip $ZIP reflist.bib
+rm reflist.bib
+ln -s ../reflist.bib reflist.bib
