@@ -9,12 +9,15 @@ route <- gtfs %>% tbl("routes") %>%
     filter(route_short_name == "110" && route_long_name %like% '%To City%') %>%
     arrange(desc(version)) %>% head(1) %>% collect()
 trip <- gtfs %>% tbl("trips") %>% 
-    filter(route_id == route$route_id) %>% head(1) %>% collect()
+    filter(route_id == !!route$route_id) %>% head(1) %>% collect()
+distgeo <- function(x) {
+    c(0, geosphere::distGeo(x))[1:nrow(x)]
+}
 shape <- gtfs %>% tbl("shapes") %>%
-    filter(shape_id == trip$shape_id) %>% arrange(shape_pt_sequence) %>% collect() %>%
+    filter(shape_id == !!trip$shape_id) %>% arrange(shape_pt_sequence) %>% collect() %>%
     mutate(shape_dist_traveled = (.) %>% 
         select(shape_pt_lon, shape_pt_lat) %>%
-        as.matrix() %>% geosphere::distGeo() %>% cumsum %>% c(0, .))
+        as.matrix() %>% distgeo() %>% cumsum)
 dbDisconnect(gtfs)
 
 shapef <- shape %>% filter(shape_dist_traveled > 8000 & shape_dist_traveled < 15000)
@@ -47,12 +50,12 @@ h <- function(x, shape = shapef) {
         geosphere::destPoint(p1, b, d) %>% as.numeric
     }))
     colnames(x) <- c('lon', 'lat')
-    as.tibble(x)
+    as_tibble(x)
 }
 
 WIDTH = 5
 HEIGHT = 2.5
-set.seed(873624)
+set.seed(8237315)
 N <- 20
 x <- sample(rnorm(N, 9000, 50), replace = TRUE)
 
@@ -69,7 +72,8 @@ grid.text("h(x)", 0.5, 0.5, gp = gpar(fontface = 3, fontfamily = 'HersheySerif')
 dev.off()
 
 
-x2 <- x + runif(N, c(10, 20), c(20, 25)) * 120
+# x2 <- x + runif(N, c(10, 23), c(20, 27)) * 120 + rnorm(N, 0, 10)
+x2 <- x + rnorm(N, c(14, 25), c(3, 1)) * 120
 
 pdf('figures/03_particle_filter_2.pdf', width = WIDTH, height = HEIGHT)
 gridExtra::grid.arrange(
