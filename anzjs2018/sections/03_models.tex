@@ -192,53 +192,104 @@ for the current work.
 \subsubsection{Vehicle transition function}
 \label{sec:pf_prediction}
 
-The particle filter allows us to model several important bus behaviours:
+The particle filter allows us to flexibly model bus behaviour,
+which in our current model includes
 \begin{itemize}
-\item non-constant speed along roads,
-\item optional stopping and waiting at bus stops while passengers board and disembark, and
-\item optional stopping and waiting at intersections or traffic lights (future work).
+\item non-constant speed along roads (between observations), and
+\item bus stop behaviour, which involves optional stopping and waiting times
+    while passengers board and disembark.
 \end{itemize}
+To handle the above, the transition function consists of two models,
+one for each of the above behaviours.
+The first models the speed and distance travelled of the vehicle 
+by using Newton's Laws of Motion,
+which, letting $\delta = t_k - t_{k-1}$ and $\epsilon_k^{(i)}\sim\mathrm{N}(0, \sigma^2)$, is
+\begin{equation}
+\label{eq:trans_newton}
+\bX_k^{(i)} = f_1(\bX_{k-1}^{(i)}, \delta_k, \epsilon_k^{(i)}) = 
+    \begin{bmatrix}
+        x_{k-1}^{(i)} + \delta(\dot x_{k-1}^{(i)} + \epsilon_k^{(i)}) \\
+        \dot x_{k-1}^{(i)} + \epsilon_k^{(i)}
+    \end{bmatrix}.
+\end{equation}
 
-For each particle, the transition function generates a plausible trajectory,
-using system noise parameter $\sigma^2$ which describes 
-how the vehicle's speed changes as a Markov process.
-The vehicle does not travel constantly along the route,
-however, as it needs to service bus stops along the way,
-so the transition function includes 
-stopping probabilities $\boldsymbol\pi = (\pi_1,\ldots,\pi_J)^\top$ at bus stops,
-dwell times $\boldsymbol\tau = (\tau_1,\ldots,\tau_J)^\top$ for passengers to
-board and disembark (conditional on the bus stopping),
-and the minimum dwell time at stops, $\gamma$,
-for the doors to open and close,
-and account for deceleration and acceleration.
-For these parameters, we used constant values for all stops,
-based on those used by \cite{Hans_2015};
-future work will investigate modelling these in real-time similarly to Section~\ref{sec:kf}.
+The second vehicle behaviour requires a model of bus stop wait times.
+We assume the vehicle is approaching stops $j$,
+and will stop with some probability $\pi_j$.
+If it does not stop, the remaining travel time $\delta_k$ is unaltered;
+otherwise, the bus waits for a minimum of $\gamma$ seconds---this 
+accounts for deceleration, opening and closing of doors, and acceleration
+\citep{Hands_2015}---and then waits while passengers board and disembark,
+which is assumed to be exponentially distributed with mean $\tau_j$.
+This leads to the following model,
+\begin{equation}
+\label{eq:trans_stop}
+\begin{split}
+p_j^{(i)} &\sim \mathrm{Bernoulli}(\pi_j) \\
+\tilde d_j^{(i)} &\sim \mathrm{Exponential}(\tau_j) \\
+d_j^{(i)} &= p_j^{(i)}(\gamma + \tilde d_j^{(i)}).
+\end{split}
+\end{equation}
 
-The transition function algorithm is shown in Algorithm~\ref{fig:algorithm},
-which implements those features discussed above.
-The stop positions are represented by their distance into trip,
-$\boldsymbol{S} = (S_1, \ldots, S_J)^\top$, and
-the $stop\_index$ function returns the index of a stop,
-given a distance travelled and set of stop distances $\boldsymbol{S}$.
-Lines~2--9 are necessary to decrease the degeneration rate of the filter,
-which can occur when there is a long delay between observations
-simply because the bus has not moved due to traffic or other reasons. 
-We therefore place positive probability for some particles to remain stationary.
+The combination of (\ref{eq:trans_newton}) and (\ref{eq:trans_stop})
+is handled by the transition function algorithm,
+displayed in Algorithm~\ref{fig:algorithm}.
+While (\ref{eq:trans_stop}) is used directly in the algorithm,
+(\ref{eq:trans_newton}) is modified to allow the bus to approach a stop
+and conditionally wait before continuing,
+until $\delta_k$ reaches zero.
+The algorithm also keeps track of each particle's travel time $z_\ell^{(i)}$
+along each segment $\ell$ of the route,
+storing the times so that the posterior distribution of the travel time
+can be computed once all particles have completed segment $\ell$:
+\begin{equation}
+\label{eq:post_tt}
+p(z_\ell | \bY_{1:k}) \approx
+    \sum_{i=1}^N W_k^{(i)} \dot\delta_{z_\ell}(z_\ell^{(i)}).
+\end{equation}
 
-Lines~11--12 of Algorithm~\ref{fig:algorithm} implement the system noise,
-which involves changing the vehicle's speed each second (i.e., acceleration).
-Lines~13--25 handle arrival behaviour at stops:
-if the particle passes the next stop,
-it has a chance of stopping (lines~18--19),
-in which case the dwell time is sampled and subtracted from the 
-time remaining to travel (lines~20--21).
-Finally, to track travel time along segments,
-at each point where the vehicle travels (lines 7 and 26),
-the travel time for the current segment, $z_j$, is incremented.
-The mutation ends once the travel time $\delta$ reaches zero,
-or when the vehicle reaches the end of the route (lines 10, 14).
-Once complete, the particle's new state is returned (line 29).
+
+
+% For each particle, the transition function generates a plausible trajectory,
+% using system noise parameter $\sigma^2$ which describes 
+% how the vehicle's speed changes as a Markov process.
+% The vehicle does not travel constantly along the route,
+% however, as it needs to service bus stops along the way,
+% so the transition function includes 
+% stopping probabilities $\boldsymbol\pi = (\pi_1,\ldots,\pi_J)^\top$ at bus stops,
+% dwell times $\boldsymbol\tau = (\tau_1,\ldots,\tau_J)^\top$ for passengers to
+% board and disembark (conditional on the bus stopping),
+% and the minimum dwell time at stops, $\gamma$,
+% for the doors to open and close,
+% and account for deceleration and acceleration.
+% For these parameters, we used constant values for all stops,
+% based on those used by \cite{Hans_2015};
+% future work will investigate modelling these in real-time similarly to Section~\ref{sec:kf}.
+
+% The transition function algorithm is shown in Algorithm~\ref{fig:algorithm},
+% which implements those features discussed above.
+% The stop positions are represented by their distance into trip,
+% $\boldsymbol{S} = (S_1, \ldots, S_J)^\top$, and
+% the $stop\_index$ function returns the index of a stop,
+% given a distance travelled and set of stop distances $\boldsymbol{S}$.
+% Lines~2--9 are necessary to decrease the degeneration rate of the filter,
+% which can occur when there is a long delay between observations
+% simply because the bus has not moved due to traffic or other reasons. 
+% We therefore place positive probability for some particles to remain stationary.
+
+% Lines~11--12 of Algorithm~\ref{fig:algorithm} implement the system noise,
+% which involves changing the vehicle's speed each second (i.e., acceleration).
+% Lines~13--25 handle arrival behaviour at stops:
+% if the particle passes the next stop,
+% it has a chance of stopping (lines~18--19),
+% in which case the dwell time is sampled and subtracted from the 
+% time remaining to travel (lines~20--21).
+% Finally, to track travel time along segments,
+% at each point where the vehicle travels (lines 7 and 26),
+% the travel time for the current segment, $z_j$, is incremented.
+% The mutation ends once the travel time $\delta$ reaches zero,
+% or when the vehicle reaches the end of the route (lines 10, 14).
+% Once complete, the particle's new state is returned (line 29).
 
 \renewcommand{\algorithmicrequire}{\textbf{Start:}}
 \newcommand{\algorithmicbreak}{\textbf{break}}
@@ -295,53 +346,89 @@ Once complete, the particle's new state is returned (line 29).
 \subsubsection{Updating state using the observation likelihood}
 \label{sec:pf_update}
 
-After mutating the particle set, the posterior distribution $\tilde\bX_{k|k}$ 
-is obtained by reweighting each particle using the likelihood.
-The measurement function $h$,
-and an additional function $g$ which transforms GPS coordinates onto a flat
-surface (the geographical equirectangular projection, \cite{Snyder_1998}),
-allow the placement of a bivariate normal likelihood on the data.
-The model for the observations is,
-assuming GPS error $\epsilon^2$,
-\begin{equation*}
-\label{eq:pf_obs_model}
-g(\bY_k) = g(h(\bX_k)) + \br_k,
-\quad \br_k \sim \mathrm{N}(\boldsymbol{0}, \epsilon^2\boldsymbol{I})
-\end{equation*}
-The geographical distance between the observation and the true vehicle can be expressed
-in terms of two independent random variables $z_1, z_2 \sim \mathrm{N}(0,1)$
-\begin{equation*}
+To compute the likelihood of the observation given each particle state,
+$p(\bY_k|\bX_k^{(i)})$,
+the measurement function $h$ is needed along with an
+\emph{geographical projection} $g$ to allow comparison of $\bY_k$,
+a GPS observation, with $\bX_k$, a distance travelled along the route in meters.
+
+The measurement function $h$ computes the GPS coordinates by using the 
+shape information provided by GTFS and travelling $x_k$ meters along 
+this two-dimensional line.
+Meanwhile, we use the \emph{Equirectangular projection} \citep{Snyder_1998},
+$\br = g(\bY_1 | \bY_0)$,
+so that the magnitude of $\boldsymbol{r}$ is equal to the physical distance
+between $\bY_0$ and $\bY_1$, with both dimensions in meters.
+Let $\bY_i = [\lambda_i, \psi_i]^\top$,
+with $\lambda_i$ and $\psi_i$ measured in radians,  
+and $R$ is the Earth's radius, in meters, then
+\begin{equation}
+\br = 
+g(\bY_1 | \bY_0) = 
+    \begin{bmatrix}
+        r_1 \\ r_2
+    \end{bmatrix} =
+    R \begin{bmatrix}
+        (\lambda_1 - \lambda_0)\cos\phi_0 \\
+        \phi_1 - \phi_0
+    \end{bmatrix}
+\end{equation}
+and, more importantly, the geographical distance $\mathcal{D}$ between the two 
+GPS coordinates is given by
+\begin{equation}
+\label{eq:dist}
+\mathcal{D}(\bY_0, \bY_1) = ||g(\bY_0 | \bY_1)|| = \sqrt{r_1^2 + r_2^2}
+\end{equation}
+
+
+Now we assume GPS observations have a known error of $\omega^2$ meters,
+and that \mbox{$\br \sim \mathrm{N}(\boldsymbol{0}, \omega^2\mathbf{I})$},
+which allows us to express $\br$ in terms of two independent
+standard normal random variables $z_1, z_2 \sim \mathrm{N}(0,1)$,
+which lets us express the distance between a vehicle observation $\bY_k$
+and a state $\bX_k$ using (\ref{eq:dist}) and the measurement function $h$,
+\begin{equation}
 \label{eq:obs_dist}
-dist(\bY_k, h(\bX_k)) = \sqrt{r_{k1}^2 + r_{k2}^2} 
-    = \sqrt{(\epsilon z_1)^2 + (\epsilon z_2)^2}.
-\end{equation*}
-The sum of two independent, standard normal random variables 
-is $\chi^2$ distributed with 2~degrees of freedom,
-which is itself exponential,
-so rearranging gives
-\begin{equation*}
+\mathcal{D}(\bY_k, h(\bX_k)) = \sqrt{r_{k1}^2 + r_{k2}^2} 
+    = \sqrt{(\omega z_1)^2 + (\omega z_2)^2}
+    = \sqrt{\omega^2 (z_1^2 + z_2^2)}
+\end{equation}
+
+Finally, it is known that the distribution of the sum of two indendent 
+standard normal variables is exponentially distributed with rate $\frac{1}{2}$,
+and that if $Z \sim \mathrm{Exponential}(\theta)$ then
+$cZ \sim \mathrm{Exponential}(\frac{\theta}{c})$,
+so the \emph{squared} distance from (\ref{eq:obs_dist}) has exponential distribution
+\begin{equation}
 \label{eq:obs_exp}
-\left(\frac{dist(\bY_k, h(\bX_k))}{\epsilon}\right)^2 =
-z_1^2 + z_2^2 \sim \mathrm{Exp}\left(\frac{1}{2}\right).
-\end{equation*}
+\mathcal{D}(\bY_k, h(\bX_k))^2 =
+\omega^2(z_1^2 + z_2^2) \sim \mathrm{Exponential}\left(\frac{1}{2\omega^2}\right).
+\end{equation}
 
-
-The likelihood of the data given a particle's state estimate 
-can now be calculated as
-\begin{equation*}
+The likelihood of the observation $\bY_k$ given a state estimate $\bX_k^{(i)}$
+can now be expressed using (\ref{eq:obs_exp}) and the PDF of the exponential distribution,
+\begin{equation}
+\label{eq:lhood}
 p(\bY_k | \bX_k^{(i)}, \epsilon) =
-\frac{1}{2}\exp\left\{
--\frac{1}{2} \left(\frac{dist(\bY_k, h(\bX_k^{(i)}))}{\epsilon}\right)^2
-\right\}
-\end{equation*}
+\frac{1}{2\omega^2}\exp\left\{
+    -\frac{\mathcal{D}(\bY_k, h(\bX_k^{(i)}))^2}{2\omega^2}
+\right\},
+\end{equation}
+where the distance between two GPS coordinates is easily computed,
+making (\ref{eq:lhood}) easy and fast to evaluate within the particle filter algorithm.
+
+
 It is worth noting that this representation of the likelihood is only
 possible due to the discrete nature of the particle filter state estimate;
-in other approaches, such as the Kalman filter,
-a reverse non-deterministic transformation,
-the inverse measurement function,
-is required to estimate the ``observed'' distance travelled $\hat Z_k~=~h^{-1}(\bY_k)$, 
-which introduces additional error and uncertainty into the model.
-
+in the Kalman filter, which has often been used in vehicle tracking,
+the measurement \emph{matrix} is used, and required that there is a linear
+transformation between the state and its observations.
+To enable this, applications first estimate the \emph{observed distance travelled}
+by snapping the GPS observations to the route,
+which introduces unnecessary error and uncertainty into the model.
+Our approach avoids this, which makes it more stable in locations where two 
+parts of the route are close to each other,
+such as at loops, where a single GPS observation might have two likely ``snapping'' points.
 
 
 \subsection{Network model}
