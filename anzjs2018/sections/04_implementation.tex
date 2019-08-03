@@ -85,7 +85,7 @@ when 8000~particles are used.
 
 \begin{figure}[tb]
     \centering
-    \includegraphics[width=0.7\textwidth]{figures/04_model_results_timing.pdf}
+    \includegraphics[width=0.8\textwidth]{figures/04_model_results_timing.pdf}
     \caption{
         Application timings were recorded for each component of each
         iteration, and averages over a 15~minute window are shown here.
@@ -128,7 +128,7 @@ and the (relative) variance of segment travel time estimates.
 
 \begin{figure}[tb]
     \centering
-    \includegraphics[width=0.7\textwidth]{figures/04_model_results_dist.pdf}
+    \includegraphics[width=0.8\textwidth]{figures/04_model_results_dist.pdf}
     \caption{
         The distance between the observation and the nearest point on the shape
         is calculated by finding the shortest distance between point and path.
@@ -141,12 +141,11 @@ and the (relative) variance of segment travel time estimates.
 \end{figure}
 
 
-Figure~\ref{fig:neff} shows that $N_\text{eff}$ increased
+Figure~\ref{fig:perf_stats} shows that $N_\text{eff}$ increased
 with GPS error and decreased with system noise,
 while remaining unaffected by changing $N$.
 The degeneration rate decreased with GPS error and increased with $N$,
-and was unaffected by system noise,
-as seen in Figure~\ref{fig:degen_rate}.
+and was unaffected by system noise.
 Large GPS error affects the likelihood,
 giving more weight to particles farther from the observation
 than does a smaller GPS error.
@@ -158,7 +157,7 @@ but show that the model is working as expected.
 
 \begin{figure}[tb]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/04_model_results_neff.pdf}
+    \includegraphics[width=\textwidth]{figures/04_model_results_neff.pdf}
     \caption{
         The effective sample size is an approximate measure of the variance
         of the particle weights.
@@ -171,23 +170,23 @@ but show that the model is working as expected.
         only evident when $N_\text{eff}$ is larger.
         The error bars show $\pm 2$SE.
     }
-    \label{fig:neff}
+    \label{fig:perf_stats}
 \end{figure}
 
-\begin{figure}[tb]
-    \centering
-    \includegraphics[width=0.9\textwidth]{figures/04_model_results_degen.pdf}
-    \caption{
-        The degeneration rate is the percentage of iterations where there were no
-        plausible particles, so the vehicle was ``lost'' by the model.
-        This decreases as GPS error and number of particles increase,
-        but there is no visible effect of system noise.
-        Note, however, that some of these can be attributed to invalid data,
-        for example if the driver has entered the wrong trip direction.
-        The error bars show $\pm 2$SE.
-    }
-    \label{fig:degen_rate}
-\end{figure}
+% \begin{figure}[tb]
+%     \centering
+%     \includegraphics[width=0.9\textwidth]{figures/04_model_results_degen.pdf}
+%     \caption{
+%         The degeneration rate is the percentage of iterations where there were no
+%         plausible particles, so the vehicle was ``lost'' by the model.
+%         This decreases as GPS error and number of particles increase,
+%         but there is no visible effect of system noise.
+%         Note, however, that some of these can be attributed to invalid data,
+%         for example if the driver has entered the wrong trip direction.
+%         The error bars show $\pm 2$SE.
+%     }
+%     \label{fig:degen_rate}
+% \end{figure}
 
 
 The last measure of performance is the relative variance of segment travel times.
@@ -196,6 +195,17 @@ so to compare the variability between simulations we needed to
 compute the average variance of travel times over all simulations,
 taking the average (over road segments) of the ratio between variance for
 each individual simulation and variance over all simulations.
+If $\tilde z_\ell^{\sigma,\epsilon}$ is a vector of all travel times
+along segment $\ell$ during the simulation with GPS error $\sigma$ and system noise $\epsilon$,
+then the relative variance $\bar v^{\sigma,\epsilon}$ is calculated by
+\begin{equation*}
+\begin{split}
+v_\ell^{\sigma,\epsilon} &=
+\frac{\mathrm{Var}(\tilde z_\ell^{\sigma,\epsilon})}{\mathrm{Var}(\tilde z_\ell)} \\
+\bar v^{\sigma,\epsilon} &=
+    \frac{1}{L}\sum_{\ell=1}^L v_\ell^{\sigma,\epsilon}
+\end{split}
+\end{equation*}
 Figure~\ref{fig:travel_times} shows that simulations with larger GPS error
 resulted in a higher relative variance,
 while simulations with more particles had lower relative variance.
