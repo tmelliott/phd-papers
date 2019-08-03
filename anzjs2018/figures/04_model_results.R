@@ -79,16 +79,89 @@ dev.off()
 
 
 
+## vehicle history files
+res <- do.call(bind_rows, 
+    lapply(
+        list.files("../../transitr/simulations", pattern = "sim_"), 
+        function(sim) {
+            siminfo <- as.numeric(strsplit(strsplit(sim, "_")[[1]][3], "-")[[1]])
+            do.call(
+                bind_rows,
+                lapply(
+                    list.files(
+                        file.path("../../transitr/simulations", sim, "history"), 
+                        pattern = "vehicle_.*\\.csv", full.names = TRUE
+                    ),
+                    function(x) {
+                        read_csv(x,
+                            col_types = "cccicddddiiidddddddc"
+                        )
+                    }
+                )
+            ) %>% mutate(
+                sim = sim, 
+                n_particles = siminfo[1], 
+                gps_error = siminfo[3], 
+                system_noise = siminfo[2]
+            )
+        }
+    )
+)
+
+pdf('figures/04_model_results_dist.pdf', width = 6, height = 3)
+ggplot(
+    res %>% filter(event_dist_to_route < 20 & event_dist_to_route > 0), 
+    aes(event_dist_to_route)
+) + 
+    geom_density() +
+    xlab("Distance to path (m)") + ylab("Density")
+dev.off()
+
+
+sims <- res %>% filter(event_dist_to_route < 20)
+
+pdf('figures/04_model_results_neff.pdf', width = 14, height = 3)
+ggplot(sims %>% group_by(n_particles, gps_error, system_noise) %>%
+        summarize(Neff.hat = mean(Neff, na.rm = TRUE), 
+                  Neff.sd = sd(Neff, na.rm = TRUE) / sqrt(n()))) +
+    geom_pointrange(aes(as.integer(as.factor(gps_error)), #+ as.numeric(as.factor(n_particles)) / 10 - 0.25, 
+        100*Neff.hat / n_particles, 
+        ymin = 100*(Neff.hat - 2*Neff.sd) / n_particles, 
+        ymax = 100*(Neff.hat + 2*Neff.sd) / n_particles,
+        shape = as.factor(n_particles))) +
+    facet_grid(~system_noise) +
+    scale_x_continuous(
+        breaks = seq_along(unique(sims$gps_error)), 
+        labels = levels(as.factor(sims$gps_error))
+    ) +
+    theme(panel.grid.major.x = element_blank()) +
+    xlab("GPS Error (m)") +
+    ylab("Effective sample size") +
+    labs(shape = "Number of particles")
+dev.off()
+
+sims %>% filter(state_type == "update") %>% ggplot(aes(action)) + geom_bar()
+
+sims %>%
+    ggplot(aes(as.factor(gps_error), 100 * Neff / n_particles)) +
+    geom_violin()
+
+
+
 get_sim_files <- function(sim) {
     if (file.exists(file.path("../../transitr/simulations", sim, "modeleval.rds"))) {
         return(readRDS(file.path("../../transitr/simulations", sim, "modeleval.rds")))
     }
     x <- try({
-        siminfo <- strsplit(sim, "_")[[1]][-1]
-        if (grepl("e", siminfo[3])) siminfo[3] <- format(as.numeric(siminfo[3]), scientific = FALSE)
-        siminfo <- as.numeric(gsub("-", ".", siminfo))
+        siminfo <- as.numeric(strsplit(strsplit(sim, "_")[[1]][3], "-")[[1]])
+        # if (grepl("e", siminfo[3])) 
+        #     siminfo[3] <- format(as.numeric(siminfo[3]), scientific = FALSE)
+        # siminfo <- as.numeric(gsub("-", ".", siminfo))
         do.call(bind_rows, 
-            lapply(list.files(file.path("../../transitr/simulations", sim, "modeleval"), pattern="vehicle_.*\\.csv", full.names = TRUE), 
+            lapply(
+                list.files(
+                    file.path("../../transitr/simulations", sim, "modeleval"), 
+                    pattern = "vehicle_.*\\.csv", full.names = TRUE), 
                 function(x) 
                     read_csv(x, 
                         col_names = c("vehicle_id", "trip_id", "ts", "prior_mse", "posterior_mse", #"sumwt", "varwt",
@@ -97,7 +170,12 @@ get_sim_files <- function(sim) {
                         col_types = "ccidddddddiii", progress = FALSE) %>%
                     mutate(ts = as.POSIXct(ts, origin = "1970-01-01"))
             )
-        ) %>% mutate(sim = sim, n_particles = siminfo[1], gps_error = siminfo[2], system_noise = siminfo[3])
+        ) %>% mutate(
+            sim = sim, 
+            n_particles = siminfo[1], 
+            gps_error = siminfo[3], 
+            system_noise = siminfo[2]
+        )
     })
     if (inherits(x, "try-error")) return(NULL)
     saveRDS(x, file.path("../../transitr/simulations", sim, "modeleval.rds"))
@@ -105,7 +183,12 @@ get_sim_files <- function(sim) {
 }
 
 
-res <- do.call(bind_rows, lapply(list.files("../../transitr/simulations", pattern = "sim_"), get_sim_files))
+res <- do.call(bind_rows, 
+    lapply(
+        list.files("../../transitr/simulations", pattern = "sim_"), 
+        get_sim_files
+    )
+)
 
 # ggplot(res %>% filter(dist_to_path < 5), aes(dist_to_path)) + geom_density()
 
