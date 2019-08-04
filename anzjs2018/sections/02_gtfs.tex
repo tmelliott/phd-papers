@@ -92,13 +92,12 @@ this is minimal and our approach is sufficient for the current work.
         \label{fig:network_creation_2}
     \end{subfigure}
     \caption{
-        Constructing a route network from the stops (dots) of three separate
-        routes (lines), as shown in (a).
-        Routes using the same subsequence of stops are assigned the same
-        road segments, so the road network shown 
-        consists of nodes (stops) and edges (roads),
-        as shown in (b), where the thickness of each lines
-        corresponds to how many routes share that road.
+        Bus stops (shown as dots above) can be serviced by more than one route, 
+        as shown in (a), with different line types representing three separate routes.
+        The constructed road network, using stops as nodes, is shown in (b),
+        in which the connecting lines represent physical road segments,
+        with line width proportional to the number of individual routes 
+        travelling along that road.
     }
     \label{fig:network_creation}
 \end{figure}

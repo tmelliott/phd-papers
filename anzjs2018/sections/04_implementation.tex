@@ -87,18 +87,19 @@ when 8000~particles are used.
     \centering
     \includegraphics[width=0.8\textwidth]{figures/04_model_results_timing.pdf}
     \caption{
-        Application timings were recorded for each component of each
-        iteration, and averages over a 15~minute window are shown here.
-        The timings shown are \emph{wall time}, the actual time passed,
-        not CPU time.
-        Steps that only involve particle calculations are approximately
-        of complexity $O(N)$,
-        however some steps are a little more complex (writing ETAs involves computing quantiles), 
-        so there is a slightly exponential trend.
+        The real-time running time of each step was recorded within each iteration,
+        and the average times over a 15~minute off-peak window are shown above.
+        Total time increases as the number of particles $N$ increases.
+        The reason for the large contribution of writing ETAs is that
+        this step involves estimation of quantiles,
+        which requires sorting the particles, 
+        an operation of $\mathcal{O}(N\log N)$ complexity.
+        The vehicle update step also involves sorting whenever the sample
+        degenerations and resampling is required.
+        Total time also includes fetching the data from the API,
+        which is constant for any $N$, which explains the increase
+        in standardised total time for $N=500$.
     }
-        % The timings for various parts of the application, and overall. %
-        % The trend is slightly non-linear due to the complexity of the ETA generation step, %
-        % which requires sorting of the particle ETAs to obtain quantile estimates.}
     \label{fig:timings}
 \end{figure}
 
