@@ -29,19 +29,23 @@ The second component is \emph{GTFS-realtime},
 which is only available in a subset of the providers due to the requirement of 
 on board GPS tracking devices and a central server.
 It provides a standardised format for sharing vehicle positions and trip delays,
-and are typically accessed by developers via an API can be used in \rt applications.
+and are typically accessed by developers via an API that can be used in \rt applications.
 
 As mentioned in Section~\ref{sec:intro},
-there are some major issues with the current prediction method in Auckland.
-These are almost directly attributed to \emph{GTFS-realtime} trip updates,
-which are currently the sole source of data for ETAs.
-Trip updates are reported whenever a vehicle arrives or departs a stop,
+there are some major issues with the arrival time prediction method currently
+deployed in Auckland,
+which is based entirely on \emph{GTFS-realtime} trip updates---%
+vehicle positions are used only to display \emph{where} the bus is.
+Trip updates are reported whenever a vehicle arrives at or departs from a stop,
 and includes the delay between the scheduled and actual arrival times,
 which is propagated to all future stops to update their ETAs.
-This assumes that the schedule is well calibrated 
-and the scheduled travel time between stops
+As already mentioned, this assumes that the schedule is well calibrated,
+and that the time between stops
 is representative of the real-world travel time between them. 
-Therefore, an alternative estimation approach that uses \rt travel times 
+Figure~\ref{fig:gtfs-delays} demonstrates the fallibility of the current approach,
+where we see the progressive lateness causing the passengers' ETA to 
+decrease much slower than expected.
+An estimation approach using \rt travel times 
 between stops would seem more adequate.
 
 
@@ -51,29 +55,30 @@ between stops would seem more adequate.
 
 The primary predictor of arrival time is 
 the travel time along roads between where the bus is \emph{now},
-and the stop at which the passenger is waiting.
+and the stop at which a passenger is waiting.
 In most applications, however, this vital information is unavailable, at least directly.
 In order to compute travel times efficiently
 and make use of all available data pooled across multiple routes,
 we constructed a \emph{road network},
-allowing us to model each physical road as a unique entity.
-In this way, every bus travelling along a road contributes to its state,
-and can be used to predice travel times for all upcoming buses 
+allowing us to model roads directly,
+such that every bus travelling along a road contributes to its state,
+which can in turn be used to predice travel times for all upcoming buses 
 travelling along the road,
 irrespective of the route they are servicing.
 
 
-The transit network was constructed by splitting each route
-into spatially identifiable segments,
+To construct the transit network,
+routes were split into spatially identifiable segments,
 each representative of a physical road,
-by using bus stops as nodes in the network
+using bus stops as nodes in the network
 and the connecting roads as edges
 (Figure~\ref{fig:network_creation}).
 In this way, routes that service the same subsequence of stops
-all contribute to congestion information for the connecting roads.
+all contribute to traffic flow information for the connecting roads.
 Although there are several drawbacks to this method,
 such as road segment overlaps where routes merge between stops,
-this is minimal and our approach is sufficient for the current work.
+our approach is sufficient for the purposes of assessing the \rt 
+faesibilty of our proposed prediction framework.
 
 
 
@@ -124,13 +129,15 @@ buses are programmed to report their location when arriving at or departing from
 bus stops, as well as some major intersections.
 To further complicate this,
 these positions can be preemptive,
-for example when approaching a queue of traffic at an intersection
-and the way-point is triggered before the bus physically gets there,
-so consecutive observations can show a bus travelling backwards.
+for example when approaching a queue of traffic at an intersection,
+the way-point may be triggered before the bus physically gets there,
+so consecutive observations may show what appears to be a bus travelling backwards.
 To handle this, we compute the approximate distance travelled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
-if this has decreased, the current state is rejected and the vehicle reverted
+if this has decreased, the current state (based on the preemtive observation)
+is rejected and the vehicle reverted
 to its previous state before continuing.
-We are available to avoid degeneration of the particle filter (Section~\ref{sec:model_perf})
-at the cost of losing one observation that is most likely invalid anyway.
+So at the cost of losing one (likely invalid) observation,
+we are able to improve particle filter performance
+when this situation is encountered.
 
