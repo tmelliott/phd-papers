@@ -3,56 +3,51 @@
 
 In this paper we described an approach to transit vehicle modelling
 that enables the \rt estimation of road state from vehicle position data,
-which in the future will be used to make arrival time predictions
+which will later be used to make arrival time predictions
 that account for \rt traffic conditions.
 The vehicle model, implemented using a particle filter,
 allows complex bus behaviours to be modelled,
-with future work planned to extend the model to handle physical intersections,
-such as traffic lights.
-From the particle filter,
+from which 
 vehicle travel times along roads are estimated which are in turn used 
 in the modelling of the road network state.
 
 
-The network model presented here is simple,
+We have focussed on making a general framework
+in which the existing models used for specific components
+can easily be changed---%
+for example, using a more complex model of stop dwell times
+based on historical data in place of the exponential---%
+or new ones added, such as implementing intersection-specific behaviour
+if intersecion locations are available.
+Future work is planned to detect route meeting points
+and use these as intersection nodes,
+with the goal of further reducing road segment overlap.
+
+
+The network model presented here is simple, 
 but provides the foundation for future work to
 develop a formal model combining \rt travel time information with historical data, 
 allowing short- and medium-term forecasts of road state,
 for example incorporating peak time congestion.
-This in turn will provide the basis for an arrival time prediction model
-that combines \rt vehicle state with travel time forecasts
-and provide commuters with what will hopefully be reliable ETAs.
-These will likely consist of a point estimate along with a prediction interval,
-as it is impossible given the available data to accurately predict arrival time
-due to traffic lights, unknown dwell times at intermediate bus stops,
-and many other factors.
+% This in turn will provide the basis for an arrival time prediction model
+% that combines \rt vehicle state with travel time forecasts
+% in order to provide commuters with more reliable ETAs.
+As for the arrival times, 
+we plan to estimate these from a combination of historical 
+and \rt data.
+The model presented in this paper provides the starting point
+for a transit modelling and predictive framework
+that can be adapted to specific transit providers,
+combined with historical data,
+and run in \rt to provide commuters with
+improved ETAs with which they can more reliably
+plan their commutes.
 
 
-
-
-% The main goal of this work was to explore the feasibility
-% of a particle filter as a \rt estimation method for transit vehicle states,
-% and the use of estimated states to determine traffic conditions
-% throughout the network.
-% This allows vehicles to inform others---irrespective of route---of 
-% current \rt traffic conditions,
-% and provide a means of obtaining more reliable ETAs.
-
-
-% We have shown that the particle filter a viable \rt option in terms of speed,
-% and while it occasionally loses the bus,
-% a lot of this is attributed to invalid data (incorrect route, direction, etc).
-% Future development will incorporate more accurate stopping behaviour,
-% perhaps using GTFS arrival and departure times in the likelihood function.
-
-
-% The network model is still in the early stages of development,
-% but given that the implementation is running well within our 30~second target,
-% there is room for developing a more complex model.
-% Future work will explore the use of historical data to develop informative priors
-% for travel times,
-% which will provide a useful fallback in the case of no data,
-% or for making more accurate long-term predictions.
-% Once such a model has been developed, we plan to explore prediction estimates,
-% particularly comparing point and intervals as a means of communicating 
-% uncertainty to commuters.
+The results of our simulations show that the framework is a 
+faesible \rt alternative.
+While the timings presented were for off-peak times,
+we hope futher investigation of choosing $N$ and $N_\text{eff}$,
+as well as work removing some redudancy from the transition algorithm,
+will mean times during peak periods, when there are 2-3~times
+as many vehicles, will come in under our 30~second target.

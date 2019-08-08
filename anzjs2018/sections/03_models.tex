@@ -49,13 +49,16 @@ of which observations $\bY_k$ are made using a GPS
 with GPS error $\omega^2$,
 giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle
 as $\bY_k = \left[\lambda_k\ \phi_k \right]^\top$.
-
 We use a particle filter to estimate $\bX_k$,
 due to its high flexibility and use in recent 
 transit vehicle modelling applications \citep{Hans_2015},
-as well as allowing estimation of travel times
+as well as many other more general vehicle tracking 
+applications \citep{}.
+In addition, it makes it trivial to estimate travel times
 $\bz = (z_1,\ldots,z_L)^\top$, in seconds, along road segments
 as the vehicle traverses the route.
+
+
 The primary advantage of the particle filter is its handling of multimodality,
 as demonstrated in Figure~\ref{fig:pf_state_predict},
 which is a common feature of the proposal distribution, particularly around bus stops.
@@ -227,14 +230,19 @@ d_j^{(i)} &= p_j^{(i)}(\gamma + \tilde d_j^{(i)}).
 \end{split}
 \end{equation}
 
-The combination of (\ref{eq:trans_newton}) and (\ref{eq:trans_stop})
-is handled by the transition function algorithm,
-displayed in Algorithm~\ref{fig:algorithm}.
-While (\ref{eq:trans_stop}) is used directly in the algorithm,
-(\ref{eq:trans_newton}) is evaluated iteratively,
-allowing the bus to approach a stop
-and conditionally wait before continuing,
-until $\delta_k$ reaches zero.
+
+The model components are implemented as an algorithm,
+in which (\ref{eq:trans_newton}) is evaluated iteratively
+one second at a time, decreasing $\delta_k$ by one each time,
+with $\epsilon_k^{(i)}$ only sampled only at the beginning
+of each time update.
+This allows the particle to approach the next stop,
+at which point (\ref{eq:trans_stop}) is evaluated for the particle
+and the dwell time subtracted from $\delta_k$,
+and continuing until $\delta_k$ reaches zero.
+Iterating this way ensures that 
+the algorithm works regardless of how many
+stops are encountered during the time step.
 The algorithm also keeps track of each particle's travel time $z_\ell^{(i)}$
 along each segment $\ell$ of the route,
 storing the times so that the posterior distribution of the travel time
@@ -242,61 +250,61 @@ can be computed once all particles have completed segment $\ell$:
 \begin{equation}
 \label{eq:post_tt}
 p(z_\ell | \bY_{1:k}) \approx
-    \sum_{i=1}^N W_k^{(i)} \dot\delta_{z_\ell}(z_\ell^{(i)}).
+    \sum_{i=1}^N W_k^{(i)} \dot\delta(z_\ell - z_\ell^{(i)}).
 \end{equation}
 
 
 
-\renewcommand{\algorithmicrequire}{\textbf{Start:}}
-\newcommand{\algorithmicbreak}{\textbf{break}}
-\newcommand{\Break}{\State \algorithmicbreak}
-\begin{algorithm}[t]
-    \caption{Particle mutation function.}
-    \label{fig:algorithm}
-    \begin{algorithmic}[2]
-    \Require $x_{k-1}, \dot x_{k-1}, \boldsymbol z$\\
-    Initialisation $\delta \gets t_k - t_{k-1}$, 
-        $j \gets stop\_index(x, \boldsymbol{S})$
-    \If {$u \sim \mathrm{U}(0,1) < 0.5$ and $x = S_j$}
-        \Comment{Remain longer at stop}
-        \State $d_j \sim \mathrm{Exp}(1/\tau_j)$
-        \State $\delta \gets \delta - \gamma - d_j$
-    \ElsIf {$u \sim \mathrm{U}(0,1) < 0.1$}
-        \Comment{Occasionally bus stopped due to traffic}
-        \State $w \gets \min(\delta, \mathrm{Exp}(1/\delta))$
-        \State $\delta \gets \delta - w$
-        \State $z_j \gets z_j + w$
-        \Comment{Congestion counts as travel time}
-    \EndIf
-    \While {$\delta > 0$ and $x < S_J$} 
-        \State $\dot x \sim \mathrm{N}(\dot x, \sigma^2)$
-        \Comment{System noise, truncated to be non-negative}
-        \State $x \leftarrow x + \dot x$
-        \If {$x \geq S_{j+1}$}
-            \If {$j+1 = J$}
-                \Comment{Break at end of route}
-                \State $x \gets S_J$
-                \Break
-            \EndIf
-            \State $u_j \sim \mathrm{U}(0,1)$
-            \Comment{Simulate vehicle stopping}
-            \If {$u_j < \pi$}
-                \State $d_j \sim \mathrm{Exp}(1/\tau_j)$
-                \State $\delta \gets \delta - \gamma - d_j$
-                \State $x \gets S_j$
-            \EndIf
-            \State $j\gets j+1$
-        \EndIf
-        \State $\delta \gets \delta - 1$
-        \State $z_j \gets z_j + 1$
-        \Comment{Track travel time along road}
-    \EndWhile
-    \\
-    \Return $x, \dot x, \boldsymbol z$
-    \end{algorithmic}
-\end{algorithm}
+% \renewcommand{\algorithmicrequire}{\textbf{Start:}}
+% \newcommand{\algorithmicbreak}{\textbf{break}}
+% \newcommand{\Break}{\State \algorithmicbreak}
+% \begin{algorithm}[t]
+%     \caption{Particle mutation function.}
+%     \label{fig:algorithm}
+%     \begin{algorithmic}[2]
+%     \Require $x_{k-1}, \dot x_{k-1}, \boldsymbol z$\\
+%     Initialisation $\delta \gets t_k - t_{k-1}$, 
+%         $j \gets stop\_index(x, \boldsymbol{S})$
+%     \If {$u \sim \mathrm{U}(0,1) < 0.5$ and $x = S_j$}
+%         \Comment{Remain longer at stop}
+%         \State $d_j \sim \mathrm{Exp}(1/\tau_j)$
+%         \State $\delta \gets \delta - \gamma - d_j$
+%     \ElsIf {$u \sim \mathrm{U}(0,1) < 0.1$}
+%         \Comment{Occasionally bus stopped due to traffic}
+%         \State $w \gets \min(\delta, \mathrm{Exp}(1/\delta))$
+%         \State $\delta \gets \delta - w$
+%         \State $z_j \gets z_j + w$
+%         \Comment{Congestion counts as travel time}
+%     \EndIf
+%     \While {$\delta > 0$ and $x < S_J$} 
+%         \State $\dot x \sim \mathrm{N}(\dot x, \sigma^2)$
+%         \Comment{System noise, truncated to be non-negative}
+%         \State $x \leftarrow x + \dot x$
+%         \If {$x \geq S_{j+1}$}
+%             \If {$j+1 = J$}
+%                 \Comment{Break at end of route}
+%                 \State $x \gets S_J$
+%                 \Break
+%             \EndIf
+%             \State $u_j \sim \mathrm{U}(0,1)$
+%             \Comment{Simulate vehicle stopping}
+%             \If {$u_j < \pi$}
+%                 \State $d_j \sim \mathrm{Exp}(1/\tau_j)$
+%                 \State $\delta \gets \delta - \gamma - d_j$
+%                 \State $x \gets S_j$
+%             \EndIf
+%             \State $j\gets j+1$
+%         \EndIf
+%         \State $\delta \gets \delta - 1$
+%         \State $z_j \gets z_j + 1$
+%         \Comment{Track travel time along road}
+%     \EndWhile
+%     \\
+%     \Return $x, \dot x, \boldsymbol z$
+%     \end{algorithmic}
+% \end{algorithm}
 
-\afterpage{\clearpage}
+% \afterpage{\clearpage}
 
 
 \subsubsection{Updating state using the observation likelihood}

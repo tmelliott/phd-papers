@@ -49,12 +49,24 @@ which can then be used to improve arrival time predictions.
 Several vehicle modelling approaches were explored, 
 including the Kalman filter \citep{Dailey_2001,Cathey_2003},
 machine learning models \citep{Yu_2006,Chang_2010},
-and the particle filter,
-which has successfully been used in vehicle tracking applications
-\citep{cn},
-as well as in transport modelling \citep{Hans_2015}.
-For several reasons, discussed further in Section~\ref{sec:pf},
-the particle filter was used in the current application.s
+and the particle filter \citep{Hans_2015}.
+
+
+The particle filter has proven itself as a robust option for
+\rt vehicle tracking applications
+\citep{Gustafsson_2002,Davidson_2011},
+and as computational power has increased over recent years,
+a strong competitor for \rt applications.
+\cite{Ulmke_2006} showed it to handle situations where traditional
+(i.e., Kalman filter) methods break down:
+the particle filter retained the accurate uncertainty about the location
+where there was a lack of information,
+an important property for our model in which we expect
+many situations where there are sparse observations
+and a strongly multimodal distribution.
+By using a particle filter,
+we were able to develop a simple, flexible framework
+which is robust to the type of data we expect to observe.
 
 
 The second component involves estimating traffic conditions throughout the transport network

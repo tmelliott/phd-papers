@@ -43,10 +43,26 @@ As already mentioned, this assumes that the schedule is well calibrated,
 and that the time between stops
 is representative of the real-world travel time between them. 
 Figure~\ref{fig:gtfs-delays} demonstrates the fallibility of the current approach,
-where we see the progressive lateness causing the passengers' ETA to 
-decrease much slower than expected.
+where we see the progressive lateness causing the passenger's ETA to 
+jump each time the bus arrives at a stop.
 An estimation approach using \rt travel times 
 between stops would seem more adequate.
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/02_gtfs_delays.pdf}
+    \caption{
+        On the left, scheduled arrival times are shown as solid points,
+        for several stops along a route. The actual arrival times
+        are shown with crosses,
+        and the GTFS-based ETAs for stop 5, $\hat A_1$, $\hat A_2$, and $\hat A_3$, are also shown.
+        On the right,
+        for a passenger arriving at stop 5 at 12:04,
+        the ETA over time is shown, demonstrating the fluctuation in
+        arrival time as the bus arrives at each stop.
+    }
+    \label{fig:gtfs-delays}
+\end{figure}
 
 
 

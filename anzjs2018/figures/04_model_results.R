@@ -111,7 +111,8 @@ egg::ggarrange(
         xlab("Number of particles") +
         ylab("Average iteration time (s)") + 
         coord_flip() +
-        theme_minimal(),
+        theme_classic() +
+        theme(strip.background = element_blank()),
     ggplot(figdat, aes((as.factor(n_particles)))) +
         geom_point(aes(y = 1000 * wall.hat / n_particles)) +
         geom_linerange(aes(ymin = 0, ymax = 1000 * wall.hat / n_particles)) +
@@ -119,10 +120,15 @@ egg::ggarrange(
         xlab("Number of particles") +
         ylab("Standardised time (ms / particle)") + 
         coord_flip() +
-        theme_minimal(),
+        theme_classic() +
+        theme(strip.background = element_blank()),
     nrow = 2
 )
 dev.off()
+
+# ## total times by time of day
+# ggplot(ttot, aes(timestamp, wall / 1000)) +
+#     geom_point()
 
 
 
@@ -158,9 +164,10 @@ res <- do.call(bind_rows, lapply(list.files("../../transitr/simulations", patter
 
 pdf('figures/04_model_results_dist.pdf', width = 6, height = 3)
 ggplot(res %>% filter(dist_to_path < 20 & dist_to_path > 0), aes(dist_to_path)) + 
-    geom_density(fill = "gray") +
+    geom_density() +
     xlab("Distance to path (m)") + ylab("Density") +
-    theme_minimal()
+    theme_classic() +
+    theme(strip.background = element_blank())
 dev.off()
 
 sims <- res %>% filter(dist_to_path < 20) %>% 
@@ -181,7 +188,8 @@ egg::ggarrange(
         facet_grid(~n_particles, 
             labeller = as_labeller(function(x) paste("N =", x))) +
         labs(lty = "System noise") +
-        theme_minimal() +
+        theme_classic() +
+        theme(strip.background = element_blank()) +
         xlab("GPS error (m)") +
         ylab(expression(bar(N)[eff]/N)),
     ggplot(sims, aes(gps_error, p_bad, 
@@ -193,7 +201,8 @@ egg::ggarrange(
             labeller = as_labeller(function(x) paste("N =", x))) +
         labs(lty = "System noise") +
         theme(legend.position = "none") +
-        theme_minimal() +
+        theme_classic() +
+        theme(strip.background = element_blank()) +
         xlab("GPS error (m)") +
         ylab("Degeneration rate"),
     # ggplot(sims, aes(system_noise*100, Neff / n_particles, 
@@ -336,7 +345,8 @@ ggplot(sdata, aes((gps_error), varp.mean)) +
     facet_grid(~n_particles, 
         labeller = as_labeller(function(x) paste("N =", x))) +
     labs(lty = "System noise") +
-    theme_minimal() +
+    theme_classic() +
+    theme(strip.background = element_blank()) +
     xlab("GPS error (m)") +
     ylab("Relative variance")
 dev.off()
