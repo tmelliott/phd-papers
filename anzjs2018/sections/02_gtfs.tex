@@ -38,27 +38,32 @@ which is based entirely on \emph{GTFS-realtime} trip updates---%
 vehicle positions are used only to display \emph{where} the bus is.
 Trip updates are reported whenever a vehicle arrives at or departs from a stop,
 and includes the delay between the scheduled and actual arrival times,
-which is propagated to all future stops to update their ETAs.
+which is propagated to all future stops to update their ETAs,
+as demonstrated in Figure~\ref{fig:gtfs-delays}.
 As already mentioned, this assumes that the schedule is well calibrated,
 and that the time between stops
 is representative of the real-world travel time between them. 
-Figure~\ref{fig:gtfs-delays} demonstrates the fallibility of the current approach,
+Figure~\ref{fig:gtfs-delays} demonstrates the fallibility of this prediction method,
 where we see the progressive lateness causing the passenger's ETA to 
 jump each time the bus arrives at a stop.
-An estimation approach using \rt travel times 
-between stops would seem more adequate.
+By using \rt travel time information,
+we can better predict the travel time between stops,
+which we hope will result in more accurate and reliable arrival time estimates.
+
 
 \begin{figure}[tb]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/02_gtfs_delays.pdf}
+    \includegraphics[width=0.8\textwidth]{figures/02_gtfs_delays.pdf}
     \caption{
         On the left, scheduled arrival times are shown as solid points,
         for several stops along a route. The actual arrival times
         are shown with crosses,
-        and the GTFS-based ETAs for stop 5, $\hat A_1$, $\hat A_2$, and $\hat A_3$, are also shown.
+        and the GTFS-based ETAs for stop 5, $\{\hat A_1, \hat A_2, \hat A_3\}$, are shown.
         On the right,
         for a passenger arriving at stop 5 at 12:04,
-        the ETA over time is shown, demonstrating the fluctuation in
+        ETA predictions
+        $\mathrm{ETA}_j = \mathrm{Time} - \hat A_j$ are shown
+        to demonstrate the fluctuation in
         arrival time as the bus arrives at each stop.
     }
     \label{fig:gtfs-delays}
@@ -78,7 +83,7 @@ and make use of all available data pooled across multiple routes,
 we constructed a \emph{road network},
 allowing us to model roads directly,
 such that every bus travelling along a road contributes to its state,
-which can in turn be used to predice travel times for all upcoming buses 
+which can in turn be used to predict travel times for all upcoming buses 
 travelling along the road,
 irrespective of the route they are servicing.
 
@@ -102,13 +107,13 @@ faesibilty of our proposed prediction framework.
     \centering
     \begin{subfigure}{0.7\textwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/02_network_segments_1.pdf}
+        \includegraphics[width=0.9\textwidth]{figures/02_network_segments_1.pdf}
         \caption{Raw GTFS route shapes}
         \label{fig:network_creation_1}
     \end{subfigure} \\
     \begin{subfigure}{0.7\textwidth}
         \centering
-        \includegraphics[width=0.95\textwidth]{figures/02_network_segments_2.pdf}
+        \includegraphics[width=0.9\textwidth]{figures/02_network_segments_2.pdf}
         \caption{GTFS-based road network}
         \label{fig:network_creation_2}
     \end{subfigure}
@@ -150,7 +155,7 @@ the way-point may be triggered before the bus physically gets there,
 so consecutive observations may show what appears to be a bus travelling backwards.
 To handle this, we compute the approximate distance travelled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
-if this has decreased, the current state (based on the preemtive observation)
+if this has decreased, the current state (based on the preemptive observation)
 is rejected and the vehicle reverted
 to its previous state before continuing.
 So at the cost of losing one (likely invalid) observation,

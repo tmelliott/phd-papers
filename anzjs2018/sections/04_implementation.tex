@@ -72,7 +72,7 @@ The most time consuming component was ETA writing,
 which involved summarising the individual ETAs estimated for each particle.
 While not discussed here this involved computing quantiles which uses a sorting algorithm
 with complexity $O(N \log N)$,
-which explains non-linear relationship with $N$.
+which explains the non-linear relationship with $N$.
 
 
 The next most intensive step was vehicle updating,
@@ -94,15 +94,6 @@ when 8000~particles are used.
         The vehicle update and writing ETA steps involve sorting the particles,
         which is an operation of $\mathcal{O}(N\log N)$ complexity.
         Total time is for the entire iteration, which includes fetching the data from the API.
-        % Total time increases as the number of particles $N$ increases.
-        % The reason for the large contribution of writing ETAs is that
-        % this step involves estimation of quantiles,
-        % which requires sorting the particles, 
-        % The vehicle update step also involves sorting whenever the sample
-        % degenerations and resampling is required.
-        % Total time also includes fetching the data from the API,
-        % which is constant for any $N$, which explains the increase
-        % in standardised total time for $N=500$.
     }
     \label{fig:timings}
 \end{figure}
@@ -127,18 +118,30 @@ For each combination of these parameter values, including varying $N$,
 the following values were calculated:
 effective sample size, $N_\text{eff}$;
 degeneration rate, the percentage of iterations in which the vehicle was lost
-(no plausible particles);
+(no plausible particles remained);
 and the (relative) variance of segment travel time estimates.
 
 
 \begin{figure}[tb]
     \centering
-    \includegraphics[width=0.8\textwidth]{figures/04_model_results_dist.pdf}
+    \includegraphics[width=0.7\textwidth]{figures/04_model_results_dist.pdf}
     \caption{
         The distribution of minimum distance between observed vehicle location
         and the route path, truncated to 20~meters.
     }
     \label{fig:dist_to_route}
+\end{figure}
+
+
+\begin{figure}[tb]
+    \centering
+    \includegraphics[width=\textwidth]{figures/04_model_results_neff.pdf}
+    \caption{
+        The effective sample size, $N_\text{eff}$,
+        and degeneration rate for varying values of GPS error,
+        system noise, and number of particles $N$.
+    }
+    \label{fig:perf_stats}
 \end{figure}
 
 
@@ -159,59 +162,27 @@ Thus, these results are not surprising,
 but show that the model is working as expected.
 
 
-\begin{figure}[tb]
-    \centering
-    \includegraphics[width=\textwidth]{figures/04_model_results_neff.pdf}
-    \caption{
-        The effective sample size, $N_\text{eff}$,
-        and degeneration rate for varying values of GPS error,
-        system noise, and number of particles $N$.
-        % increases with GPS error and decreases with system noise,
-        % however both effects are reduced for larger $N$.
-        % Conversely, degeneration rate decreases with GPS error and
-        % system noise, although the effect of the latter is very small,
-        % and again the relationship is less pronounced for larger $N$.
-    }
-    \label{fig:perf_stats}
-\end{figure}
-
-% \begin{figure}[tb]
-%     \centering
-%     \includegraphics[width=0.9\textwidth]{figures/04_model_results_degen.pdf}
-%     \caption{
-%         The degeneration rate is the percentage of iterations where there were no
-%         plausible particles, so the vehicle was ``lost'' by the model.
-%         This decreases as GPS error and number of particles increase,
-%         but there is no visible effect of system noise.
-%         Note, however, that some of these can be attributed to invalid data,
-%         for example if the driver has entered the wrong trip direction.
-%         The error bars show $\pm 2$SE.
-%     }
-%     \label{fig:degen_rate}
-% \end{figure}
-
-
 The last measure of performance is the relative variance of segment travel times.
 We used relative variance as each segment has a very different travel time distribution,
 so to compare the variability between simulations we needed to 
 compute the average variance of estimated travel times over all simulations,
 taking the average (over road segments) of the ratio between variance for
 each individual simulation and variance over all simulations.
-If $\tilde z_\ell^{\omega,\epsilon}$ is a vector of all travel times
-along segment $\ell$ during the simulation with GPS error $\omega$ and system noise $\epsilon$,
-then the relative variance $\bar v^{\omega,\epsilon}$ is calculated by
+If $\tilde \bz_\ell^{\omega,\sigma}$ is a vector of all travel times
+along segment $\ell$ during the simulation with GPS error $\omega$ and system noise $\sigma$,
+then the relative variance $\bar v^{\omega,\sigma}$ is calculated by
 \begin{equation*}
 \begin{split}
-v_\ell^{\omega,\epsilon} &=
-\frac{\mathrm{Var}(\tilde z_\ell^{\omega,\epsilon})}{\mathrm{Var}(\tilde z_\ell)} \\
-\bar v^{\omega,\epsilon} &=
-    \frac{1}{L}\sum_{\ell=1}^L v_\ell^{\omega,\epsilon}
+v_\ell^{\omega,\sigma} &=
+\frac{\mathrm{Var}(\tilde \bz_\ell^{\omega,\sigma})}{\mathrm{Var}(\tilde \bz_\ell)} \\
+\bar v^{\omega,\sigma} &=
+    \frac{1}{L}\sum_{\ell=1}^L v_\ell^{\omega,\sigma}
 \end{split}
 \end{equation*}
 Figure~\ref{fig:travel_times} shows that simulations with larger GPS error
 resulted in a higher relative variance,
 while simulations with more particles had lower relative variance.
-There was no visible effect of system noise on the variability of travel times.
+There was no clear pattern to the effect of system noise.
 
 
 The results of the simulations
@@ -221,9 +192,7 @@ However, until the arrival time prediction model has been completed,
 it is difficult to make decisions about the optimal values to use:
 we are unable to say whether a higher variation of travel time estimates
 is going to have a significant effect on the final ETAs,
-particularly when compared to the uncertainty of forecasting road state,
-or whether reducing the degeneration rate, 
-or increasing $N_\text{eff}$, would be more advantageous.
+particularly when compared to the uncertainty of forecasting road state.
 
 
 \begin{figure}[tb]
