@@ -26,7 +26,7 @@ a phenomenon referred to as ``ghost buses'' by transport bloggers.
 Arrival time prediction is only as reliable as the underlying model,
 and while a lot of work has gone into developing public transport vehicle models
 \citep{Cathey_2003,Jeong_2005,Yu_2011,Hans_2015},
-many public transport providers---notably Auckland Transport---no formal model is used.
+many public transport providers---notably Auckland Transport---use no formal model.
 Instead, ETAs are based solely on the scheduled arrival time
 adjusted by the vehicle's arrival or departure delay at the most recent stop, 
 \emph{if available}.
@@ -53,14 +53,14 @@ and the particle filter \citep{Hans_2015},
 which has proven itself as a robust option for
 \rt vehicle tracking applications
 \citep{Gustafsson_2002,Davidson_2011}.
-\cite{Ulmke_2006} compared used both a Gaussian sum approximation and a particle filter
+\cite{Ulmke_2006} compared both a Gaussian sum approximation and a particle filter
 to track a vehicle in real-time,
 and although not their primary aim,
 showed how the particle filter behaved better in some difficult situations.
 In particular, the particle filter accurately estimated the \emph{uncertainty}
 of the vehicle's location when the observations were unavailable for a time,
 which is a situation that often occurs with transit data---%
-the bus may be stopped a a bus stop, or it could be continuing along the route but,
+the bus may be stopped at a bus stop, or it could be continuing along the route but,
 for some other reason, failing to report its position.
 Choosing to implement a particle filter has allowed us
 to develop a simple, flexible framework
@@ -83,15 +83,15 @@ In general, however, no comprehensive network modelling approach has been propos
 solely GPS position data to model and account for congestion when estimating arrival times.
 
 
-In this paper, we propose a simple framework for modelling the predicting
-transit vehicle arrival in real-time.
+In this paper, we propose a simple framework for modelling transit vehicles and predicting
+their arrival times in real-time.
 Section~\ref{sec:gtfs} describes how we construct a transit network,
 which allows us to model travel times along physical roads,
 while Section~\ref{sec:models} presents two \rt models---%
 one for each of the vehicle and network states---%
 with the primary goal of estimating \rt traffic states throughout the network.
-Finally, in Section~\ref{sec:rt}, we discuss the \rt faesibility and performance
-of using a particle filter to model transit vehicles in real-time.
+Finally, we discuss the \rt faesibility and performance
+of the particle filter in Section~\ref{sec:rt}.
 
 
 

@@ -121,12 +121,12 @@ The state is expressed using the Dirac delta function $\dot\delta(\cdot)$,
 so that
 \begin{equation*}
 p(\bX_{k-1} | \bY_{1:k-1}) \approx 
-    \sum_{i=1}^N W_{k-1} \dot\delta(\bX_{k-1} - \bX_{k-1}^{(i)})
+    \sum_{i=1}^N W_{k-1}^{(i)} \dot\delta(\bX_{k-1} - \bX_{k-1}^{(i)})
 \end{equation*}
 each of which is independently updated or \emph{mutated} using the transition function $f$ (Figure~\ref{fig:pf_state_predict}),
 \begin{equation*}
 p(\bX_k | \bX_{k-1}) \approx 
-    \sum_{i=1}^N W_{k-1} \dot\delta(\bX_{k} - f(\bX_{k-1}^{(i)}, \boldsymbol{\psi})),
+    \sum_{i=1}^N W_{k-1}^{(i)} \dot\delta(\bX_{k} - f(\bX_{k-1}^{(i)}, \boldsymbol{\psi})),
 \end{equation*}
 where $\boldsymbol{\psi}$ is a vector containing all of the necessary model parameters
 (Section~\ref{sec:pf_prediction}).
@@ -141,7 +141,7 @@ W_k^{(i)} = \frac{W_{k-1}^{(i)} p(\bY_k | \bX_k^{(i)})}{
 which gives us the final posterior state estimate
 \begin{equation*}
 p(\bX_k | \bY_k) \approx  
-    \sum_{i=1}^N W_{k} \dot\delta(\bX_{k} - \bX_{k}^{(i)}).
+    \sum_{i=1}^N W_{k}^{(i)} \dot\delta(\bX_{k} - \bX_{k}^{(i)}).
 \end{equation*}
 
 One problem with particle filters is degeneration,
@@ -160,8 +160,9 @@ However, resampling requires sorting $N$ particles,
 which is of $\mathcal{O}(N\log N)$ complexity,
 so to reduce computational costs, resampling is performed only when
 the effective sample size $N_{\text{eff}} = 1 / \sum_i (W_k^{(i)})^2$
-falls below a specified threshold $N_{\text{thres}}$.
-We used a fixed threshold value of $N_{\text{thres}} = N/10$
+falls below a specified threshold $N_{\text{thres}}$
+\citep{Gustafsson_2002}.
+We used a fixed threshold value of $N_{\text{thres}} = N/4$
 for the current work.
 
 
@@ -177,7 +178,7 @@ which currently includes
 \end{enumerate}
 The transition function consists of two models,
 one for each of the above behaviours.
-The first models the speed and distance travelled of the vehicle 
+The first models the speed and distance travelled by the vehicle 
 by using Newton's Laws of Motion,
 which, letting $\delta_k = t_k - t_{k-1}$, is
 \begin{equation}
@@ -190,7 +191,7 @@ which, letting $\delta_k = t_k - t_{k-1}$, is
 \end{equation}
 where $\epsilon_k^{(i)}\sim\mathrm{N}_T(0, \sigma^2)$, truncated to the interval
 $(-\dot x_{k-1}^{(i)}, 30 - \dot x_{k-1}^{(i)})$,
-which ensures vehicle speed is positive and less than 30~m/s
+which ensures vehicle speed is always positive and less than 30~m/s
 (approximately 110~km/h).
 
 
@@ -219,7 +220,7 @@ decreasing $\delta_k^{(i)}$ by one each time,
 after initializing $\delta_k^{(i)} = \delta_k$.
 In order to obtain the desired non-constant speed between observations,
 $\epsilon_k^{(i)}$ is re-sampled each second,
-allong the particle's speed to vary.
+allowing the particle's speed to vary.
 This iterative approach allows the particle to approach the next stop,
 at which point (\ref{eq:trans_stop}) is evaluated for the particle
 and the dwell time subtracted from $\delta_k^{(i)}$.
