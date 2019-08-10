@@ -29,13 +29,13 @@
 \newcommand{\rt}{real-time\ }
 
 \def\volumeyear{2018}
-\linenumbers
+% \linenumbers
 
 \begin{document}
 \cleanlookdateon
 \runningheads{Modelling the travel time of transit vehicles}{TOM~ELLIOTT AND THOMAS~LUMLEY}
 \title{
-    Modelling the travel time of rtansit vehicles in \rt through a GTFS-based road network
+    Modelling the travel time of transit vehicles in \rt through a GTFS-based road network
     using GPS vehicle locations
 } 
 
@@ -57,9 +57,9 @@
 \begin{abstract}
 Predicting the arrival time of a transit vehicle involves not only
 knowledge of its current position and schedule adherence,
-but also of traffic conditions along the remainder of the route.
-Road networks are dynamic, 
-and can change from free-flowing to highly congested very quickly,
+but also traffic conditions along the remainder of the route.
+Road networks are dynamic 
+and can quickly change from free-flowing to highly congested,
 which impacts the arrival time of transit vehicles,
 particularly buses which often share the road with other vehicles,
 so reliable predictions need to account for \rt and future traffic conditions.
@@ -68,9 +68,9 @@ The first step in this process is to construct a framework with which road state
 Our proposed framework implements a vehicle model using a particle filter
 to estimate road travel times,
 which are used in a second model to estimate \rt traffic conditions.
-Development and testing took place in Auckland, New Zealand,
-although attempts were made at generalising each component so 
-it will be compatible with other public transport systems around the world.
+Although development and testing took place in Auckland, New Zealand,
+we generalised each component to make the framework compatible 
+with other public transport systems around the world.
 We demonstrate the \rt feasibility and performance of our approach in real-time,
 where a combination of R and C++ was used to obtain the necessary performance results.
 Future work will use these estimated traffic conditions 

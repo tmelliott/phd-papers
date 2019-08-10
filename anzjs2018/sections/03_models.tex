@@ -29,11 +29,10 @@ of which noisy measurements are made.
 
 
 
-The following sections describe the two models used in this application,
-both of which are examples of a Bayesian filter.
+The following sections describe two Bayesian filters used in this application.
 The first, implemented using a particle filter, estimates vehicle states
-with the primary goal of estimating road travel times from a sequence of GPS positions;
-the second uses these travel times to update road states 
+with the primary goal of estimating road travel times from a sequence of GPS positions.
+The second uses these travel times to update road states 
 and is implemented using an \emph{information filter},
 a variant of the Kalman filter \citep{Anderson_2012}.
 
@@ -51,10 +50,10 @@ of which observations $\bY_k$ are made using a GPS
 with error $\omega^2$,
 giving the longitude $\lambda_k$ and latitude $\phi_k$ of the vehicle
 as $\bY_k = \left[\lambda_k\ \phi_k \right]^\top$.
-We use a particle filter to estimate $\bX_k$,
+We use a particle filter to estimate $\bX_k$
 due to its flexibility and proven robustness
 in recent vehicle modelling applications \citep{Ulmke_2006,Hans_2015}.
-In addition, it makes it trivial to estimate travel times
+It also makes it trivial to estimate travel times
 $\bz = (z_1,\ldots,z_L)^\top$, in seconds, along road segments
 as the vehicle traverses the route.
 
@@ -62,12 +61,12 @@ as the vehicle traverses the route.
 The primary advantage of the particle filter is its handling of multimodality,
 as demonstrated in Figure~\ref{fig:pf_state_predict},
 which is a common feature of the proposal distribution, particularly around bus stops.
-Another advantage is that the likelihood function is intuitively based
+Another advantage is that the likelihood function is intuitive, based
 on the physical distance between the vehicle observation and the state's
-estimate of the true location, $h(\bX_k)$ (Section~\ref{sec:pf_update}).
+estimate of the actual location, $h(\bX_k)$ (Section~\ref{sec:pf_update}).
 Conversely, particle filter methods are computationally demanding,
 requiring an increasing number of particles as model complexity and
-number of parameters increases \citep{Carpenter_1999}.
+the number of parameters increases \citep{Carpenter_1999}.
 Section~\ref{sec:rt} describes our implementation of the particle filter
 and its \rt performance.
 
@@ -95,8 +94,8 @@ and its \rt performance.
         \centering
         \includegraphics[width=0.7\textwidth]{figures/03_particle_filter_4.pdf}
         \caption{
-            The state is updated by weighted resampling based on distance
-            of particle to observation.
+            The state is updated by resampling with likelihood weights based on the distance
+            between the particle and the observation, shown as a (red) cross.
         }
         \label{fig:pf_state_predict2}
     \end{subfigure}
@@ -104,8 +103,8 @@ and its \rt performance.
         The particle filter approximates vehicle state using a set of 
         discrete points (a), which are each mutated independently (b)
         to predict the next state.
-        The measurement function $h$ allows each particle state
-        to be mapped to a GPS coordinate (a),
+        The measurement function $h$ maps each particle state
+        to a GPS coordinate (a),
         which can be compared to the observed location (c)
         to calculate each particle's likelihood to compute resampling weights.
     }
@@ -144,12 +143,11 @@ p(\bX_k | \bY_k) \approx
     \sum_{i=1}^N W_{k}^{(i)} \dot\delta(\bX_{k} - \bX_{k}^{(i)}).
 \end{equation*}
 
-One problem with particle filters is degeneration,
-which occurs when the particle sample no longer approximates the target distribution
-due to the particles becoming too diverse
-and all of the weight falls onto only a small number of them.
-This occurs naturally over time, but the rate at which it occurs depends 
-on a relationship between how well the transition function predicts future states,
+One problem with particle filters is degeneration:
+when the particles become too spread out with respect to the predictive distribution,
+the weight will be concentrated on to just a few of them.
+This occurs naturally over time, but the rate at which it does so depends 
+on a relationship between how well the transition function predicts future states
 and the variance of those predictions (system noise).
 To avoid degeneration,
 particle filters use \emph{importance resampling}
@@ -178,9 +176,7 @@ which currently includes
 \end{enumerate}
 The transition function consists of two models,
 one for each of the above behaviours.
-The first models the speed and distance travelled by the vehicle 
-by using Newton's Laws of Motion,
-which, letting $\delta_k = t_k - t_{k-1}$, is
+The first models the speed and distance travelled by the vehicle,
 \begin{equation}
 \label{eq:trans_newton}
 \bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \delta_k, \epsilon_k^{(i)}) = 
@@ -189,9 +185,10 @@ which, letting $\delta_k = t_k - t_{k-1}$, is
         \dot x_{k-1}^{(i)} + \epsilon_k^{(i)}
     \end{bmatrix},
 \end{equation}
-where $\epsilon_k^{(i)}\sim\mathrm{N}_T(0, \sigma^2)$, truncated to the interval
-$(-\dot x_{k-1}^{(i)}, 30 - \dot x_{k-1}^{(i)})$,
-which ensures vehicle speed is always positive and less than 30~m/s
+where $\delta_k = t_k - t_{k-1}$
+and $\epsilon_k^{(i)}\sim\mathrm{N}_T(0, \sigma^2)$, truncated to the interval
+$(-\dot x_{k-1}^{(i)}, 30 - \dot x_{k-1}^{(i)})$
+to ensure vehicle speed is always positive and less than 30~m/s
 (approximately 110~km/h).
 
 
@@ -203,7 +200,7 @@ otherwise, the bus waits for a minimum of $\gamma$ seconds---this
 accounts for deceleration, opening and closing of doors, and acceleration
 \citep{Hans_2015}---and then waits while passengers board and disembark,
 which is assumed to be exponentially distributed with mean $\tau_j$.
-This leads to the following model,
+This behaviour is expressed in the following model:
 \begin{equation}
 \label{eq:trans_stop}
 \begin{split}
@@ -240,9 +237,9 @@ p(z_\ell | \bY_{1:k}) \approx
 \subsubsection{Updating state using the observation likelihood}
 \label{sec:pf_update}
 
-To compute the likelihood of the observation given each particle state,
+Computing the likelihood of the observation given each particle state,
 $p(\bY_k|\bX_k^{(i)})$,
-the measurement function $h$ is needed along with 
+uses the measurement function $h$ and 
 a \emph{geographical projection} function $g$ to allow comparison of $\bY_k$,
 a GPS observation, with $\bX_k$, a distance travelled along the route in meters.
 
@@ -289,11 +286,12 @@ is expressed as
     = \sqrt{\omega^2 (z_1^2 + z_2^2)}.
 \end{equation}
 
-Finally, it is known that the distribution of the sum of two indendent 
-standard normal variables is exponentially distributed with rate $\frac{1}{2}$,
-and that if $Z \sim \mathrm{Exponential}(\theta)$ then
-$cZ \sim \mathrm{Exponential}(\frac{\theta}{c})$,
-so the \emph{squared} distance from (\ref{eq:obs_dist}) is distributed as
+Finally, the sum of two independent 
+standard normal random variables has a Chi-square distribution with two degrees of freedom,
+which is also an exponential distribution with rate~$\frac{1}{2}$,
+and if $Z \sim \mathrm{Exponential}(\theta)$ then
+$cZ \sim \mathrm{Exponential}(\frac{\theta}{c})$;
+therefore, the \emph{squared} distance from (\ref{eq:obs_dist}) is distributed as
 \begin{equation}
 \label{eq:obs_exp}
 \mathcal{D}(\bY_k, h(\bX_k))^2 =
@@ -316,10 +314,10 @@ allowing for fast evaluation of (\ref{eq:lhood}) within the particle filter algo
 
 It is worth noting that this representation of the likelihood is only
 possible due to the discrete nature of the particle filter state estimate;
-in the Kalman filter, which has often been used in transit vehicle tracking,
-the measurement \emph{matrix} is used, and requires a linear
+the Kalman filter---which has often been used for transit vehicle tracking---%
+uses the measurement \emph{matrix}, requiring a linear
 transformation between the state and its observations.
-To enable this, applications first estimate the \emph{observed distance travelled}
+To do so, applications first estimate the \emph{observed distance travelled}
 by snapping the GPS observations to the route,
 which introduces unnecessary error and uncertainty into the model.
 Our approach avoids this, which makes it more stable in locations where two 
@@ -331,12 +329,12 @@ such as at loops, where a single GPS observation might have two likely ``snappin
 \label{sec:kf}
 
 The primary objective of the network model is to estimate the \rt traffic conditions
-(travel time) along roads in the transit network, 
+(travel time) along roads in the transit network
 and make short-term forecasts for estimating arrival times.
 In this paper, we model each road segment independently,
-as excluding correlations simplifies the model to not only a one-dimensional Kalman filter,
+as excluding correlations not only simplifies the model to a one-dimensional Kalman filter,
 but it also means computations can be run in parallel,
-greatly increasing the real-time performance of the model.
+further improving the real-time performance of the model.
 
 
 The network state $\boldsymbol\theta_c = \{\theta_c^\ell\}_{\ell = 1}^L$ is the travel time 
@@ -358,7 +356,7 @@ R_{c\ell}^m = \mathrm{Var}(z_{\ell}^{m} | \bY^m_{1:c}) =
 \end{equation}
 
 The model of travel times becomes a simple reduction of (\ref{eq:rbe_model}) 
-to the one dimensional case, 
+to the one-dimensional case, 
 with $f$ and $h$ both unity,
 system noise $v_{c\ell} \sim \mathrm{N}(0, \nu_\ell^2)$,
 where $\nu_\ell^2$ is the average change in travel time per second
@@ -425,7 +423,7 @@ P^\ell_{c|c} = \frac{1}{U^\ell_{c|c}}
 \end{equation*}
 which can now be used in the prediction of travel times
 for upcoming buses. 
-It should be noted that, if segment correlations were to be included,
+Note that, if we included segment correlations,
 the full state $\boldsymbol{\theta}_c$ would need updating in a single step,
 which would require inverting a large $L\times L$ matrix,
 significantly increasing the time of updating the state.

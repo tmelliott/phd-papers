@@ -5,14 +5,14 @@ GTFS (general transit feed specification)
 is an API (application programming interface) specification for transit data
 detailing how it should be organised,
 making access easier for application developers.
-Developed and maintained by Google \citep{GoogleDevelopers_2006},
+GTFS is developed and maintained by Google \citep{GoogleDevelopers_2006},
 who use it in Google Maps Transit Directions,
-it is used by over 1100~transit providers around the world\footnote{%
+and over 1100~transit providers use it around the world\footnote{%
 source: \url{http://transitfeeds.com} as of August 2019},
 including here in Auckland, New Zealand.
 An advantage of this standardised format is that,
 provided an application depends solely on GTFS data,
-after developing it locally in Auckland it can be deployed to any other GTFS-based
+after developing it locally in Auckland it will be deployable to any other GTFS-based
 public transport system with minimal modification.
 
 
@@ -25,26 +25,26 @@ The first, \emph{GTFS static}, includes information about
 \item \emph{schedules}, specifying the arrival (and departure) times for each bus at each of its stops; 
 \item and \emph{shapes}, the sequence of points defining a vehicle's path along a route.
 \end{itemize}
-The second component is \emph{GTFS-realtime},
-which is only available in a subset of the providers due to the requirement of 
-on board GPS tracking devices and a central server.
+The second component, \emph{GTFS-realtime},
+is only available in a subset of providers due to the requirement of 
+onboard GPS tracking devices and a central server.
 It provides a standardised format for sharing vehicle positions and trip delays,
-and are typically accessed by developers via an API that can be used in \rt applications.
+and are typically accessed by developers via an API that \rt applications can use.
 
 As mentioned in Section~\ref{sec:intro},
-there are some major issues with the arrival time prediction method currently
+there are some fundamental issues with the arrival time prediction method currently
 deployed in Auckland,
 which is based entirely on \emph{GTFS-realtime} trip updates---%
 vehicle positions are used only to display \emph{where} the bus is.
-Trip updates are reported whenever a vehicle arrives at or departs from a stop,
-and includes the delay between the scheduled and actual arrival times,
-which is propagated to all future stops to update their ETAs,
+Vehicles report trip updates when they arrive at or depart from a stop,
+including the delay between the scheduled and actual arrival times.
+The delay is then propagated to all future stops to update their ETAs,
 as demonstrated in Figure~\ref{fig:gtfs-delays}.
-As already mentioned, this assumes that the schedule is well calibrated,
+As already mentioned, this assumes that the schedule is well-calibrated
 and that the time between stops
 is representative of the real-world travel time between them. 
 Figure~\ref{fig:gtfs-delays} demonstrates the fallibility of this prediction method,
-where we see the progressive lateness causing the passenger's ETA to 
+where we see the incremental lateness causing the passenger's ETA to 
 jump each time the bus arrives at a stop.
 By using \rt travel time information,
 we can better predict the travel time between stops,
@@ -76,20 +76,20 @@ which we hope will result in more accurate and reliable arrival time estimates.
 
 The primary predictor of arrival time is 
 the travel time along roads between where the bus is \emph{now},
-and the stop at which a passenger is waiting.
+and the stop where a passenger waits.
 In most applications, however, this vital information is unavailable, at least directly.
 In order to compute travel times efficiently
 and make use of all available data pooled across multiple routes,
 we constructed a \emph{road network},
 allowing us to model roads directly,
 such that every bus travelling along a road contributes to its state,
-which can in turn be used to predict travel times for all upcoming buses 
+which can, in turn, be used to predict travel times for all upcoming buses 
 travelling along the road,
 irrespective of the route they are servicing.
 
 
-To construct the transit network,
-routes were split into spatially identifiable segments,
+Constructing the transit network involved splitting routes
+into spatially identifiable segments,
 each representative of a physical road,
 using bus stops as nodes in the network
 and the connecting roads as edges
@@ -98,8 +98,8 @@ In this way, routes that service the same subsequence of stops
 all contribute to traffic flow information for the connecting roads.
 Although there are several drawbacks to this method,
 such as road segment overlaps where routes merge between stops,
-our approach is sufficient for the purposes of assessing the \rt 
-faesibilty of our proposed prediction framework.
+our approach is sufficient for assessing the \rt 
+feasibility of our proposed prediction framework.
 
 
 
@@ -135,30 +135,31 @@ faesibilty of our proposed prediction framework.
 \emph{GTFS-realtime} provides the positions of vehicles in a transit network.
 The data consists of the time $t_k$ that the position was last updated,
 the GPS position of the vehicle, $\bY_k$, 
-and information about the trip being serviced.
-In Auckland, vehicle positions are updated with a frequency of anywhere between 10~seconds and several minutes,
-so there is often a lot of uncertainty about a vehicle's intermediate trajectory,
-particularly when there are one or more bus stops along the way.
+and information about the serviced trip.
+In Auckland, vehicle positions are updated with a frequency 
+of anywhere between 10~seconds and several minutes,
+so there is often considerable uncertainty about a vehicle's intermediate trajectory,
+in particular when there are one or more bus stops along the way.
 It is also possible for a bus to remain stationary,
-for example due to heavy congestion,
+such as when there is heavy congestion,
 so the number of possible trajectories rapidly increases with 
 the time between observations.
 
 
-One important consideration regarding Auckland Transport's \rt implementation is that
+An important consideration regarding Auckland Transport's \rt implementation is that
 buses are programmed to report their location when arriving at or departing from
 bus stops, as well as some major intersections.
 To further complicate this,
 these positions can be preemptive,
-for example when approaching a queue of traffic at an intersection,
-the way-point may be triggered before the bus physically gets there,
+for example when approaching a queue of traffic at an intersection;
+the way-point may trigger before the bus physically gets to it,
 so consecutive observations may show what appears to be a bus travelling backwards.
 To handle this, we compute the approximate distance travelled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
-if this has decreased, the current state (based on the preemptive observation)
-is rejected and the vehicle reverted
+if this has decreased, we reject the current state (based on the preemptive observation)
+and reset the vehicle 
 to its previous state before continuing.
 So at the cost of losing one (likely invalid) observation,
-we are able to improve particle filter performance
-when this situation is encountered.
+we can improve predictive performance
+when this event occurs.
 

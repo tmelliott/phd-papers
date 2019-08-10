@@ -1,15 +1,13 @@
 \section{Discussion and Future Work}
 \label{sec:discussion}
 
-In this paper we described an approach to transit vehicle modelling
+In this paper, we described an approach to transit vehicle modelling
 that enables the \rt estimation of road state from vehicle position data,
 which will later be used to make arrival time predictions
 that account for \rt traffic conditions.
-The vehicle model, implemented using a particle filter,
-allows complex bus behaviours to be modelled,
-from which 
-vehicle travel times along roads are estimated which are in turn used 
-in the modelling of the road network state.
+The particle filter allows the modelling of complex bus behaviours,
+providing estimates of vehicle travel times along roads
+which are in turn used to estimate the road network state.
 
 
 We have focussed on making a general framework
@@ -20,8 +18,8 @@ based on historical data in place of the exponential---%
 or new ones added, such as implementing intersection-specific behaviour
 if intersection locations are available.
 Future work is planned to detect route meeting points
-and use these as intersection nodes,
-with the goal of further reducing road segment overlap.
+and use these as intersection nodes
+ to further reduce road segment overlap.
 
 
 The network model presented here is simple, 
@@ -42,10 +40,10 @@ plan their commutes.
 
 
 The results of our simulations show that the framework is a 
-faesible \rt alternative.
+feasible \rt alternative.
 While the timings presented were for off-peak times,
-futher investigation into the choice of $N$ and $N_\text{eff}$,
-as well as work removing some redudancy from the transition algorithm,
+further investigation into the choice of $N$ and $N_\text{eff}$,
+as well as work removing redundancy from the transition algorithm,
 should allow us to model all vehicles during peak periods---%
 when there are 2-3~times as many vehicles---%
-within our 30~second timeframe target.
+within our 30-second timeframe target.
