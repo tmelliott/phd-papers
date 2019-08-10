@@ -27,7 +27,7 @@ The first, \emph{GTFS static}, includes information about
 \end{itemize}
 The second component, \emph{GTFS-realtime},
 is only available in a subset of providers due to the requirement of 
-onboard GPS tracking devices and a central server.
+on-board GPS tracking devices and a central server.
 It provides a standardised format for sharing vehicle positions and trip delays,
 and are typically accessed by developers via an API that \rt applications can use.
 
@@ -150,13 +150,13 @@ An important consideration regarding Auckland Transport's \rt implementation is 
 buses are programmed to report their location when arriving at or departing from
 bus stops, as well as some major intersections.
 To further complicate this,
-these positions can be preemptive,
+these positions can be pre-emptive,
 for example when approaching a queue of traffic at an intersection;
 the way-point may trigger before the bus physically gets to it,
 so consecutive observations may show what appears to be a bus travelling backwards.
 To handle this, we compute the approximate distance travelled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
-if this has decreased, we reject the current state (based on the preemptive observation)
+if this has decreased, we reject the current state (based on the pre-emptive observation)
 and reset the vehicle 
 to its previous state before continuing.
 So at the cost of losing one (likely invalid) observation,
