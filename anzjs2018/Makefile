@@ -4,7 +4,7 @@ texfiles = $(shell find sections -name '*.tex')
 
 default: $(file).pdf
 
-$(file).pdf: $(file).tex | $(texfiles)
+$(file).pdf: $(file).tex $(texfiles)
 	@latexmk -pdf $<
 
 # html: $(file).dvi

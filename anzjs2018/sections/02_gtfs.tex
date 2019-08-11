@@ -6,9 +6,9 @@ GTFS (general transit feed specification)
 is an API (application programming interface) specification for transit data
 detailing how it should be organised,
 making access easier for application developers.
-GTFS is developed and maintained by Google \citep{GoogleDevelopers_2006},
-who use it in Google Maps Transit Directions,
-and over 1100~transit providers use it around the world\footnote{%
+GTFS, developed and maintained by Google \citep{GoogleDevelopers_2006},
+% who use it in Google Maps Transit Directions,
+is used by over 1100~transit providers around the world\footnote{%
 source: \url{http://transitfeeds.com} as of August 2019},
 including here in Auckland, New Zealand.
 An advantage of this standardised format is that,
@@ -30,15 +30,16 @@ The second component, \emph{GTFS-realtime},
 is only available in a subset of providers due to the requirement of 
 on-board GPS tracking devices and a central server.
 It provides a standardised format for sharing vehicle positions and trip delays,
-and are typically accessed by developers via an API that \rt applications can use.
+which developers access via an API for use in \rt applications.
 
 As mentioned in Section~\ref{sec:intro},
 there are some fundamental issues with the arrival time prediction method currently
 deployed in Auckland,
 which is based entirely on \emph{GTFS-realtime} trip updates---%
 vehicle positions are used only to display \emph{where} the bus is.
-Vehicles report trip updates when they arrive at or depart from a stop,
-including the delay between the scheduled and actual arrival times.
+Vehicles report a trip update,
+which includes the delay between scheduled and actual arrival time,
+when they arrive at or depart from a stop.
 The delay is then propagated to all future stops to update their ETAs,
 as demonstrated in Figure~\ref{fig:gtfs-delays}.
 As already mentioned, this assumes that the schedule is well-calibrated
@@ -49,7 +50,8 @@ where we see the incremental lateness causing the passenger's ETA to
 jump each time the bus arrives at a stop.
 By using \rt travel time information,
 we can better predict the travel time between stops,
-which we hope will result in more accurate and reliable arrival time estimates.
+from which more accurate and, ideally, more reliable arrival esimates
+can be made.
 
 
 \begin{figure}[tb]
@@ -85,7 +87,7 @@ we constructed a \emph{road network},
 allowing us to model roads directly,
 such that every bus travelling along a road contributes to its state,
 which can, in turn, be used to predict travel times for all upcoming buses 
-travelling along the road,
+travelling along the same road,
 irrespective of the route they are servicing.
 
 
@@ -152,7 +154,7 @@ buses are programmed to report their location when arriving at or departing from
 bus stops, as well as some major intersections.
 To further complicate this,
 these positions can be pre-emptive,
-for example when approaching a queue of traffic at an intersection;
+for example when approaching a queue of traffic at an intersection:
 the way-point may trigger before the bus physically gets to it,
 so consecutive observations may show what appears to be a bus travelling backwards.
 To handle this, we compute the approximate distance travelled, $\tilde x_k$,
