@@ -1,0 +1,45 @@
+Thank you for all of the very constructive feedback, I hope I've covered them adequately. Below I've replied to each point following the order/layout of the original comments.
+
+Referee 1:
+The issue of constant stopping probabilities and dwell times is something we're planning to explore with historical data, which I've now mentioned in the discussion (lines 331-333). After the model specification, I have now addressed the likely consequences of making the assumption (lines 187-191).
+
+- I've clarified dimensions of the state vector (lines 131-133).
+- The measurement function was a function of X and a sampled value of noise for generality, but I've changed this to h(x) + e in (1) to avoid confusion.
+- I've re-expressed the likelihood equations to more clearly describe the relationship between X and Y, through the functions g and h (section 3.1.2)
+- Degeneration has been described in more detail (para starting line 158), and PF described through model formulae instead of as an algorithm (section 3.1.1); included specification of N_eff value we used (line 170).
+- Continuity improved: "intuitive likelihood" is followed with reasoning (line 153)
+
+- spelling fixed, now using Figure/Section etc consistently, and using all UK English.
+- description of network construction (removing route dependencies) has been clarified (section 2.1)
+- figures improved to be consistent and clearer
+- added citations for R, dplyr, and ggplot2 (all used to summarise and present simulation results)
+
+
+Referee 2:
+1. I've added a reference to the Ulmke 2006 paper (para starting line 35), which demonstrates the advantage of the PF when there's sparse sampling. 
+
+2. The main advantage of our approach is that we don't need to snap points to the route. I've included an example where "snapping" can fall over in previous (i.e., KF) approaches do highlight the advantage of avoiding it (bottom of page 5).
+
+3. I've removed z from the vehicle state X and explained how we take advantage of the PF to estimate these values in real-time using eq (4).
+
+4. Added state equations to show that Z is simply a measurement of theta, which is obtained from the PF (top of page 12)
+
+5. Added missing units to parameters.
+
+6. We're in the process of developing a simulation to test travel time estimation as part of the arrival time prediction component of the project, so these aren't available for the current paper. 
+
+7. Clarified that no correlation structure is used (line 230).
+
+8. All figures improved/restructured to make them much easier to read and remove any ambiguity.
+
+
+AE:
+I've respecified the PF state equations using Dirac, which I agree is much better, thank you.
+
+Instead of writing out the model algorithm, I've described the model using the suggested notation and briefly mentioned how this is implemented using an iterative algorithm. I don't think there was any advantage to including the full algorithm description, so I decided to remove it. 
+
+I've re-written the likelihood section to clarify g, h, and the relationship between X and Y, as well as fixed the definition to keep epsilon on the RHS.
+
+Fixed typos in equation subscript (page 12, eq 3), and the noise term (page 12, eq 1). 
+
+And moved future work comments to the end. 

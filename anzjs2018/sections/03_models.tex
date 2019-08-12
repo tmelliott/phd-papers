@@ -176,8 +176,7 @@ with which to model bus behaviour.
 Currently, this model includes
 \begin{enumerate}
 \item non-constant speed along roads (between observations), and
-\item bus stop behaviour, which involves optional stopping and waiting times
-    while passengers board and disembark.
+\item bus stop behaviour, (optional stopping and wait times while passengers board and disembark).
 \end{enumerate}
 The transition function consists of two models,
 one for each of the above behaviours.
@@ -198,11 +197,11 @@ to ensure vehicle speed is always positive and less than 30~m/s
 
 
 The second vehicle behaviour requires a model of bus stop wait times.
-When the vehicle is approaching stop $j$,
-it stops with probability $\pi_j$.
+When approaching stop $j$,
+the vehicle stops with probability $\pi_j$.
 If it does not stop, the remaining travel time $\delta_k$ is unaltered;
-otherwise, the bus waits for a minimum of $\gamma$ seconds---this 
-accounts for deceleration, opening and closing of doors, and acceleration
+otherwise, the bus waits for a minimum of $\gamma$ seconds---% 
+accounting for deceleration, opening and closing of doors, and acceleration
 \citep{Hans_2015}---and then waits while passengers board and disembark,
 which we assume to follow an exponential distribution with mean $\tau_j$.
 Stopping behaviour is expressed in the following model:
@@ -211,18 +210,27 @@ Stopping behaviour is expressed in the following model:
 \begin{split}
 p_j^{(i)} &\sim \mathrm{Bernoulli}(\pi_j) \\
 \tilde d_j^{(i)} &\sim \mathrm{Exponential}(\tau_j) \\
-d_j^{(i)} &= p_j^{(i)}(\gamma + \tilde d_j^{(i)}).
+d_j^{(i)} &= p_j^{(i)}(\gamma + \tilde d_j^{(i)}),
 \end{split}
 \end{equation}
+using constant values of $\pi_j = 0.5$ and $\tau_j = 10$~seconds for all stops;
+if available, historical dwell time information can easily be used
+to specify each $\tau_j$,
+or even replace the exponential prior altogether.
+As it stands, we found these values to be vague enough that
+the actual vehicle trajectory was sampled by enough of the particles
+to prevent degeneration of the filter;
+the consequence being increased variance of travel time estimates.
 
 
 The model components are implemented as an algorithm,
 in which (\ref{eq:trans_newton}) is evaluated iteratively one second at a time,
 each step decreasing $\delta_k^{(i)}$ by one second,
 after initialising $\delta_k^{(i)} = \delta_k$.
-In order to obtain the desired non-constant speed between observations,
-$\epsilon_k^{(i)}$ is re-sampled each second,
-allowing the particle's speed to vary.
+% To allow non-constant speed between observations,
+We also re-sampled
+$\epsilon_k^{(i)}$ each second
+to allow the particle's speed to vary between observations.
 This iterative approach allows the particle to approach the next stop,
 at which point (\ref{eq:trans_stop}) is evaluated for the particle
 and the dwell time subtracted from $\delta_k^{(i)}$.

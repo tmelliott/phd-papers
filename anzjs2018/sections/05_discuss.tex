@@ -11,15 +11,13 @@ which are in turn used to estimate the road network state.
 
 
 We have focussed on making a general framework
-in which the existing models used for specific components
-can easily be changed---%
-for example, using a more complex model of stop dwell times
-based on historical data in place of the exponential---%
-or new ones added, such as implementing intersection-specific behaviour
-if intersection locations are available.
-Future work is planned to detect route meeting points
-and use these as intersection nodes
- to further reduce road segment overlap.
+into which new models can be incorporated,
+such as implementing intersection-specific behaviour
+once intersection locations are available,
+or exiting models changed.
+For example, we plan to model stop dwell time using historical data,
+which will allow us to replace the exponential distribution
+with something more appropriate.
 
 
 The network model presented here is simple, 
