@@ -8,8 +8,8 @@ detailing how it should be organised,
 making access easier for application developers.
 GTFS, developed and maintained by Google \citep{GoogleDevelopers_2006},
 % who use it in Google Maps Transit Directions,
-is used by over 1100~transit providers around the world\footnote{%
-source: \url{http://transitfeeds.com} as of August 2019},
+is used by over 1100~transit providers around the world
+(sourced from \url{http://transitfeeds.com} on August 2019),
 including here in Auckland, New Zealand.
 An advantage of this standardised format is that,
 provided an application depends solely on GTFS data,
@@ -18,16 +18,16 @@ public transport system with minimal modification.
 
 
 There are two components to GTFS.
-The first, \emph{GTFS static}, includes information about
+The first, \emph{GTFS static}, includes information about:
 \begin{itemize}
 \item \emph{stops}, a physical location where passengers can embark and disembark the vehicle;
 \item \emph{routes}, a sequence of two or more stops displayed as a single service;
 \item \emph{trips}, an instance of a route occurring at a specific time of day;
-\item \emph{schedules}, specifying the arrival (and departure) times for each bus at each of its stops; 
+\item \emph{schedules}, specifying the arrival (and departure) times for each bus at each of its stops;
 \item and \emph{shapes}, the sequence of points defining a vehicle's path along a route.
 \end{itemize}
 The second component, \emph{GTFS-realtime},
-is only available in a subset of providers due to the requirement of 
+is only available in a subset of providers due to the requirement of
 on-board GPS tracking devices and a central server.
 It provides a standardised format for sharing vehicle positions and trip delays,
 which developers access via an API for use in \rt applications.
@@ -44,9 +44,9 @@ The delay is then propagated to all future stops to update their ETAs,
 as demonstrated in Figure~\ref{fig:gtfs-delays}.
 As already mentioned, this assumes that the schedule is well-calibrated
 and that the time between stops
-is representative of the real-world travel time between them. 
+is representative of the real-world travel time between them.
 Figure~\ref{fig:gtfs-delays} demonstrates the fallibility of this prediction method,
-where we see the incremental lateness causing the passenger's ETA to 
+where we see the incremental lateness causing the passenger's ETA to
 jump each time the bus arrives at a stop.
 By using \rt travel time information,
 we can better predict the travel time between stops,
@@ -77,7 +77,7 @@ can be made.
 \subsection{Transit network construction}
 \label{sec:network_build}
 
-The primary predictor of arrival time is 
+The primary predictor of arrival time is
 the travel time along roads between where the bus is \emph{now},
 and the stop where a passenger waits.
 In most applications, however, this vital information is unavailable, at least directly.
@@ -86,7 +86,7 @@ and make use of all available data pooled across multiple routes,
 we constructed a \emph{road network},
 allowing us to model roads directly,
 such that every bus travelling along a road contributes to its state,
-which can, in turn, be used to predict travel times for all upcoming buses 
+which can, in turn, be used to predict travel times for all upcoming buses
 travelling along the same road,
 irrespective of the route they are servicing.
 
@@ -101,7 +101,7 @@ In this way, routes that service the same subsequence of stops
 all contribute to traffic flow information for the connecting roads.
 Although there are several drawbacks to this method,
 such as road segment overlaps where routes merge between stops,
-our approach is sufficient for assessing the \rt 
+our approach is sufficient for assessing the \rt
 feasibility of our proposed prediction framework.
 
 
@@ -121,11 +121,11 @@ feasibility of our proposed prediction framework.
         \label{fig:network_creation_2}
     \end{subfigure}
     \caption{
-        Bus stops (shown as dots above) can be serviced by more than one route, 
+        Bus stops (shown as dots above) can be serviced by more than one route,
         as shown in (a), with different line types representing three separate routes.
         The constructed road network, using stops as nodes, is shown in (b),
         in which the connecting lines represent physical road segments,
-        with line width proportional to the number of individual routes 
+        with line width proportional to the number of individual routes
         travelling along that road.
     }
     \label{fig:network_creation}
@@ -137,15 +137,15 @@ feasibility of our proposed prediction framework.
 
 \emph{GTFS-realtime} provides the positions of vehicles in a transit network.
 The data consists of the time $t_k$ that the position was last updated,
-the GPS position of the vehicle, $\bY_k$, 
+the GPS position of the vehicle, $\bY_k$,
 and information about the serviced trip.
-In Auckland, vehicle positions are updated with a frequency 
+In Auckland, vehicle positions are updated with a frequency
 of anywhere between 10~seconds and several minutes,
 so there is often considerable uncertainty about a vehicle's intermediate trajectory,
 in particular when there are one or more bus stops along the way.
 It is also possible for a bus to remain stationary,
 such as when there is heavy congestion,
-so the number of possible trajectories rapidly increases with 
+so the number of possible trajectories rapidly increases with
 the time between observations.
 
 
@@ -160,9 +160,8 @@ so consecutive observations may show what appears to be a bus travelling backwar
 To handle this, we compute the approximate distance travelled, $\tilde x_k$,
 of the vehicle by finding the nearest point on the path to the observation;
 if this has decreased, we reject the current state (based on the pre-emptive observation)
-and reset the vehicle 
+and reset the vehicle
 to its previous state before continuing.
 So at the cost of losing one (likely invalid) observation,
 we can improve predictive performance
 when this event occurs.
-

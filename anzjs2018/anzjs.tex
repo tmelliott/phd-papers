@@ -18,6 +18,7 @@
 \usepackage{afterpage}
 
 
+
 \newcommand{\bv}{\boldsymbol{v}}
 \newcommand{\bz}{\boldsymbol{z}}
 \newcommand{\bw}{\boldsymbol{w}}
@@ -37,13 +38,13 @@
 \title{
     Modelling the travel time of transit vehicles in \rt through a GTFS-based road network
     using GPS vehicle locations
-} 
+}
 
 % Modelling transit vehicles to estimate the \rt traffic conditions in a public transport network}
 \author{Tom Elliott\corrauth~and~Thomas~Lumley}
 \affiliation{University of Auckland}
 \address{
-    Department of Statistics, University of Auckland, 
+    Department of Statistics, University of Auckland,
     Auckland 1142, New Zealand\\
     Email: \texttt{tom.elliott@auckland.ac.nz}
 }
@@ -58,7 +59,7 @@
 Predicting the arrival time of a transit vehicle involves not only
 knowledge of its current position and schedule adherence,
 but also traffic conditions along the remainder of the route.
-Road networks are dynamic 
+Road networks are dynamic
 and can quickly change from free-flowing to highly congested,
 which impacts the arrival time of transit vehicles,
 particularly buses which often share the road with other vehicles,
@@ -69,11 +70,11 @@ Our proposed framework implements a vehicle model using a particle filter
 to estimate road travel times,
 which are used in a second model to estimate \rt traffic conditions.
 Although development and testing took place in Auckland, New Zealand,
-we generalised each component to make the framework compatible 
+we generalised each component to make the framework compatible
 with other public transport systems around the world.
 We demonstrate the \rt feasibility and performance of our approach in real-time,
-where a combination of R and C++ was used to obtain the necessary performance results.
-Future work will use these estimated traffic conditions 
+where a combination of \textsf{R} and \textsf{C++} was used to obtain the necessary performance results.
+Future work will use these estimated traffic conditions
 in combination with historical data to obtain reliable
 arrival time predictions of transit vehicles.
 \end{abstract}

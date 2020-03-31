@@ -4,26 +4,26 @@
 The application consists of two components:
 the first handles importing static GTFS data and constructing the network,
 while the second implements the \rt models and prediction.
-We used Rcpp \citep{Rcpp}
+We used \textsf{Rcpp} \citep{Rcpp}
 to develop the program,
-which provides access to R \citep{rcore},
+which provides access to \textsf{R} \citep{rcore},
 which contains many useful tools for data manipulation and package development,
-as well as the speed and memory management capabilities of C++.
-The program is implemented in the R package
+as well as the speed and memory management capabilities of \textsf{C++}.
+The program is implemented in the \textsf{R} package
 \verb+transitr+, available on Github (\url{https://github.com/tmelliott/transitr}).
 In this section, we discuss the features of the \rt component
-and assess its performance 
+and assess its performance
 with respect to timing and travel time estimation.
 
-Below is the general structure of the \rt component, 
-where the bold steps are those discussed in this paper.
+Below is the general structure of the \rt component,
+where the bold steps are those discussed in this paper:
 \begin{enumerate}
 \item Load GTFS data from database
-\item Each time new data are received \ldots
+\item Each time new data are received, do:
 \begin{enumerate}
     \item Update or create new vehicle objects from the new data
     \item \textbf{Run particle filter on each vehicle to update or initialise its state}
-    \item \textbf{Update state of any roads for which vehicles 
+    \item \textbf{Update state of any roads for which vehicles
         have completed travel}
     \item Generate ETAs for vehicles using combination of vehicle and network state
     \item Write ETAs to a file for distribution
@@ -36,13 +36,13 @@ our primary concern was to ensure each component of the program
 was as efficient as possible,
 so ETA generation and distribution is fast enough to be feasible in real-time,
 with a target of 30~seconds or faster at peak time.
-Using C++ provided the memory management control necessary to make this possible.
-Since we modelled each vehicle independently, 
-it was straightforward to spread the vehicle updates 
-over multiple cores using OpenMP without thread-safety concerns.
+Using \textsf{C++} provided the memory management control necessary to make this possible.
+Since we modelled each vehicle independently,
+it was straightforward to spread the vehicle updates
+over multiple cores using \textsf{OpenMP} without thread-safety concerns.
 
 
-The number of particles needed per vehicle 
+The number of particles needed per vehicle
 depends on many factors,
 so it was necessary to explore the performance of the application
 with a varying number of particles.
@@ -52,11 +52,11 @@ system noise and GPS error.
 To enable comparisons, we implemented a simulated \rt environment
 in which the same subset of real vehicle data from 8~October 2018
 could be analysed using a range of settings.
-These simulations were carried out on a virtual machine 
-with 8~Intel Xeon 3.00GHz CPU cores and 32~GB of memory, 
-running Ubuntu~16.04 and using R~3.4.1.
-The simulations were processed locally using R~3.6.0,
-and made use of the R packages \verb+dplyr+ \citep{dplyr}
+These simulations were carried out on a virtual machine
+with 8~Intel Xeon 3.00GHz CPU cores and 32~GB of memory,
+running \textsf{Ubuntu}~16.04 and using \textsf{R}~3.4.1.
+The simulations were processed locally using \textsf{R}~3.6.0,
+and made use of the \textsf{R} packages \verb+dplyr+ \citep{dplyr}
 for manipulating and summarising the results,
 and \verb+ggplot2+ \citep{ggplot2} to graph them.
 
@@ -67,14 +67,14 @@ and \verb+ggplot2+ \citep{ggplot2} to graph them.
 Within each iteration, the program recorded timings of its various components.
 Since the number of vehicles travelling at any given time changes throughout the day,
 we used the average timings over an off-peak 15-minute window.
-Figure~\ref{fig:timings} shows the average timings for 
+Figure~\ref{fig:timings} shows the average timings for
 varying numbers of particles, $N$.
 
 
 The most time-consuming component was ETA writing,
 which involved summarising the individual ETAs estimated for each particle.
 While not discussed here this involved computing quantiles which uses a sorting algorithm
-with complexity $O(N \log N)$,
+with complexity $\mathcal{O}(N \log N)$,
 which explains the non-linear relationship with $N$.
 
 
@@ -82,8 +82,8 @@ The next most intensive step was vehicle updating,
 which took about 5~seconds for 8000 particles.
 The ETA prediction step only took a few seconds,
 although this may increase once a more comprehensive model has been developed.
-On our 8-core virtual machine, 
-the average time to process one iteration during off-peak 
+On our 8-core virtual machine,
+the average time to process one iteration during off-peak
 was about 16 seconds when using 8000 particles.
 
 \begin{figure}[tb]
@@ -165,7 +165,7 @@ and show that the model is working as expected.
 
 The last measure of performance is the relative variance of segment travel times.
 We used relative variance as each segment has a very different travel time distribution,
-so to compare the variability between simulations we needed to 
+so to compare the variability between simulations we needed to
 compute the average variance of estimated travel times over all simulations,
 taking the average (over road segments) of the ratio between variance for
 each simulation and variance over all simulations.
@@ -175,7 +175,7 @@ then the relative variance $\bar v^{\omega,\sigma}$ is calculated by
 \begin{equation*}
 \begin{split}
 v_\ell^{\omega,\sigma} &=
-\frac{\mathrm{Var}(\tilde \bz_\ell^{\omega,\sigma})}{\mathrm{Var}(\tilde \bz_\ell)} \\
+\frac{\mathrm{Var}(\tilde \bz_\ell^{\omega,\sigma})}{\mathrm{Var}(\tilde \bz_\ell)}, \\
 \bar v^{\omega,\sigma} &=
     \frac{1}{L}\sum_{\ell=1}^L v_\ell^{\omega,\sigma}.
 \end{split}
@@ -209,5 +209,3 @@ particularly when compared to the uncertainty of forecasting road state.
     }
     \label{fig:travel_times}
 \end{figure}
-
-

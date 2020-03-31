@@ -14,14 +14,14 @@ Inaccurate ETAs are the primary source of this frustration,
 as they fluctuate---sometimes dramatically---over time.
 While unpredictable changes to traffic conditions may cause this,
 it can equally be due to poor schedule calibration.
-Furthermore, buses are shown as \emph{on-time} 
-if they are not present in the \rt system and 
+Furthermore, buses are shown as \emph{on-time}
+if they are not present in the \rt system and
 the service provider has not manually cancelled them,
 in which case ETAs are based solely on scheduled arrival times.
 Once the scheduled arrival time has passed,
 the service is removed from the \rt board,
 leaving passengers unsure as to when---if at all---their bus will show up,
-a phenomenon referred to as ``ghost buses'' by transport bloggers.
+a phenomenon referred to as `ghost buses' by transport bloggers.
 
 
 Arrival time prediction is only as reliable as the underlying model,
@@ -29,7 +29,7 @@ and while considerable work has gone into developing public transport vehicle mo
 \citep{Cathey_2003,Jeong_2005,Yu_2011,Hans_2015},
 many public transport providers---notably Auckland Transport---use no formal model.
 Instead, ETAs are based solely on the scheduled arrival time
-adjusted by the vehicle's arrival or departure delay at the most recent stop, 
+adjusted by the vehicle's arrival or departure delay at the most recent stop,
 \emph{if available}.
 This method assumes that the schedule is accurate
 and there is no unusual congestion along the route.
@@ -37,7 +37,7 @@ Neither of these is a valid assumption,
 particularly in our test area of Auckland, New Zealand,
 where infrastructure for buses (such as priority lanes) is limited,
 and bus drivers do not actively adhere to the schedule.
-A more robust modelling and prediction framework 
+A more robust modelling and prediction framework
 based on \rt congestion information would avoid making these assumptions.
 Such a framework should consist of a robust vehicle model to estimate the position and speed
 of transit vehicles from \rt GPS data,
@@ -46,7 +46,7 @@ to model traffic flow.
 This information can then be used to improve arrival time predictions.
 
 
-Several vehicle modelling approaches were explored, 
+Several vehicle modelling approaches were explored,
 including the Kalman filter \citep{Dailey_2001,Cathey_2003},
 machine learning models \citep{Yu_2006,Chang_2010},
 and the particle filter \citep{Hans_2015},
@@ -67,7 +67,7 @@ to develop a simple, flexible framework
 which is robust to the type of data we expect to observe.
 
 
-The second component of our framework 
+The second component of our framework
 involves estimating traffic conditions throughout the transport network
 using the information obtained from the vehicle model.
 \cite{Yu_2010} improved prediction accuracy by using the travel times
@@ -76,7 +76,7 @@ A similar method presented by \cite{Hans_2015}
 used headway, the time between consecutive vehicles at a point on the route,
 as a predictor of travel time.
 Since these approaches only work well on high-frequency routes,
-\cite{Yu_2011} showed further improvements by combining travel times 
+\cite{Yu_2011} showed further improvements by combining travel times
 from several routes;
 however, their method was limited to predefined converging routes.
 In general, however, no comprehensive network modelling approach has been proposed using
@@ -91,6 +91,3 @@ one for each of the vehicle and network states---%
 with the primary goal of estimating \rt traffic states throughout the network.
 Finally, we discuss the \rt feasibility and performance
 of the particle filter in Section~\ref{sec:rt}.
-
-
-

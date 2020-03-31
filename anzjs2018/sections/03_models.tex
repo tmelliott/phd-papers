@@ -1,4 +1,4 @@
-\section{The Models}
+\section{The models}
 \label{sec:models}
 
 Real-time tracking applications often use
@@ -9,7 +9,7 @@ reducing computational demands
 \citep{Anderson_2012}.
 These models assume an underlying Markov process with state $\boldsymbol{\mathcal{X}}_k$,
 an $n\times1$ column vector,
-with system noise $\boldsymbol{\omega}_k\sim\mathrm{N}(\boldsymbol{0},\mathcal{Q})$ 
+with system noise $\boldsymbol{\omega}_k\sim\mathrm{N}(\boldsymbol{0},\mathcal{Q})$
 of which observations $\boldsymbol{\mathcal{Y}}_k$,
 an $m\times1$ column vector, are made
 with error $\boldsymbol{\nu}_k\sim\mathrm{N}(\boldsymbol{0},\mathcal{R})$,
@@ -17,11 +17,11 @@ giving the following general model:
 \begin{equation}
 \label{eq:rbe_model}
 \begin{split}
-\boldsymbol{\mathcal{X}}_k &= f(\boldsymbol{\mathcal{X}}_{k-1}, \boldsymbol{\omega}_k) \\
-\boldsymbol{\mathcal{Y}}_k &= h(\boldsymbol{\mathcal{X}}_k) + \boldsymbol{\nu}_k
+\boldsymbol{\mathcal{X}}_k &= f(\boldsymbol{\mathcal{X}}_{k-1}, \boldsymbol{\omega}_k), \\
+\boldsymbol{\mathcal{Y}}_k &= h(\boldsymbol{\mathcal{X}}_k) + \boldsymbol{\nu}_k.
 \end{split}
 \end{equation}
-The transition function $f:\mathbb{R}^n\mapsto\mathbb{R}^n$ 
+The transition function $f:\mathbb{R}^n\mapsto\mathbb{R}^n$
 describes the relationship between consecutive states,
 while the measurement function $h:\mathbb{R}^n\mapsto\mathbb{R}^m$ is a deterministic function
 mapping the underlying state to the observable state,
@@ -32,7 +32,7 @@ of which noisy measurements are made.
 The following sections describe two Bayesian filters used in this application.
 The first, implemented using a particle filter, estimates vehicle states
 with the primary goal of estimating road travel times from a sequence of GPS positions.
-The second uses these travel times to update road states 
+The second uses these travel times to update road states
 and is implemented using an \emph{information filter},
 a variant of the Kalman filter \citep{Anderson_2012}.
 
@@ -77,7 +77,7 @@ and its \rt performance.
         \includegraphics[width=0.7\textwidth]{figures/03_particle_filter_1.pdf}
         \caption{
             Vehicle state is mapped to observation space by the
-            measurement function $h$.   
+            measurement function $h$.
         }
         \label{fig:pf_state_prev}
     \end{subfigure}\\
@@ -85,7 +85,7 @@ and its \rt performance.
         \centering
         \includegraphics[width=0.7\textwidth]{figures/03_particle_filter_2.pdf}
         \caption{
-            The transition function $f$ predicts the future state 
+            The transition function $f$ predicts the future state
             of each particle.
         }
         \label{fig:pf_state_predict}
@@ -100,7 +100,7 @@ and its \rt performance.
         \label{fig:pf_state_predict2}
     \end{subfigure}
     \caption{
-        The particle filter approximates vehicle state using a set of 
+        The particle filter approximates vehicle state using a set of
         discrete points (a), which are each mutated independently (b)
         to predict the next state.
         The measurement function $h$ maps each particle state
@@ -118,36 +118,36 @@ is represented by a set of discrete points, or particles, (Figure~\ref{fig:pf_st
 each with an associated weight $W_{k-1}^{(i)}$.
 The state is expressed using the Dirac delta function $\dot\delta(\cdot)$,
 \begin{equation*}
-p(\bX_{k-1} | \bY_{1:k-1}) \approx 
-    \sum_{i=1}^N W_{k-1}^{(i)} \dot\delta(\bX_{k-1} - \bX_{k-1}^{(i)})
+p(\bX_{k-1} | \bY_{1:k-1}) \approx
+    \sum_{i=1}^N W_{k-1}^{(i)} \dot\delta(\bX_{k-1} - \bX_{k-1}^{(i)}),
 \end{equation*}
 which is updated of \emph{mutated} by applying the transition function $f$
 to each particle independently (Figure~\ref{fig:pf_state_predict}),
 giving us the proposal distribution
 \begin{equation*}
-p(\bX_k | \bX_{k-1}) \approx 
+p(\bX_k | \bX_{k-1}) \approx
     \sum_{i=1}^N W_{k-1}^{(i)} \dot\delta(\bX_{k} - f(\bX_{k-1}^{(i)}, \boldsymbol{\psi})),
 \end{equation*}
 where $\boldsymbol{\psi}$ is a vector containing all of the necessary model parameters
 (Section~\ref{sec:pf_prediction}).
-After mutation, 
-the state is updated by reweighting the particles using the likelihood $p(\bY_k | \bX_k^{(i)})$ 
+After mutation,
+the state is updated by reweighting the particles using the likelihood $p(\bY_k | \bX_k^{(i)})$
 (Section~\ref{sec:pf_update}) and standardising so $\sum_{i=1}^N W_k^{(i)} = 1$,
 \begin{equation*}
 W_k^{(i)} = \frac{W_{k-1}^{(i)} p(\bY_k | \bX_k^{(i)})}{
     \sum_{j=1}^N W_{k-1}^{(j)} p(\bY_k | \bX_k^{(j)})
-}
+},
 \end{equation*}
 which leads to the final posterior state estimate
 \begin{equation*}
-p(\bX_k | \bY_k) \approx  
+p(\bX_k | \bY_k) \approx
     \sum_{i=1}^N W_{k}^{(i)} \dot\delta(\bX_{k} - \bX_{k}^{(i)}).
 \end{equation*}
 
 One problem with particle filters is degeneration:
 when the particles become too spread out with respect to the predictive distribution,
 the weight will be concentrated on to just a few of them.
-This occurs naturally over time, but the rate at which it does so depends 
+This occurs naturally over time, but the rate at which it does so depends
 on the relationship between how well the transition function predicts future states
 and the variance of those predictions (system noise).
 If left unchecked, the predictive distribution reaches a point
@@ -173,7 +173,7 @@ for the current work.
 
 The particle filter provides us with a flexible method
 with which to model bus behaviour.
-Currently, this model includes
+Currently, this model includes:
 \begin{enumerate}
 \item non-constant speed along roads (between observations), and
 \item bus stop behaviour, (optional stopping and wait times while passengers board and disembark).
@@ -183,7 +183,7 @@ one for each of the above behaviours.
 The first models the speed and distance travelled by the vehicle,
 \begin{equation}
 \label{eq:trans_newton}
-\bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \delta_k, \epsilon_k^{(i)}) = 
+\bX_k^{(i)} = f(\bX_{k-1}^{(i)}, \delta_k, \epsilon_k^{(i)}) =
     \begin{bmatrix}
         x_{k-1}^{(i)} + \delta_k(\dot x_{k-1}^{(i)} + \epsilon_k^{(i)}) \\
         \dot x_{k-1}^{(i)} + \epsilon_k^{(i)}
@@ -200,7 +200,7 @@ The second vehicle behaviour requires a model of bus stop wait times.
 When approaching stop $j$,
 the vehicle stops with probability $\pi_j$.
 If it does not stop, the remaining travel time $\delta_k$ is unaltered;
-otherwise, the bus waits for a minimum of $\gamma$ seconds---% 
+otherwise, the bus waits for a minimum of $\gamma$ seconds---%
 accounting for deceleration, opening and closing of doors, and acceleration
 \citep{Hans_2015}---and then waits while passengers board and disembark,
 which we assume to follow an exponential distribution with mean $\tau_j$.
@@ -208,8 +208,8 @@ Stopping behaviour is expressed in the following model:
 \begin{equation}
 \label{eq:trans_stop}
 \begin{split}
-p_j^{(i)} &\sim \mathrm{Bernoulli}(\pi_j) \\
-\tilde d_j^{(i)} &\sim \mathrm{Exponential}(\tau_j) \\
+p_j^{(i)} &\sim \mathrm{Bernoulli}(\pi_j), \\
+\tilde d_j^{(i)} &\sim \mathrm{Exponential}(\tau_j), \\
 d_j^{(i)} &= p_j^{(i)}(\gamma + \tilde d_j^{(i)}),
 \end{split}
 \end{equation}
@@ -252,33 +252,33 @@ p(z_\ell | \bY_{1:k}) \approx
 
 Computing the likelihood of the observation given a particle state,
 $p(\bY_k|\bX_k^{(i)})$,
-uses the measurement function $h$ and 
+uses the measurement function $h$ and
 a \emph{geographical projection} function $g$ to allow comparison of $\bY_k$,
-a GPS observation, with $\bX_k$, 
+a GPS observation, with $\bX_k$,
 which includes the distance, in meters, travelled along the route.
 
-The measurement function $h$ computes GPS coordinates by using the 
-shape information provided by GTFS and travelling $x_k$ meters along 
+The measurement function $h$ computes GPS coordinates by using the
+shape information provided by GTFS and travelling $x_k$ meters along
 this two-dimensional line.
 Meanwhile, we use the \emph{Equirectangular projection} \citep{Snyder_1998},
 $\br = g(\bY_1 | \bY_0)$,
 such that the magnitude of $\boldsymbol{r}$ is equal to the physical distance
 between $\bY_0$ and $\bY_1$ and both dimensions are in meters.
 Let $\bY_i = [\lambda_i, \psi_i]^\top$,
-with $\lambda_i$ and $\psi_i$ measured in radians,  
+with $\lambda_i$ and $\psi_i$ measured in radians,
 and $R$ is the Earth's radius, in meters, then
 \begin{equation*}
-\br = 
-g(\bY_1 | \bY_0) = 
+\br =
+g(\bY_1 | \bY_0) =
     \begin{bmatrix}
         r_1 \\ r_2
     \end{bmatrix} =
     R \begin{bmatrix}
         (\lambda_1 - \lambda_0)\cos\phi_0 \\
         \phi_1 - \phi_0
-    \end{bmatrix}
+    \end{bmatrix},
 \end{equation*}
-and, more importantly, the geographical distance $\mathcal{D}$ between the two 
+and, more importantly, the geographical distance $\mathcal{D}$ between the two
 GPS coordinates is given by
 \begin{equation}
 \label{eq:dist}
@@ -295,12 +295,12 @@ and a state $\bX_k$, using (\ref{eq:dist}) and the measurement function $h$,
 is expressed as
 \begin{equation}
 \label{eq:obs_dist}
-\mathcal{D}(\bY_k, h(\bX_k)) = \sqrt{r_{k1}^2 + r_{k2}^2} 
+\mathcal{D}(\bY_k, h(\bX_k)) = \sqrt{r_{k1}^2 + r_{k2}^2}
     = \sqrt{(\omega z_1)^2 + (\omega z_2)^2}
     = \sqrt{\omega^2 (z_1^2 + z_2^2)}.
 \end{equation}
 
-Finally, the sum of two independent 
+Finally, the sum of two independent
 standard normal random variables has a Chi-square distribution with two degrees of freedom,
 which is also an exponential distribution with rate~$\frac{1}{2}$,
 and if $Z \sim \mathrm{Exponential}(\theta)$ then
@@ -313,7 +313,7 @@ therefore, the \emph{squared} distance from (\ref{eq:obs_dist}) is distributed a
 \end{equation}
 
 The likelihood of the observation $\bY_k$ given a state estimate $\bX_k^{(i)}$
-can now be expressed using (\ref{eq:obs_exp}) 
+can now be expressed using (\ref{eq:obs_exp})
 and the probability density function of the exponential distribution,
 \begin{equation}
 \label{eq:lhood}
@@ -334,7 +334,7 @@ transformation between the state and its observations.
 To do so, applications first estimate the \emph{observed distance travelled}
 by snapping the GPS observations to the route,
 which introduces unnecessary error and uncertainty into the model.
-Our approach avoids this, which makes it more stable in locations where two 
+Our approach avoids this, which makes it more stable in locations where two
 parts of the route are close to each other,
 such as at loops, where a single GPS observation might have two likely ``snapping'' points.
 
@@ -351,26 +351,26 @@ but it also means computations can be run in parallel,
 further improving the real-time performance of the model.
 
 
-The network state $\boldsymbol\theta_c = \{\theta_c^\ell\}_{\ell = 1}^L$ is the travel time 
+The network state $\boldsymbol\theta_c = \{\theta_c^\ell\}_{\ell = 1}^L$ is the travel time
 of transit vehicles along road segment $\ell$ at time $t_c$,
 of which observations $Z_{c\ell}^{m}$
 are obtained from the particle filter for vehicle $m$ at time $t_c$,
-as defined in (\ref{eq:post_tt}), such that 
-(after adding the $m$ superscript to identify unique vehicles), 
+as defined in (\ref{eq:post_tt}), such that
+(after adding the $m$ superscript to identify unique vehicles),
 \begin{equation}
 \label{eq:tt_obs_mean}
-Z_{c\ell}^{m} = \mathrm{E}(z_{\ell}^{m} | \bY^m_{1:c}) = 
+Z_{c\ell}^{m} = \mathrm{E}(z_{\ell}^{m} | \bY^m_{1:c}) =
 \sum_{i=1}^N (W_c^{(i)})^m (z_\ell^{(i)})^{m}.
 \end{equation}
 The measurement error is also estimated from the particle filter,
 \begin{equation}
 \label{eq:tt_obs_err}
-R_{c\ell}^m = \mathrm{Var}(z_{\ell}^{m} | \bY^m_{1:c}) = 
+R_{c\ell}^m = \mathrm{var}(z_{\ell}^{m} | \bY^m_{1:c}) =
 \sum_{i=1}^N (W_c^{(i)})^m \left((z_\ell^{(i)})^{m} - Z_{c\ell}^{m}\right)^2.
 \end{equation}
 
-The model of travel times becomes a simple reduction of (\ref{eq:rbe_model}) 
-to the one-dimensional case, 
+The model of travel times becomes a simple reduction of (\ref{eq:rbe_model})
+to the one-dimensional case,
 with $f$ and $h$ both unity,
 system noise $v_{c\ell} \sim \mathrm{N}(0, \nu_\ell^2)$,
 where $\nu_\ell^2$ is the average change in travel time per second
@@ -388,27 +388,27 @@ Z_{c\ell}^{m} &= \theta_c^\ell + e_{c\ell}^{m}.
 Since multiple vehicles can travel along a road simultaneously,
 we used an information filter to implement the network model.
 The information filter is a transformation of the Kalman filter in which the
-\emph{information matrix} and \emph{information vector} are used in place of 
+\emph{information matrix} and \emph{information vector} are used in place of
 the covariance matrix and state vector, respectively,
 allowing multiple observations to be added together to update the state
 in a single iteration.
 
 
 The state at time $t_{c-1}$ is parameterised by its mean and variance,
-conditional on $\boldsymbol{Z}_{1:c-1,\ell}$, 
+conditional on $\boldsymbol{Z}_{1:c-1,\ell}$,
 the data from all vehicles up until time $t_{c-1}$,
 \begin{equation*}
-\hat \theta_{c-1|c-1}^\ell = 
+\hat \theta_{c-1|c-1}^\ell =
 \mathrm{E}(\theta_{c-1}^\ell | \boldsymbol{Z}_{1:c-1,\ell})
 \quad\text{and}\quad
-P_{c-1|c-1}^\ell = 
-\mathrm{Var}(\theta_{c-1}^\ell | \boldsymbol{Z}_{1:c-1,\ell})
+P_{c-1|c-1}^\ell =
+\mathrm{var}(\theta_{c-1}^\ell | \boldsymbol{Z}_{1:c-1,\ell}),
 \end{equation*}
 respectively,
 which are predicted from the previous state estimate using the predictive model
 \begin{align*}
 \label{eq:kf_transition}
-\hat \theta^\ell_{c|c-1} &= \hat \theta^\ell_{c-1|c-1} \\
+\hat \theta^\ell_{c|c-1} &= \hat \theta^\ell_{c-1|c-1}, \\
 P^\ell_{c|c-1} &= P^\ell_{c-1|c-1} + (\Delta_{c\ell} \nu_{c\ell})^2.
 \end{align*}
 
@@ -416,31 +416,28 @@ For the update step, the parameters are transformed into an information
 space parameterised by the information matrix $U^\ell_c = (P_{c|c-1}^\ell)^{-1}$
 and the information vector $u^\ell_c~=~\hat \theta^\ell_{c|c-1} (P^\ell_{c|c-1})^{-1}$.
 The travel time estimate of vehicle $m$ along segment $\ell$,
-along with its uncertainty, 
+along with its uncertainty,
 as defined in (\ref{eq:tt_obs_mean}) and (\ref{eq:tt_obs_err}), respectively,
-are transformed to a measurement information covariance matrix 
+are transformed to a measurement information covariance matrix
 $B_{c\ell}^{m}~=~(R_{c\ell}^m)^{-2}$
 and measurement information vector $b_{c\ell}^{m}~=~Z_{c\ell}^{m} (R_{c\ell}^{m})^{-2}$.
 The total information is the sum of the information over all $M_{c\ell}$ vehicles
 that traversed segment $\ell$ in the time interval $(t_{c-1}, t_c]$,
 so the update equations are simply
 \begin{align*}
-U^\ell_{c|c} &= U^\ell_{c|c-1} + \sum_{m=1}^{M_{c\ell}} B_{c\ell}^{m} \\
+U^\ell_{c|c} &= U^\ell_{c|c-1} + \sum_{m=1}^{M_{c\ell}} B_{c\ell}^{m}, \\
 \hat u^\ell_{c|c} &= \hat u^\ell_{c|c-1} + \sum_{m=1}^{M_{c\ell}} b_{c\ell}^{m}.
 \end{align*}
-The desired parameter estimates are obtained 
+The desired parameter estimates are obtained
 by the inverse transformations
 \begin{equation*}
-\hat \theta^\ell_{c|c} = \frac{\hat u^\ell_{c|c}}{U^\ell_{c|c}} 
+\hat \theta^\ell_{c|c} = \frac{\hat u^\ell_{c|c}}{U^\ell_{c|c}}
 \quad\text{and}\quad
-P^\ell_{c|c} = \frac{1}{U^\ell_{c|c}}
+P^\ell_{c|c} = \frac{1}{U^\ell_{c|c}},
 \end{equation*}
 which can be used in the prediction of travel times
-for upcoming buses. 
+for upcoming buses.
 Note that, if we included segment correlations,
 the full state $\boldsymbol{\theta}_c$ would need updating in a single step,
 which would require inverting a large $L\times L$ matrix,
 significantly increasing the time of updating the state.
-
-
-
