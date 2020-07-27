@@ -1,0 +1,18 @@
+---
+title: Section Three
+header-includes:
+   - \usepackage{cleveref}
+---
+
+# Predicting arrival time
+
+## Particle filter etas
+
+* use particle filter and network state to obtain ETA estiamtes for each particle/stop
+* include dwell time uncertainties, etc
+* result is a distribution estimated by $N$ particles
+
+## Simplified ETA CDF
+
+* round to minutes
+* compute the CDF by definition ``number of particles arriving within $x$ minutes''

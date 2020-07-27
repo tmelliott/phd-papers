@@ -1,6 +1,6 @@
 % Options for packages loaded elsewhere
-\PassOptionsToPackage{unicode}{hyperref}
-\PassOptionsToPackage{hyphens}{url}
+% \PassOptionsToPackage{unicode}{hyperref}
+% \PassOptionsToPackage{hyphens}{url}
 
 \documentclass{article}
 
@@ -69,9 +69,14 @@
 
 \maketitle
 
-%% Content goes here
+Hello \dots
 
-\input{sections/sec01.tex}
+<<include-sections,echo=FALSE,results="asis">>=
+for (file in list.files('sections', pattern = "*.tex", full.names = TRUE)) {
+  cat(sprintf("\\input{%s}", file), "\n")
+}
+@
+
 
 \bibliographystyle{acm}
 \bibliography{allrefs}

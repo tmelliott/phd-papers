@@ -1,0 +1,13 @@
+---
+title: Section Four
+header-includes:
+   - \usepackage{cleveref}
+---
+
+# Journey planning applications
+
+* CDF makes it possible to answer many (often complex) jouney planning questions
+* P(catch)
+* P(arrive on time)
+* P(transfer)
+* this is a simple computation - can be done client side (i.e., on a user's phone) by passing CDF (small size, as e.g., JSON)
