@@ -1,0 +1,26 @@
+---
+title: Section One
+header-includes:
+   - \usepackage{cleveref}
+---
+
+# Introduction
+
+```{=latex}
+\begin{equation}
+\label{eq:no}
+y = 2x
+\end{equation}
+```
+
+Predicting bus arrival is ... quite something \( \cite{Elliott_2020} \)
+
+I can just type things here, like ... yeah!
+```{=latex}
+\begin{equation}
+\label{eq:hello}
+x = \int 2x\; \mathrm{d}x
+\end{equation}
+```
+
+We see in `\cref{eq:hello}`{=latex} that ... blah.

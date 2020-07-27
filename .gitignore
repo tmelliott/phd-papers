@@ -1,6 +1,8 @@
 reflist.bib
 figures/*.pdf
 
+*.tex
+
 # Created by https://www.gitignore.io/api/latex,r,linux
 
 ### LaTeX ###
