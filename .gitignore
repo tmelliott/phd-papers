@@ -31,7 +31,6 @@ auto
 
 ## Generated if empty string is given at "Please type another file name for output:"
 .pdf
-!new2020.pdf
 
 ## Bibliography auxiliary files (bibtex/biblatex/biber):
 *.bbl
@@ -279,3 +278,4 @@ vignettes/*.pdf
 
 # End of https://www.gitignore.io/api/latex,r,linux
 *.pdf
+!new2020.pdf
