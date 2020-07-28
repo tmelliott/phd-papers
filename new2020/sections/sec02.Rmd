@@ -6,6 +6,8 @@ header-includes:
 
 # Background
 
+Before describing the process of obtaining arrival time distributions, we must first define the framework with which we obtain vehicle and network state estimates. @cite:Elliott_2020; present a process for constructing a transit road network from raw GTFS data.
+
 ## A transit road network
 
 * information about GTFS

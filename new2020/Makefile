@@ -7,15 +7,27 @@ TEX_FILES = $(patsubst %.Rmd, %.tex, $(RMD_FILES))
 default: $(TARGET)
 
 $(TARGET): $(FILE).tex $(TEX_FILES) allrefs.bib
-	@latexmk -pdf $<
+	@echo "Building $@"
+	@latexmk -pdf -silent $<
+	@echo Done!
 
 $(FILE).tex: $(FILE).Rnw $(TEX_FILES)
-	@Rscript -e 'knitr::knit("$<")'
+	@echo "Compiling $< -> $@"
+	@Rscript -e 'knitr::knit("$<", quiet = TRUE)'
+	@echo ""
 
 %.tex: %.Rmd
-	@Rscript -e 'rmarkdown::render("$<", output_format = rmarkdown::pdf_document(keep_tex = TRUE))'
+	@echo "Compiling $< -> $@"
+	@Rscript -e 'rmarkdown::render("$<", output_format = rmarkdown::pdf_document(keep_tex = TRUE), quiet = TRUE)'
 	@rm $*.pdf
+	@echo "Cleaning $@"
 	@Rscript clean_tex.R $@
+	@echo ""
 
 clean:
 	@latexmk -pdf -c $(FILE).tex
+	@rm -f sections/*.log
+
+fullclean:
+	@latexmk -pdf -C -f $(FILE).tex
+	@rm -f $(FILE).tex sections/*.tex sections/*.log

@@ -6,21 +6,9 @@ header-includes:
 
 # Introduction
 
-```{=latex}
-\begin{equation}
-\label{eq:no}
-y = 2x
-\end{equation}
-```
+* the problem of predicting bus arrival - it needs to use real-time traffic information @cite:cn;
+* however, many deployed methods are either specific to a provider/city, or don't make use of real-time data (only vehicle position and/or arrival delays, e.g., in Auckland)
+* since the only logical source of ``traffic data'' in this setting is the transit vehicles themselves, makes sense to develop framework that uses them to estimate real-time network state @cite:Elliott_2020;
+* in this example, particle filter is used to obtain a sample of points from the arrival time distribution - many many points, which cannot possibly be distributed or stored efficiently
+* we propose a method of reducing this to a simple discrete CDF of arrival time (in minutes)
 
-Predicting bus arrival is ... quite something \( \cite{Elliott_2020} \)
-
-I can just type things here, like ... yeah!
-```{=latex}
-\begin{equation}
-\label{eq:hello}
-x = \int 2x\; \mathrm{d}x
-\end{equation}
-```
-
-We see in `\cref{eq:hello}`{=latex} that ... blah.
