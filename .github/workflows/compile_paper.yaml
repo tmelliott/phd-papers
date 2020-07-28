@@ -1,0 +1,26 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+name: Compile papers
+
+jobs:
+  R-CMD-check:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: r-lib/actions/setup-r@master
+      - name: Install dependencies
+        run: make -C new2020 Install
+      - name: Build
+        run: cd new2020 && make
+      - name: Rename file
+        run: cd new2020 && mv main.pdf new2020.pdf
+      - name: Commit results
+        run: |
+          git commit new2020/new2020.pdf -m 'Compile new2020.pdf' || echo "No changes to commit"
+          git push origin || echo "No changes to commit"
