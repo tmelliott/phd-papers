@@ -2,10 +2,22 @@
 % \PassOptionsToPackage{unicode}{hyperref}
 % \PassOptionsToPackage{hyphens}{url}
 
-\documentclass{article}
+\documentclass{statsoc}
 
-\title{Doing things with particle filters}
-\author{Tom Elliott and Thomas Lumley}
+\title[Particle buses]{Doing things with particle filters}
+
+\author{Tom Elliott}
+\address{University of Auckland,
+         Auckland,
+         New Zealand}
+\email{tom.elliott@auckland.ac.nz}
+
+\author[Elliott, T \& Lumley, T]{Thomas Lumley}
+\address{University of Auckland,
+         Auckland,
+         New Zealand}
+\email{t.lumley@auckland.ac.nz}
+
 
 \usepackage{lmodern}
 \usepackage{amssymb,amsmath}
@@ -60,7 +72,7 @@
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% \setcounter{secnumdepth}{-\maxdimen} % remove section numbering
 
 \usepackage{amsmath}
 \usepackage{cleveref}
@@ -68,6 +80,11 @@
 \begin{document}
 
 \maketitle
+
+\begin{abstract}
+The prediction of transit vehicle arrival time is a complex problem with the added difficulty of its real-time nature. Reliable predictions require the combination of both vehicle and network states, implying that real-time traffic congestion information is incorporated into the predictions. Inevitably, however, there is a lot of uncertainty around arrival times: road speeds fluctuate, particularly around peak time, and multimodality is added with every stop passed (which may or may not cause the bus to stop depending on passenger demand). Therefore, not only do we need to predict arrival time, but also assess and report the uncertainties involved. We present a method of using a particle filter to combine the states of both vehicle and network to obtain arrival time distributions. These are then discretised in such a way that allows real-time calculation of event probabilities for use in journey planning applications.
+\end{abstract}
+\keywords{particle filter, transport, real-time, GTFS}
 
 Hello \dots
 
@@ -78,7 +95,21 @@ for (file in list.files('sections', pattern = "*.tex", full.names = TRUE)) {
 @
 
 
-\bibliographystyle{acm}
+\bibliographystyle{chicago}
 \bibliography{allrefs}
 
 \end{document}
+
+% royal statistical society - journal a
+% computational statistics & data analysis
+% transportation research part c
+
+
+%% inzight paper:
+% what for, and then how
+
+% american statistician (education)
+% JSS (design/modular etc)
+
+
+% NZSA conference

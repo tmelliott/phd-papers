@@ -12,3 +12,9 @@ header-includes:
 * in this example, particle filter is used to obtain a sample of points from the arrival time distribution - many many points, which cannot possibly be distributed or stored efficiently
 * we propose a method of reducing this to a simple discrete CDF of arrival time (in minutes)
 
+
+Some of the references include:
+
+* @cite:Cathey_2003;
+* @cite:Yu_2006,Yu_2010,Yu_2011;
+* @cite:Hans_2015;
