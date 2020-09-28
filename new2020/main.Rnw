@@ -95,7 +95,7 @@ for (file in list.files('sections', pattern = "*.tex", full.names = TRUE)) {
 @
 
 
-\bibliographystyle{chicago}
+\bibliographystyle{rss}
 \bibliography{allrefs}
 
 \end{document}
