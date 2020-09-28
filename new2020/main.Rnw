@@ -86,8 +86,6 @@ The prediction of transit vehicle arrival time is a complex problem with the add
 \end{abstract}
 \keywords{particle filter, transport, real-time, GTFS}
 
-Hello \dots
-
 <<include-sections,echo=FALSE,results="asis">>=
 for (file in list.files('sections', pattern = "*.tex", full.names = TRUE)) {
   cat(sprintf("\\input{%s}", file), "\n")
