@@ -4,10 +4,16 @@ header-includes:
    - \usepackage{cleveref}
 ---
 
-# Journey planning applications
+# A discretized CDF approximation for journey planning
 
 * CDF makes it possible to answer many (often complex) jouney planning questions
 * P(catch)
 * P(arrive on time)
 * P(transfer)
 * this is a simple computation - can be done client side (i.e., on a user's phone) by passing CDF (small size, as e.g., JSON)
+
+## Simplified ETA CDF
+@label:eta_cdf;
+
+* round to minutes
+* compute the CDF by definition ``number of particles arriving within $x$ minutes''

@@ -16,10 +16,10 @@ if (nrow(m)) {
     for (i in seq_len(nrow(m))) {
         rep <- paste0("\\", m[i, 2], "{", m[i, 3], "}")
         rep <- gsub("[\\]+_", "_", rep)
-        cat("\n ", m[i, 2], "->", rep)
+        # cat("\n ", m[i, 1], "->", rep)
         txt <- stringr::str_replace_all(txt, stringr::fixed(m[i, 1]), rep)
     }
-    cat("")
+    # cat("")
 }
 
 writeLines(txt, f)

@@ -11,7 +11,7 @@ Before describing the process of obtaining arrival time distributions, we must f
 ## A transit road network
 
 * information about GTFS
-* the concept of converting it into a network (as per `\cite{Elliott_2020}`{=latex})
+* the concept of converting it into a network (as per @cite:Elliott_2020;)
 * end product is real-time estimates of traffic state
 
 ## Estimating network and vehicle state using particle filtering
@@ -19,4 +19,3 @@ Before describing the process of obtaining arrival time distributions, we must f
 * particle filter on vehicle state
 * used to estimate vehicle speed, position
 * obtain distribution of travel times for each vehicle along each road
-

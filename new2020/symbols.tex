@@ -1,0 +1,318 @@
+% plan to remove these
+\newcommand{\bB}{\mathbf{B}}
+\newcommand{\bbeta}{\boldsymbol\beta}
+\newcommand{\bbetahat}{\boldsymbol{\hat\beta}}
+\newcommand{\bY}{\boldsymbol Y}
+\newcommand{\bX}{\boldsymbol X}
+\newcommand{\bx}{\boldsymbol x}
+\newcommand{\bz}{\boldsymbol z}
+\newcommand{\bbX}{\textbf{X}}
+
+\makeatletter
+\newcommand*\rel@kern[1]{\kern#1\dimexpr\macc@kerna}
+\newcommand*\widebar[1]{%
+  \begingroup
+  \def\mathaccent##1##2{%
+    \rel@kern{0.8}%
+    \overline{\rel@kern{-0.8}\macc@nucleus\rel@kern{0.2}}%
+    \rel@kern{-0.2}%
+  }%
+  \macc@depth\@ne
+  \let\math@bgroup\@empty \let\math@egroup\macc@set@skewchar
+  \mathsurround\z@ \frozen@everymath{\mathgroup\macc@group\relax}%
+  \macc@set@skewchar\relax
+  \let\mathaccentV\macc@nested@a
+  \macc@nested@a\relax111{#1}%
+  \endgroup
+}
+\makeatother
+
+%% new symbol list, better structured
+
+\newcommand{\mat}[1]{\mathbf{#1}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+\newcommand{\tvec}[1]{\left[#1\right]^\top}
+\newcommand{\collect}[1]{\left\{#1\right\}}
+
+\newcommand{\Vtime}{t}
+\newcommand{\Vtdiff}{\Delta}
+
+\newcommand{\Vobs}{\boldsymbol{y}}
+\newcommand{\VobsMat}{\mat Y}
+\newcommand{\Vlat}{\phi}
+\newcommand{\Vlon}{\lambda}
+\newcommand{\Varr}{A}
+\newcommand{\Vdep}{D}
+\newcommand{\Vdwell}{\tilde\Vdep}
+
+\newcommand{\Vstate}{\bx}
+\newcommand{\Vdist}{x}
+\newcommand{\Vspeed}{\dot x}
+\newcommand{\Vaccel}{\ddot x}
+\newcommand{\Vtt}{B}
+\newcommand{\Vttobs}{b}
+\newcommand{\Vtterr}{e}
+\newcommand{\Np}{N}
+\newcommand{\Pwt}[1][i]{w^{(#1)}}
+\newcommand{\Vtrans}{f}
+\newcommand{\Vmeas}{h}
+\newcommand{\Vprojf}{g}
+\newcommand{\Vproj}[2]{g\left(#1\cond{}#2\right)}
+\newcommand{\Viproj}[2]{g^{-1}\left(#1\cond{}#2\right)}
+\newcommand{\VnoiseSD}{\sigma}
+\newcommand{\Vnoise}{\VnoiseSD^2}
+\newcommand{\GPSerrSD}{\varepsilon}
+\newcommand{\GPSerr}{\GPSerrSD^2}
+\newcommand{\TUerrSD}{\xi}
+\newcommand{\TUerr}{\TUerrSD^2}
+\newcommand{\Ppos}{\vec{\tilde y}}
+
+\newcommand{\Neff}{N_\text{eff}}
+\newcommand{\Nthres}{N_\text{thres}}
+
+\newcommand{\Vsegstart}{T}
+\newcommand{\Vsegend}{T'}
+
+\newcommand{\vi}[1][i]{^{(#1)}}
+
+\newcommand{\Nstop}{M}
+\newcommand{\Nseg}{L}
+\newcommand{\Tstopd}{\mathcal{S}}
+\newcommand{\Tsegd}{\mathcal{D}}
+\newcommand{\Tseglen}{\mathcal{L}}
+\newcommand{\Prstop}{\pi}
+\newcommand{\mindwell}{\gamma}
+\newcommand{\dwell}{\tau}
+\newcommand{\dwellvar}{\omega^2}
+\newcommand{\Istop}{p}
+\newcommand{\pdwell}{d}
+\newcommand{\pserve}{\tilde d}
+\newcommand{\Print}{\rho}
+\newcommand{\intwait}{\nu}
+\newcommand{\Iint}{r}
+\newcommand{\pwait}{w}
+\newcommand{\pcwait}{\tilde w}
+
+\newcommand{\NWtdiff}{\Delta}
+\newcommand{\NWstate}{\beta}
+\newcommand{\NWstatevar}{\mat{P}}
+\newcommand{\NWvar}{\mat{\boldsymbol{\psi}}}
+\newcommand{\Rstate}{b}
+\newcommand{\Rvar}{v}
+\newcommand{\NWnoise}{q}
+\newcommand{\NWerr}{\Vtterr}
+\newcommand{\NWtransfun}{F}
+\newcommand{\NWtrans}{\mat{\NWtransfun}}
+\newcommand{\NWmeas}{\mat{H}}
+\newcommand{\NWobss}{\boldsymbol{z}}
+\newcommand{\NWobs}{\Vttobs}
+\newcommand{\NWErr}{E}
+\newcommand{\NWinfmat}{\mat{U}}
+\newcommand{\NWinfvec}{\boldsymbol{u}}
+\newcommand{\NWobsinfmat}{\mat{I}}
+\newcommand{\NWobsinfvec}{\boldsymbol{i}}
+\newcommand{\NWctrl}{\xi}
+\newcommand{\NWctrlvec}{\vec\NWctrl}
+\newcommand{\NWmaxtt}{\mu}
+\newcommand{\MaxSpeed}{\mathbb{V}}
+
+\newcommand{\NWhistmean}[2]{\beta_{#1}\left(#2\right)}
+\newcommand{\NWhistvar}[2]{\psi_{#1}\left(#2\right)}
+\newcommand{\NWmeantt}{\theta}
+\newcommand{\NWvartt}{\omega^2}
+
+\newcommand{\ellc}{\ell,c}
+
+\newcommand{\Linkt}{\eta}
+\newcommand{\Linktt}{\boldsymbol{\Linkt}}
+\newcommand{\Nodedwell}{\kappa}
+\newcommand{\Tarr}{\alpha}
+\newcommand{\TTarr}{\boldsymbol{\Tarr}}
+\newcommand{\Tdwell}{\Delta}
+\newcommand{\TTdwell}{\boldsymbol{\Tdwell}}
+\newcommand{\TripTime}{{t_r}}
+\newcommand{\Teta}{A}
+
+\newcommand{\RouteNWstate}{\bbeta}
+\newcommand{\RouteNWstatevar}{\boldsymbol{\zeta}}
+\newcommand{\RouteNWstateseg}{\beta}
+\newcommand{\RouteNWstatevarseg}{\zeta}
+\newcommand{\RouteNWstatecor}{\rho}
+
+\newcommand{\ttsofar}{\eta}
+\newcommand{\ArrTvar}{\upsilon}
+\newcommand{\Curdwell}{\kappa}
+
+
+\newcommand{\Tripr}{\mathcal{T}}
+\newcommand{\Tript}{t}
+\newcommand{\TripStop}{s}
+\newcommand{\TripDep}{d}
+\newcommand{\TripSeg}{\ell}
+\newcommand{\SegProg}{\hat p}
+
+\newcommand{\FM}{\mathcal{A}}
+\newcommand{\Fpf}{$\FM_\text{p}$}
+\newcommand{\Fnorm}{$\FM_\text{n}$}
+\newcommand{\Fhist}{$\FM_\text{h}$}
+\newcommand{\Fsched}{$\FM_\text{s}$}
+
+\newcommand{\RouteSegs}{\mathcal{R}}
+\newcommand{\ShapePath}{\mathcal{P}}
+
+\newcommand{\dist}[1]{d\left(#1\right)}
+\newcommand{\distThreshold}{D_\text{thres}}
+
+% distributions
+\newcommand{\Normal}[2]{\mathcal{N}\left(#1,\, #2\right)}
+\newcommand{\TNormal}[4]{\mathcal{N}_T\left(#1,\, #2,\, #3,\, #4\right)}
+\newcommand{\LogNormal}[2]{\log\text{-}\mathcal{N}\left(#1,\, #2\right)}
+\newcommand{\Bern}[1]{\mathrm{Bernoulli}\left(#1\right)}
+\newcommand{\Exp}[1]{\mathcal{E}\left(#1\right)}
+\newcommand{\GammaD}[2]{\mathcal{G}\left(#1,\, #2\right)}
+\newcommand{\Uniform}[2]{\mathcal{U}\left(#1,\, #2\right)}
+
+% other stuff
+\newcommand{\E}[1]{\mathbb{E}\left[#1\right]}
+\newcommand{\Var}[1]{\mathrm{Var}\left[#1\right]}
+\newcommand{\Cov}[2]{\mathrm{Cov}\left[#1,\,#2\right]}
+\newcommand{\dirac}{\delta}
+\newcommand{\DiracMeasure}[2]{\dirac_{#1}\left(#2\right)}
+\renewcommand{\Pr}[1]{\mathbb{P}\left(#1\right)}
+
+\newcommand{\cond}{\,\big|\,}
+
+\newcommand{\Pcatch}{\mathbb{P}_\text{catch}}
+\newcommand{\Ptransfer}{\mathbb{P}_\text{transfer}}
+\newcommand{\Ewait}{\mathbb{E}_\text{wait}}
+\newcommand{\Ecatch}{\mathbb{E}_\text{catch}}
+\newcommand{\Emiss}{\mathbb{E}_\text{miss}}
+
+\newcommand{\dx}{\,\mathrm{d}x}
+
+
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+
+% \begin{symbols}{lll} % Include a list of Symbols (a three column table)
+
+% \multicolumn{3}{l}{Vehicle state model} \\
+% \hline
+% % time symbols
+% $\Vtime_k$      & time of the $k^{\text{th}}$ observation & Unix timestamp \\
+% $\Vtdiff_k$     & time since the last observation, $t_k-t_{k-1}$ & seconds \\
+% \addlinespace
+
+% % vehicle observation symbols
+% $\Vobs_k$     & vehicle observation (at time $\Vtime_k$) & \\
+% $\Vlat_k$     & vehicle latitude & degrees \\
+% $\Vlon_k$     & vehicle longitude & degrees \\
+% $\Varr_m$, $\Vdep_m$  & observed arrival, departure time at stop $m$ & Unix timestamp \\
+% $\Vdwell_m$   & observed dwell time at stop $m$ & seconds \\
+% \addlinespace
+
+% % vehicle state symbols
+% $\Vstate_k$   & vehicle state (at time $\Vtime_k$) & \\
+% $\Vdist_k$    & vehicle distance into trip & m \\
+% $\Vspeed_k$    & vehicle speed & m/s \\
+% % $\Vaccel_k$    & vehicle acceleration & m/s$^2$ \\
+% \addlinespace
+
+% % particle filter symbols
+% $\Np$         & number of particles per vehicle & \\
+% $\Np_\text{eff}$ & effective sample size \\
+% $\Pwt_k$      & weight of particle $i$ given data up to time $\Vtime_k$ & \\
+% $\dirac$      & Dirac delta function (refer to \cref{app:dirac-delta-measure}) \\
+% $\Ppos\vi_k$  & Computed coordinates of particle $i$ at time $\Vtime_k$ \\
+% \addlinespace
+
+% % vehicle model symbols
+% $\Vtrans$     & vehicle transition function & \\
+% $\Vmeas$      & vehicle measurement function & \\
+% $\Vnoise$     & vehicle system noise & m/s\footnote{Except the acceleration models (A3, B3) which has units m/s$^2$.} \\
+% $\GPSerr$     & measurement or GPS error & meters \\
+% $\TUerr$      & Trip update arrival/departure error & seconds \\
+% $d(a,b)$      & distance between points $a$ and $b$ & meters \\
+% $\ShapePath$  & shape path of the vehicle \\
+% \addlinespace
+
+% % bus stop symbols
+% $\Nstop$        & number of stops in the vehicle's active trip & \\
+% $\Tarr_m$       & arrival time at stop $m$ & Unix timestamp \\
+% $\dwell_m$      & mean dwell time at stop $m$ & seconds \\
+% $\dwellvar_m$   & variance of dwell time at stop $m$ & seconds \\
+% %$\pserve_m$     & service time (passengers on and off) at stop $m$ & seconds \\
+% $\Prstop_m$     & probability of stopping at stop $m$ & \\
+% % $\Istop_m$      & indicator of stopping at stop $m$ & \\
+% $\mindwell$     & minimum dwell time & seconds \\
+% $\pdwell_m$     & total dwell time at stop $m$ & seconds \\
+% \addlinespace
+
+% % intersection symbols
+% $\Nseg$       & number of segments in the vehicle's active trip & \\
+% $\Tsegd_\ell$   & distance into trip of start of segment $\ell$ & meters \\
+% $\Tseglen_\ell$ & length of segment $\ell$ & meters \\
+% $\Vsegstart_\ell$, $\Vsegend_\ell$ & start and end times along road segment $\ell$ & Unix timestamp \\
+% $\Vtt_\ell$   & vehicle travel time along segment $\ell$ & seconds \\
+% $\intwait_\ell$ & mean wait time at intersection $\ell$ & seconds \\
+% % $\pcwait_\ell$ & wait time at intersection $\ell$ & seconds \\
+% $\Print_\ell$   & probability of stopping at intersection $\ell$ & \\
+% % $\Iint_\ell$       & indicator that vehicle stopped at intersection $\ell$ & \\
+% $\pwait_\ell$ & total wait time at intersection $\ell$ & seconds \\
+% \addlinespace
+
+% \multicolumn{3}{l}{Network state model} \\
+% \hline
+% % network symbols
+% $\NWstate_{\ellc}$        & road segment $\ell$ state at time $t_c$   & m/s \\
+% $\MaxSpeed_\ell$ & maximum speed along road segment $\ell$ & m/s \\
+% $\NWtrans_c$ & road segment transition function at time $t_c$ & \\
+% $\NWtdiff_c$ & time since last road state update, $t_c - t_{c-1}$ & seconds \\
+% $\NWnoise_\ell$        & road segment $\ell$ system noise & m/s$^2$ \\
+% $\NWvar_c$          & between-vehicle variance, segment $\ell$, time $t_c$ & m/s \\
+% $\NWerr_{\ellc}^m$ & measurement error for bus $m$, segment $\ell$, time $t_c$ & m/s \\
+% $\hat\NWstate_{\ellc|c}$, $\NWstatevar_{\ellc|c}$ & estimated state (mean, variance), segment $\ell$, & m/s \\
+%  & time $t_c$, given observations up to time $t_{c-1}$ & \\
+% % $\NWinfmat_c$, $\NWinfvec_c$       & road segment information matrix, vector at time $t_c$ & \\
+% % $\NWobsinfmat_c$, $\NWobsinfvec$ & \multicolumn{2}{l}{road segment observation information matrix, vector at time $t_c$} \\
+% % $\mu_\psi$, $\sigma_\psi^2$ & mean and variance of between-vehicle variance & m/s \\
+% \addlinespace
+
+% \multicolumn{3}{l}{Arrival time prediction} \\
+% \hline
+% % Prediction
+% $\Tripr_k$ & trip state at time $t_k$ \\
+% $\SegProg_k$ & progress along trip's current segment, time $t_k$  \\
+% \addlinespace
+
+% $S_m$ & scheduled arrival time at stop $m$ & Unix timestamp \\
+% $\hat\Tarr_m$ & predicted arrival time at stop $m$ & seconds \\
+% \addlinespace
+
+% $\breve\Tarr_m$ & predicted arrival time at stop $m$ & minutes \\
+% $\hat\Teta_q$ & $100q$\% quantile of arrival time & minutes \\
+
+% \addlinespace
+
+% \multicolumn{3}{l}{Statistical distributions} \\
+% \hline
+
+% $\Bern{\pi}$ &
+% \multicolumn{2}{l}{Bernoulli distribution with probability of success $\pi$} \\
+
+% $\Exp{\lambda}$ &
+% \multicolumn{2}{l}{Exponential distribution with rate $\lambda$} \\
+
+% $\GammaD{r}{\theta}$ &
+% \multicolumn{2}{l}{Gamma distribution with shape $r$ and scale $\theta$} \\
+
+% $\Normal{\mu}{\sigma^2}$ &
+% \multicolumn{2}{l}{Normal distribution with mean $\mu$ and variance $\sigma^2$} \\
+% $\TNormal{\mu}{\sigma^2}{a}{b}$ &
+% \multicolumn{2}{l}{Truncated Normal distribution with mean $\mu$ and variance $\sigma^2$ }\\
+% & truncated to the interval $(a,b)$  \\
+
+% $\Uniform{a}{b}$ &
+% \multicolumn{2}{l}{Uniform distribution on the interval $(a,b)$} \\
+
+% \end{symbols}

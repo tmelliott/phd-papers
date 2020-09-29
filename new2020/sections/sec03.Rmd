@@ -2,17 +2,78 @@
 title: Section Three
 header-includes:
    - \usepackage{cleveref}
+   - \input{../symbols.tex}
 ---
 
 # Predicting arrival time
 
-## Particle filter etas
+Accurate, reliable prediction of bus arrival time requires knowledge of both vehicle and network states, represented by $\Vstate_{k}$ and $\NWstate_{c}$, respectively. Since there is a high degree in the uncertainty of these, particularly when forecasting future network states around peak times, it is crucial to incorporate this uncertainty into the arrival time distribution and, ultimately, decision making processes.
 
-* use particle filter and network state to obtain ETA estiamtes for each particle/stop
-* include dwell time uncertainties, etc
-* result is a distribution estimated by $N$ particles
+The particle filter presents a robust method of sampling all of the possible trajectories the vehicle might take @citep:Hans_2015;.
 
-## Simplified ETA CDF
+* initial state incoporates uncertainty (shape, multimodality) of vehicle state
+* trajectory of each particle = one possible path the bus might take
+* accounts for uncertainty in (forecasted) road speed, correlations, etc
+* result makes no assumptions about shape of distribution
 
-* round to minutes
-* compute the CDF by definition ``number of particles arriving within $x$ minutes''
+The main downside of the particle filter is the computational demand of it, often requiring 5000-10000 particles per bus.
+
+* @cite:Elliott_2020; showed the pf is feasible in real-time for modelling
+* need to also show predicions can be done quickly and usefully
+* reduce number of particles where possible
+
+Our implementation is described in @cref:pf_etas;. To examine the effectiveness of our approach, we run our method on a full day and compared the predictions with the actual arrivals, as well as the currently used "GTFS" predictions. These are discussed in @cref:pf_results;.
+
+
+## Particle filter ETAs
+@label:pf_etas;
+
+In our application, the vehicle state is already represented by a set of $\Np$\ particles,
+\[
+p(\Vstate_{k|k}\cond{}\Vobs_k) \approx \sum_{i=1}^\Np \Pwt_k \DiracMeasure{\Vstate_k\vi}{\Vstate_k}
+\]
+which we use directly. However, were vehicle states available in some other form, one would simply take a sample from the posterior state estimate $p(\Vstate_{k|k}\cond{}\Vobs_k)$. This gives us a sample of plausible bus states for which we can predict individual arrival times at upcoming stops.
+
+As with the vehicle model described by @citet:Elliott_2020;, we can iteratively forecast each particle's arrival at all upcoming stops. This involves incorporating network state (vehicle speeds along roads) as well as bus stopping behaviour. These two aspects are described individually below, and each particle simply iterates between them until it reaches the end of the route.
+
+[introduce trip state]
+
+### Road segment travel times
+
+[mostly copy 5-step process from thesis section 5.2.1]
+
+Each particle begins having travelled $\Vdist_k\vi$\ meters along the route, with a current speed of $\Vspeed_k\vi$. The first travel time required is, therefore, the time to reach the end of the current road segment, $\TripSeg\vi$, assuming the bus maintains its current speed. From the transit network construction, we know that segment $\TripSeg\vi$ starts $\Tsegd_{\TripSeg\vi}$\ meters along the route and has a length of $\Tseglen_{\TripSeg\vi}$\ meters, so the distance remaining is
+\[
+   \bar z\vi = \Tsegd_{\TripSeg\vi} + \Tseglen_{\TripSeg\vi} - \Vdist_k\vi
+\]
+which will take the particle
+\[
+   z\vi = \frac{\bar z\vi}{\Vspeed_k\vi}\ \text{seconds}
+\]
+to complete.
+
+[ once trip state introduced, the above becomes:]
+
+... particle has completed 100$p_\ell\vi$% of the segment. If the vehicle is nearing the end of the segment (less than 200\ meters remaining), we keep the particle's initial speed $\Vspeed_k\vi$. Otherwise, we simulate a speed from the network state with mean $\NWstate_\ell$, uncertainty $\NWstatevar_\ell$, and between-vehicle variability $\NWvar_\ell$, as follows:
+\begin{equation*}
+   \Vspeed_\ell{\vi}^\star =
+   \begin{cases}
+      \Vspeed_k\vi & (1-\SegProg_k)\Tseglen_\ell < 200, \\
+      v_\ell{\vi} \sim \TNormal{\NWstate_\ell}{\NWstatevar_\ell^2 + \NWvar_\ell^2}{0}{\MaxSpeed_\ell}, & \text{otherwise}.
+   \end{cases}
+\end{equation*}
+
+Now the travel time to the end of the current segment can simply be obtained as
+\[
+   \tilde z\vi = \frac{(1-\SegProg_k\vi)\Tseglen_\ell}{\Vspeed_\ell{\vi}^\star}.
+\]
+We now store an iterative variable *travel-time-so-far* with the time taken to reach the end of the current segment, $\ttsofar\vi = \tilde z\vi$.
+
+
+### Bus stops
+
+
+### Arrival time distribution
+
+## Results
+@label:pf_results;
