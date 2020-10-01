@@ -118,11 +118,11 @@ We may obtain any summary statistics from this distribution, including the mean 
 ## Results
 @label:pf_results;
 
-* we ran model to full day of data
-* predicted arrival times
-* at end of day, compare to actual arrival times
-* also computed GTFS prediction (schedule + delay) as comparison
+To assess the feasibility and reliability of this approach, we ran the full model on one day of data from DATE. This used the particle filter and network model described by @cite:Elliott_2020;, and the arrival time predictions described above. At the end of the day, we could compare the predicted with the actual arrival times. In addition, we compare to the GTFS-based predictions which are simply the scheduled arrival time plus the delay at the most recent stop.
 
-* the results show our method works better even without forecasting overall
-* this picture shows during off-peak, we outperform and capture the uncertainty inherent in arrival time prediction
+To assess, we use RMSE, MAE, MAPE, and PICP. RMSE and MAE provide an assessment of the absolute prediction reliability, while MAPE scales predictions by the time-until-arrival; that is, it is more affected by short-term predictions when the bus is near, giving us a comparative measure of short-term reliability (which is useful when deciding between walking, jogging, or sprinting to the bus stop). PICP (which is only available for the particle filter estimates) assess how well the uncertainty is captured (we would expect a 95% prediction interval to capture the true value in 95% of cases).
+
+The overall values are shown in @cref:tab:results1;. The particle filter predictions are slightly more accurate than GTFS on average, and have about 20% error versus GTFS's 27%. However, only 77% of prediction intervals contain the actual arrival time, indicating that uncertainties are being under-predicted (the nominal coverage is 85%).
+
+Since traffic and bus numbers change over the course of a day, we also computed the assessment statistics over 15\ minute intervals. These results are shown in @cref:fig:results2;, and immediately we can see the sizeable affect of peak time of predictive accuracy. This suggests that, during off-peak time when traffic conditions are stable, the real-time predictions are a vast improvment on the status quo. Since the underlying network model is not yet enabled to handle forecasts, its not surprising that accuracy and uncertainty coverage is lacking.
 

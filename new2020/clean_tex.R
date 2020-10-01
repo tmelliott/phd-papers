@@ -10,7 +10,7 @@ txt <- txt[from:to]
 # convert @cite:Paper_2000,Paper2_2001; to
 # `\cite{Paper_2000, Paper2_2001}`{=latex}
 
-regx <- "@([a-zA-Z]+):([a-zA-Z0-9,_\\\\]+);"
+regx <- "@([a-zA-Z]+):([a-zA-Z0-9,_\\\\:]+);"
 m <- do.call(rbind, stringr::str_match_all(txt, regx))
 if (nrow(m)) {
     for (i in seq_len(nrow(m))) {
