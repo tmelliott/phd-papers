@@ -36,30 +36,34 @@ which we use directly. However, were vehicle states available in some other form
 
 As with the vehicle model described by @citet:Elliott_2020;, we can iteratively forecast each particle's arrival at all upcoming stops. This involves incorporating network state (vehicle speeds along roads) as well as bus stopping behaviour. These two aspects are described individually below, and each particle simply iterates between them until it reaches the end of the route.
 
-[introduce trip state]
-
-### Road segment travel times
-
-[mostly copy 5-step process from thesis section 5.2.1]
-
-Each particle begins having travelled $\Vdist_k\vi$\ meters along the route, with a current speed of $\Vspeed_k\vi$. The first travel time required is, therefore, the time to reach the end of the current road segment, $\TripSeg\vi$, assuming the bus maintains its current speed. From the transit network construction, we know that segment $\TripSeg\vi$ starts $\Tsegd_{\TripSeg\vi}$\ meters along the route and has a length of $\Tseglen_{\TripSeg\vi}$\ meters, so the distance remaining is
+To begin, we define the state of an active trip at time $\Tript_k$ in which the vehicle is at or last visited stop $\TripStop_k$, together with an indicator $\TripDep_k$ of whether or not the bus has departed the stop, the index of the current road segment $\TripSeg_k$, and the progress along that segment $\SegProg_k$:
 \[
-   \bar z\vi = \Tsegd_{\TripSeg\vi} + \Tseglen_{\TripSeg\vi} - \Vdist_k\vi
+   \Tripr_k = \tvec{\Tript_k, \TripStop_k, \TripDep_k, \TripSeg_k, \SegProg_k}.
 \]
-which will take the particle
+
+Next, we approximate the distribution of trip state by generating a sample of particles from $p(\Tripr_k | \Vobs_{1:k})$. In our case, we already have a weighted sample of particles, but the sample could be taken from any posterior distribution, for example if vehicle state is estimated using a Kalman filter the particles can be sampled from the Gaussian state estimate.
+
+We wish to take a sample of size $\tilde N \leq N$, which can depend on the number of remaining stops and the level of accuracy desired. However, in the next section we approximate the predictive distributions using a discrete CDF, so accuracy only needs to be at about the 30\ second level. Thus, we pull sample with replacement from $p(\Vstate_k|\Vobs_{1:k})$, yielding the trip state estimate
 \[
-   z\vi = \frac{\bar z\vi}{\Vspeed_k\vi}\ \text{seconds}
+   p(\Tripr_k | \Vobs_{1:k}) \approx
+   \frac{1}{\tilde N} \sum_{i=1}^{\tilde N} \DiracMeasure{\Tripr_k\vi}{\Tripr_k}
 \]
-to complete.
+where the components of $\Tripr_k\vi$ are computed from the vehicle state particles. This doesn't make sense. Gosh darnit.
 
-[ once trip state introduced, the above becomes:]
+Assuming I can rewrite the above to make sense ...
 
-... particle has completed 100$p_\ell\vi$% of the segment. If the vehicle is nearing the end of the segment (less than 200\ meters remaining), we keep the particle's initial speed $\Vspeed_k\vi$. Otherwise, we simulate a speed from the network state with mean $\NWstate_\ell$, uncertainty $\NWstatevar_\ell$, and between-vehicle variability $\NWvar_\ell$, as follows:
+Now we iterate each trip particle to the end of the route, storing the arrival times at all stops along the way. This is a five-step process.
+
+Note: need to add current speed to trip state ???
+
+**Step 1: complete the current segment**
+
+Each particle has completed 100$p_\ell\vi$% of the segment. If the vehicle is nearing the end of the segment (less than 200\ meters remaining), we keep the particle's initial speed $\Vspeed_k\vi$. Otherwise, we simulate a speed from the network state with mean $\NWstate_\ell$, uncertainty $\NWstatevar_\ell$, and between-vehicle variability $\NWvar_\ell$, as follows:
 \begin{equation*}
-   \Vspeed_\ell{\vi}^\star =
+   v_\ell{\vi}^\star =
    \begin{cases}
       \Vspeed_k\vi & (1-\SegProg_k)\Tseglen_\ell < 200, \\
-      v_\ell{\vi} \sim \TNormal{\NWstate_\ell}{\NWstatevar_\ell^2 + \NWvar_\ell^2}{0}{\MaxSpeed_\ell}, & \text{otherwise}.
+      v_\ell{\vi} \sim \TNormal{\NWstate_\ell}{\RouteNWstatevarseg_\ell^2 + \NWvar_\ell^2}{0}{\MaxSpeed_\ell}, & \text{otherwise}.
    \end{cases}
 \end{equation*}
 
@@ -69,11 +73,56 @@ Now the travel time to the end of the current segment can simply be obtained as
 \]
 We now store an iterative variable *travel-time-so-far* with the time taken to reach the end of the current segment, $\ttsofar\vi = \tilde z\vi$.
 
+**Step 2: compute arrival time at next stop**
 
-### Bus stops
+If there are any remaining segments between the current segment $\TripSeg_k\vi$ and the next stop $j_k\vi + 1$, their travel times are sampled from the network state with variance increased by network system noise to account for forecasting changes.
+\[
+   v_j\vi \sim
+   \TNormal{\hat \NWstate_j}{\left[(\RouteNWstatevarseg_j + \ttsofar\vi\NWnoise)^2 + \NWvar_j^2\right]\wedge P_{\text{max}}}{0}{\MaxSpeed_j},
+\]
+allowing uncertainty to increase up to a maximum $P_\text{max}$ which is the overall variance of all speeds along all segments estimated from historical data. The travel time along each segment is added to the travel-time-so-far,
+\[
+   \ttsofar\vi = \ttsofar\vi + \frac{\Tseglen_j}{v_j\vi}.
+\]
+
+Now, arrival time at stop $j$ is the sum of travel time along all segments up to the next stop. In the iterative process, this is simply $\Tarr_j\vi = t_k + \ttsofar\vi$.
 
 
-### Arrival time distribution
+**Step 3: compute stop dwell time**
+
+Once at a stop, a bus either stops and waits while passengers board and disembark, or travels past without stopping. This *dwell time* needs to be modelled @citep:cn;, but adds multimodality to the arrival time distribution.
+
+The dwell time model is ... [from chapter 3], as used by @citet:Hans_2015,Elliott_2020;. This now gets added to the travel-time-so-far,
+\[
+   \ttsofar\vi = \ttsofar\vi + \pdwell_j\vi
+\]
+unless the stop is a layover. In that case, we allow the particle---with some probability---to remain at the stop until the end of the dwell time, or the scheduled departure time, whichever is later.
+
+
+**Step 4: repeat steps 2--3**
+
+We now repeat each of the steps, sampling travel times for intermediary road segments as the particle arrives, and storing stop arrival times, until the particle reaches the end of the route.
+
+
+**Step 5: obtain arrival time distributions**
+
+Since each particle stores its arrival at all stops, we can very easily obtain the predictive distribution of arrival time for the bus using the delta measure,
+\[
+   p(\Tarr_j | \Vstate_k, \vec\NWstate_k) \approx
+   \frac{1}{\tilde N}\sum_{i=1}^{\tilde N}
+      \DiracMeasure{\Tarr_j\vi}{\Tarr_j}.
+\]
+We may obtain any summary statistics from this distribution, including the mean and prediction intervals.
+
 
 ## Results
 @label:pf_results;
+
+* we ran model to full day of data
+* predicted arrival times
+* at end of day, compare to actual arrival times
+* also computed GTFS prediction (schedule + delay) as comparison
+
+* the results show our method works better even without forecasting overall
+* this picture shows during off-peak, we outperform and capture the uncertainty inherent in arrival time prediction
+
