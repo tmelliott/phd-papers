@@ -5,6 +5,10 @@ header-includes:
    - \input{../symbols.tex}
 ---
 
+```{r,echo=FALSE}
+knitr::opts_chunk$set(fig.path="figures/")
+```
+
 # Predicting arrival time
 
 Accurate, reliable prediction of bus arrival time requires knowledge of both vehicle and network states, represented by $\Vstate_{k}$ and $\NWstate_{c}$, respectively. Since there is a high degree in the uncertainty of these, particularly when forecasting future network states around peak times, it is crucial to incorporate this uncertainty into the arrival time distribution and, ultimately, decision making processes.
@@ -126,3 +130,85 @@ The overall values are shown in @cref:tab:results1;. The particle filter predict
 
 Since traffic and bus numbers change over the course of a day, we also computed the assessment statistics over 15\ minute intervals. These results are shown in @cref:fig:results2;, and immediately we can see the sizeable affect of peak time of predictive accuracy. This suggests that, during off-peak time when traffic conditions are stable, the real-time predictions are a vast improvment on the status quo. Since the underlying network model is not yet enabled to handle forecasts, its not surprising that accuracy and uncertainty coverage is lacking.
 
+```{r day_results,echo=FALSE,fig.width=8,fig.height=4,message=FALSE,warning=FALSE,cache=TRUE,fig.cap="Prediction accuracy results for the particle filter and GTFS methods."}
+# library(RSQLite)
+library(tidyverse)
+# library(dbplyr)
+library(patchwork)
+
+load("../data/etadata.rda")
+res_timeofday <- eta_talk %>%
+    mutate(
+        hour = timestamp %>% format("%H") %>% as.integer,
+        minute = timestamp %>% format("%M") %>% as.integer,
+        hour = hour + (floor(minute / 15) * 15 / 60)
+    ) %>%
+    filter(time_until_arrival > 0) %>%
+    group_by(hour) %>%
+    summarize(
+        pf_rmse = sqrt(mean(pf_error^2)),
+        pf_mae = mean(abs(pf_error)),
+        pf_mape = mean(abs(pf_error / time_until_arrival)),
+        pf_ci_cov = mean(pf_ci),
+        pf_ci_width = mean(pf_upper - pf_lower),
+        pf_ci_lower = quantile(pf_upper - pf_lower, 0.025),
+        pf_ci_upper = quantile(pf_upper - pf_lower, 0.975),
+        gtfs_rmse = sqrt(mean(gtfs_error^2)),
+        gtfs_mae = mean(abs(gtfs_error)),
+        gtfs_mape = mean(abs(gtfs_error / time_until_arrival))
+    ) %>% arrange(hour)
+
+pal <- viridis::magma(3)[2:1] #RColorBrewer::brewer.pal(2, "Set1")
+names(pal) <- c("Particle filter", "GTFS")
+
+plot_base <- ggplot(res_timeofday, aes(hour)) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    scale_colour_manual(values = pal, name = "") +
+    xlab("Time of day (hour)")
+
+plot_rmse <- plot_base +
+    geom_path(aes(y = pf_rmse, colour = "Particle filter")) +
+    geom_path(aes(y = gtfs_rmse, colour = "GTFS"), alpha = 0.5) +
+    scale_y_continuous(
+        "RMSE (s)"
+        # trans = "log10"
+    ) +
+    theme(legend.position = "bottom")
+
+plot_mae <- plot_base +
+    geom_path(aes(y = pf_mae, colour = "Particle filter")) +
+    geom_path(aes(y = gtfs_mae, colour = "GTFS"), alpha = 0.5) +
+    scale_y_continuous(
+        "MAE (s)"
+        # trans = "log10"
+    )
+
+plot_mape <- plot_base +
+    geom_path(aes(y = 100 * pf_mape, colour = "Particle filter")) +
+    geom_path(aes(y = 100 * gtfs_mape, colour = "GTFS"), alpha = 0.5) +
+    scale_y_continuous(
+        "MAPE (%)"
+        # trans = "log10"
+    )
+
+plot_ci <- plot_base +
+    geom_hline(aes(yintercept = 85), lty = 2) +
+    geom_path(aes(y = 100 * pf_ci_cov, colour = "Particle filter")) +
+    scale_y_continuous(
+        name = "PICP (%)"
+    )
+
+plot_rmse + plot_mae +
+    plot_mape + plot_ci +
+    guide_area() +
+    plot_layout(
+        guides = "collect",
+        design = "
+            13
+            24
+            55
+        ",
+        heights = c(1, 1, 0.1)
+    )
+```

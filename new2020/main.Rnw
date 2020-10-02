@@ -79,6 +79,7 @@
 
 \input{symbols.tex}
 
+\graphicspath{{sections/}}
 
 \begin{document}
 
