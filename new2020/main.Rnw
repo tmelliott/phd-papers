@@ -76,6 +76,8 @@
 
 \usepackage{amsmath}
 \usepackage{cleveref}
+\usepackage{longtable}
+\usepackage{booktabs}
 
 \input{symbols.tex}
 

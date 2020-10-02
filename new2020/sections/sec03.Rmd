@@ -2,6 +2,7 @@
 title: Section Three
 header-includes:
    - \usepackage{cleveref}
+   - \usepackage{booktabs}
    - \input{../symbols.tex}
 ---
 
@@ -122,21 +123,64 @@ We may obtain any summary statistics from this distribution, including the mean 
 ## Results
 @label:pf_results;
 
+```{r load_results,echo=FALSE,cache=TRUE}
+library(tidyverse)
+library(tidyselect)
+load("../data/etadata.rda")
+```
+
 To assess the feasibility and reliability of this approach, we ran the full model on one day of data from DATE. This used the particle filter and network model described by @cite:Elliott_2020;, and the arrival time predictions described above. At the end of the day, we could compare the predicted with the actual arrival times. In addition, we compare to the GTFS-based predictions which are simply the scheduled arrival time plus the delay at the most recent stop.
 
 To assess, we use RMSE, MAE, MAPE, and PICP. RMSE and MAE provide an assessment of the absolute prediction reliability, while MAPE scales predictions by the time-until-arrival; that is, it is more affected by short-term predictions when the bus is near, giving us a comparative measure of short-term reliability (which is useful when deciding between walking, jogging, or sprinting to the bus stop). PICP (which is only available for the particle filter estimates) assess how well the uncertainty is captured (we would expect a 95% prediction interval to capture the true value in 95% of cases).
 
-The overall values are shown in @cref:tab:results1;. The particle filter predictions are slightly more accurate than GTFS on average, and have about 20% error versus GTFS's 27%. However, only 77% of prediction intervals contain the actual arrival time, indicating that uncertainties are being under-predicted (the nominal coverage is 85%).
+The overall values are shown in @cref:tab:overall_results;. The particle filter predictions are slightly more accurate than GTFS on average, and have about 20% error versus GTFS's 27%. However, only 77% of prediction intervals contain the actual arrival time, indicating that uncertainties are being under-predicted (the nominal coverage is 85%).
 
-Since traffic and bus numbers change over the course of a day, we also computed the assessment statistics over 15\ minute intervals. These results are shown in @cref:fig:results2;, and immediately we can see the sizeable affect of peak time of predictive accuracy. This suggests that, during off-peak time when traffic conditions are stable, the real-time predictions are a vast improvment on the status quo. Since the underlying network model is not yet enabled to handle forecasts, its not surprising that accuracy and uncertainty coverage is lacking.
+```{r overall_results,echo=FALSE,cache=TRUE,results="asis",dependson="load_results"}
 
-```{r day_results,echo=FALSE,fig.width=8,fig.height=4,message=FALSE,warning=FALSE,cache=TRUE,fig.cap="Prediction accuracy results for the particle filter and GTFS methods."}
-# library(RSQLite)
-library(tidyverse)
-# library(dbplyr)
+res_overall <- eta_talk %>%
+   filter(time_until_arrival > 0) %>%
+   summarize(
+      pf_rmse = sqrt(mean(pf_error^2)),
+      pf_mae = mean(abs(pf_error)),
+      pf_mape = mean(abs(pf_error / time_until_arrival)) * 100,
+      pf_cicov = mean(pf_ci) * 100,
+   #   pf_ci_width = mean(pf_upper - pf_lower),
+   #   pf_ci_lower = quantile(pf_upper - pf_lower, 0.025),
+   #   pf_ci_upper = quantile(pf_upper - pf_lower, 0.975),
+      gtfs_rmse = sqrt(mean(gtfs_error^2)),
+      gtfs_mae = mean(abs(gtfs_error)),
+      gtfs_mape = mean(abs(gtfs_error / time_until_arrival)) * 100
+   ) %>%
+   pivot_longer(everything(),
+      names_to = c("model", ".value"),
+      names_pattern = "([a-z]*)_(.*)"
+   ) %>%
+   mutate(
+      model = c("Particle filter", "Schedule-delay")
+   ) %>%
+   rename(
+      " " = "model",
+      "RMSE (s)" = "rmse",
+      "MAE (s)" = "mae",
+      "MAPE (%)" = "mape",
+      "PICP (%)" = "cicov"
+   )
+
+opts <- options(knitr.kable.NA = "")
+knitr::kable(res_overall, #"latex",
+   booktabs = TRUE,
+   # table.envir = "table",
+   digits = 0,
+   caption = "Results for particle filter and other."
+)
+options(opts)
+```
+
+Since traffic and bus numbers change over the course of a day, we also computed the assessment statistics over 15\ minute intervals. These results are shown in @cref:fig:day_results;, and immediately we can see the sizeable affect of peak time of predictive accuracy. This suggests that, during off-peak time when traffic conditions are stable, the real-time predictions are a vast improvement on the status quo. Since the underlying network model is not yet enabled to handle forecasts, its not surprising that accuracy and uncertainty coverage is lacking.
+
+```{r day_results,echo=FALSE,fig.width=8,fig.height=4,message=FALSE,warning=FALSE,cache=TRUE,fig.cap="\\label{fig:day_results}Prediction accuracy results for the particle filter and GTFS methods.",dependson="load_results"}
 library(patchwork)
 
-load("../data/etadata.rda")
 res_timeofday <- eta_talk %>%
     mutate(
         hour = timestamp %>% format("%H") %>% as.integer,
