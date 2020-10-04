@@ -11,8 +11,6 @@ name: Compile papers
 jobs:
   compile-papers:
     runs-on: macOS-latest
-    env:
-      TZ: 'Pacific/Auckland'
     steps:
       - uses: actions/checkout@v2
         with:
@@ -29,6 +27,8 @@ jobs:
       - name: Install dependencies
         run: make -C new2020 install
       - name: Build
+        env:
+          TZ: 'Pacific/Auckland'
         run: cd new2020 && make
       - name: Rename file
         run: cd new2020 && mv main.pdf new2020.pdf
