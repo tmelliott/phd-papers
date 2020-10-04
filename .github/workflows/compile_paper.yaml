@@ -11,6 +11,8 @@ name: Compile papers
 jobs:
   compile-papers:
     runs-on: macOS-latest
+    env:
+      TZ: 'Pacific/Auckland'
     steps:
       - uses: actions/checkout@v2
         with:
