@@ -78,7 +78,6 @@
 \usepackage{cleveref}
 \usepackage{longtable}
 \usepackage{booktabs}
-\usepackage{textalpha}
 
 \input{symbols.tex}
 
