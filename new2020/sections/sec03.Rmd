@@ -3,6 +3,7 @@ title: Section Three
 header-includes:
    - \usepackage{cleveref}
    - \usepackage{booktabs}
+   - \usepackage{texalpha}
    - \input{../symbols.tex}
 ---
 
@@ -136,7 +137,6 @@ To assess, we use RMSE, MAE, MAPE, and PICP. RMSE and MAE provide an assessment 
 The overall values are shown in @cref:tab:overall_results;. The particle filter predictions are slightly more accurate than GTFS on average, and have about 20% error versus GTFS's 27%. However, only 77% of prediction intervals contain the actual arrival time, indicating that uncertainties are being under-predicted (the nominal coverage is 85%).
 
 ```{r overall_results,echo=FALSE,cache=TRUE,results="asis",dependson="load_results"}
-
 res_overall <- eta_talk %>%
    filter(time_until_arrival > 0) %>%
    summarize(
