@@ -3,7 +3,7 @@ title: Section Three
 header-includes:
    - \usepackage{cleveref}
    - \usepackage{booktabs}
-   - \usepackage{texalpha}
+   - \usepackage{textalpha}
    - \input{../symbols.tex}
 ---
 
