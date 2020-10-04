@@ -124,7 +124,7 @@ We may obtain any summary statistics from this distribution, including the mean 
 ## Results
 @label:pf_results;
 
-```{r load_results,echo=FALSE,cache=TRUE}
+```{r load_results,echo=FALSE,cache=TRUE,message=FALSE}
 library(tidyverse)
 library(tidyselect)
 load("../data/etadata.rda")
