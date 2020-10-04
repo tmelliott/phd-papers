@@ -4,6 +4,7 @@ title: Section Three
 header-includes:
    - \usepackage{cleveref}
    - \usepackage{booktabs}
+   - \input{../symbols.tex}
 ---
 
 ```{r,echo=FALSE}
@@ -136,34 +137,34 @@ To assess, we use RMSE, MAE, MAPE, and PICP. RMSE and MAE provide an assessment 
 The overall values are shown in @cref:tab:overall_results;. The particle filter predictions are slightly more accurate than GTFS on average, and have about 20% error versus GTFS's 27%. However, only 77% of prediction intervals contain the actual arrival time, indicating that uncertainties are being under-predicted (the nominal coverage is 85%).
 
 ```{r overall_results,echo=FALSE,cache=TRUE,results="asis",dependson="load_results"}
-# res_overall <- eta_talk %>%
-#    filter(time_until_arrival > 0) %>%
-#    summarize(
-#       pf_rmse = sqrt(mean(pf_error^2)),
-#       pf_mae = mean(abs(pf_error)),
-#       pf_mape = mean(abs(pf_error / time_until_arrival)) * 100,
-#       pf_cicov = mean(pf_ci) * 100,
-#    #   pf_ci_width = mean(pf_upper - pf_lower),
-#    #   pf_ci_lower = quantile(pf_upper - pf_lower, 0.025),
-#    #   pf_ci_upper = quantile(pf_upper - pf_lower, 0.975),
-#       gtfs_rmse = sqrt(mean(gtfs_error^2)),
-#       gtfs_mae = mean(abs(gtfs_error)),
-#       gtfs_mape = mean(abs(gtfs_error / time_until_arrival)) * 100
-#    ) %>%
-#    pivot_longer(everything(),
-#       names_to = c("model", ".value"),
-#       names_pattern = "([a-z]*)_(.*)"
-#    ) %>%
-#    mutate(
-#       model = c("Particle filter", "Schedule-delay")
-#    ) %>%
-#    rename(
-#       " " = "model",
-#       "RMSE (s)" = "rmse",
-#       "MAE (s)" = "mae",
-#       "MAPE (%)" = "mape",
-#       "PICP (%)" = "cicov"
-#    )
+res_overall <- eta_talk %>%
+   filter(time_until_arrival > 0) %>%
+   summarize(
+      pf_rmse = sqrt(mean(pf_error^2)),
+      pf_mae = mean(abs(pf_error)),
+      pf_mape = mean(abs(pf_error / time_until_arrival)) * 100,
+      pf_cicov = mean(pf_ci) * 100,
+   #   pf_ci_width = mean(pf_upper - pf_lower),
+   #   pf_ci_lower = quantile(pf_upper - pf_lower, 0.025),
+   #   pf_ci_upper = quantile(pf_upper - pf_lower, 0.975),
+      gtfs_rmse = sqrt(mean(gtfs_error^2)),
+      gtfs_mae = mean(abs(gtfs_error)),
+      gtfs_mape = mean(abs(gtfs_error / time_until_arrival)) * 100
+   ) %>%
+   pivot_longer(everything(),
+      names_to = c("model", ".value"),
+      names_pattern = "([a-z]*)_(.*)"
+   ) %>%
+   mutate(
+      model = c("Particle filter", "Schedule-delay")
+   ) %>%
+   rename(
+      " " = "model",
+      "RMSE (s)" = "rmse",
+      "MAE (s)" = "mae",
+      "MAPE (%)" = "mape",
+      "PICP (%)" = "cicov"
+   )
 
 # opts <- options(knitr.kable.NA = "")
 # knitr::kable(res_overall, #"latex",
