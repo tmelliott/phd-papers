@@ -2,9 +2,82 @@
 title: Section Four
 header-includes:
    - \usepackage{cleveref}
+   - \input{../symbols.tex}
 ---
 
 # A discretized CDF approximation for journey planning
+
+One of the main problems with particle filter results is that we have a large sample of points, rather than the description of a posterior distribution (as would be the case with a Kalman filter, for example). Trying to do any real-time processing, for example computing event probabilities, would be very computationally intensive, and probably not feasible on a user's phone, which would require the server to not only generate the arrival time distributions, but to process individual journey planning queries too. 
+
+To consider a simpler approximation, we start by noting that arrival times are generally displayed to the user in one-minute accuracy. Therefore, we can consider the concept of discretizing arrival times at the one-minute level and obtaining a CDF which for the probability that the bus arrives within $a$\ minutes.
+
+Computing a CDF approximation using particles is in fact a trivial exercise, and can be done in real-time without any negative affect on performance. This is because the method described below *does not* require sorting of the particles, which we would need to do to compute, for example, quantiles (median, or a prediction interval). This essentially consists of counting the number of particles in each one-minute interval and expressing it as a probability. Here, the particle arrival time $\alpha\vi$ is in seconds, is transformed to minutes and rounded down using the floor operator, while the discrete CDF is reported in $a$\ minutes.
+\begin{equation}
+   \label{eq:eta_count}
+   \Pr(A \in [a, a+1]) = 
+   \frac{1}{\tilde N} \sum_{i=1}^{\tilde N} I\left\{ \lfloor\frac{\alpha\vi}{60}\rfloor = a \right\},
+\end{equation}
+where the indicator $I\{a=b\}$ is 1 if $a$ equals $b$, and zero otherwise.
+
+Using @cref:eq:eta_count; the CDF for bus arrival at a given stop is
+\[
+   P(A < a) = \sum_{x=0}^{x=a-1} \Pr{A \in [x, x+1]},
+\]
+and is demonsrated graphically in @cref:fig:pf_cdf;.
+
+```{r pf_cdf,echo=FALSE,fig.width=6,fig.height=4,message=FALSE,warning=FALSE,cache=TRUE,fig.cap="\\label{fig:pf_cdf}Particle filter estimates of arrival time and the process to obtain a discretized CDF approximation."}
+library(tidyverse)
+set.seed(346)
+N <- 2e3
+x <- rlnorm(N, log(14), 0.14)
+d <- data.frame(x = x)
+
+cdf <- table(floor(x))
+cdf <- c(structure(0, .Names = min(floor(x)) - 1), cdf)
+d2 <- data.frame(a = as.integer(names(cdf)), n = as.integer(cdf)) %>%
+   mutate(
+      n2 = cumsum(n),
+      p = n2 / N
+   )
+
+p1 <- ggplot(d, aes(x)) +
+   geom_dotplot(dotsize = 1, binwidth = 0.09, fill = "#333333", colour = "white") +
+   geom_histogram(
+      fill = "transparent", 
+      colour = "black",
+      binwidth = 1,
+      boundary = 10
+   ) +
+   theme_classic() +
+   xlab("") +
+   ylab("Number of particles") +
+   xlim(min(d2$a), max(d2$a))
+
+
+p2 <- ggplot(d2, aes(a, p)) +
+   geom_step() +
+   theme_classic() +
+   xlab("Arrival time, a (minutes") +
+   ylab("Pr(A < a)")
+
+library(patchwork)
+p1 / p2
+```
+
+The CDF can easily be distributed to users' phones, since the data structure is simple and consists of only a few values. Now we assess the validity of the simplification by predicting event probabilities and comparing those to the truth, as well as the GTFS binary estimate of the event outcomes.
+
+Of course, we can obtain simple summary statistics for the distribution, such as the median or other quantiles. For a quantile $q\in(0,1)$, we calculate
+\[
+   \hat A_q = \max\{a\in\{0,1,\ldots\} : \Pr(A < a) \leq q\}
+\]
+which provides the smallest arrival time, in minutes, with a probability of no more than $q$ of the bus arriving before that time.
+
+Another question, however, is to compute probabilities of events. The simplest is, of course, the probability that the bus arrives before or after a specific time, $\Pr{A < a}$ or $\Pr{A \geq a}$. This is useful for answer questions such as
+
+* what is the probability of catching the bus if I arrive by 9:30am?
+* what is the probability the bus will arrive before 1pm for my meeting?
+
+Calculating these events is straighforward given the CDF, and can be performed on a user's phone or quickly on the server. We performed a journey planning exercise to assess the reliability of these results by computing the probablity of a bus arriving before a specific time and assessing the outcome. Due to restrains on the current implementation, we only have arrival time distributions for buses which have begun the route. The journey planning problem is this: *given two alternative bus stop options requiring walking in opposite directions, which is the best to take?* We account for the walking time to both stops A and B, and compute the probabilities of catching the next few buses. 
 
 * CDF makes it possible to answer many (often complex) jouney planning questions
 * P(catch)

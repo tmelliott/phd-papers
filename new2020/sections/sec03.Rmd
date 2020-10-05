@@ -12,6 +12,7 @@ knitr::opts_chunk$set(fig.path="figures/")
 ```
 
 # Predicting arrival time
+@label:sec:pred_arrival;
 
 Accurate, reliable prediction of bus arrival time requires knowledge of both vehicle and network states, represented by $\Vstate_{k}$ and $\NWstate_{c}$, respectively. Since there is a high degree in the uncertainty of these, particularly when forecasting future network states around peak times, it is crucial to incorporate this uncertainty into the arrival time distribution and, ultimately, decision making processes.
 
