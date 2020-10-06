@@ -18,11 +18,14 @@ jobs:
       - uses: r-lib/actions/setup-r@master
       - uses: r-lib/actions/setup-pandoc@v1
       - uses: r-lib/actions/setup-tinytex@v1
+      - name: Query dependencies
+        working-directory: ./new2020
+        run: Rscript get_deps.R .github/dependencies.Rds
       - name: Cache R packages
         uses: actions/cache@v1
         with:
           path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-r-${{ matrix.config.r }}-1-${{ hashFiles('Makefile') }}
+          key: ${{ runner.os }}-r-${{ matrix.config.r }}-1-${{ hashFiles('.github/depends.Rds') }}
           restore-keys: ${{ runner.os }}-r-${{ matrix.config.r }}-1-
       - name: Install dependencies
         run: make -C new2020 install
