@@ -20,7 +20,7 @@ jobs:
       - uses: r-lib/actions/setup-tinytex@v1
       - name: Query dependencies
         working-directory: ./new2020
-        run: Rscript get_deps.R .github/dependencies.Rds
+        run: Rscript get_deps.R ../.github/depends.Rds
       - name: Cache R packages
         uses: actions/cache@v1
         with:
