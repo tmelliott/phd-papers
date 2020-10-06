@@ -7,7 +7,7 @@ TEX_FILES = $(patsubst %.Rmd, %.tex, $(RMD_FILES))
 default: $(TARGET)
 
 install:
-	@Rscript -e 'install.packages(c("stringr", "rmarkdown", "knitr", "tidyverse", "patchwork", "viridis"))'
+	@Rscript -e 'install.packages(c("stringr", "rmarkdown", "knitr", "tidyverse", "patchwork", "viridis", "kableExtra"))'
 
 $(TARGET): $(FILE).tex $(TEX_FILES) allrefs.bib
 	@echo "Building $@"

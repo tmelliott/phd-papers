@@ -18,6 +18,17 @@
          New Zealand}
 \email{t.lumley@auckland.ac.nz}
 
+%%%% FIX FOR TABLES
+\usepackage{etoolbox}
+
+\makeatletter
+\patchcmd{\@makecaption}
+  {\parbox}
+  {\advance\@tempdima-\fontdimen2\font\parbox} % decrease the width!
+  {}{}
+\makeatother
+%%%% END FIX
+
 
 % \usepackage{lmodern}
 \usepackage{amssymb,amsmath}
@@ -93,7 +104,7 @@ The prediction of transit vehicle arrival time is a complex problem with the add
 \keywords{particle filter, transport, real-time, GTFS, transit networks, journey planning}
 
 <<include-sections,echo=FALSE,results="asis">>=
-for (file in list.files('sections', pattern = "*.tex", full.names = TRUE)) {
+for (file in list.files('sections', pattern = "*.tex$", full.names = TRUE)) {
   cat(sprintf("\\input{%s}", file), "\n")
 }
 @

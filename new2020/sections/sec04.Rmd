@@ -2,19 +2,24 @@
 title: Section Four
 header-includes:
    - \usepackage{cleveref}
+   - \usepackage{booktabs}
    - \input{../symbols.tex}
 ---
 
+```{r,echo=FALSE}
+knitr::opts_chunk$set(fig.path="figures/")
+```
+
 # A discretized CDF approximation for journey planning
 
-One of the main problems with particle filter results is that we have a large sample of points, rather than the description of a posterior distribution (as would be the case with a Kalman filter, for example). Trying to do any real-time processing, for example computing event probabilities, would be very computationally intensive, and probably not feasible on a user's phone, which would require the server to not only generate the arrival time distributions, but to process individual journey planning queries too. 
+One of the main problems with particle filter results is that we have a large sample of points, rather than the description of a posterior distribution (as would be the case with a Kalman filter, for example). Trying to do any real-time processing, for example computing event probabilities, would be very computationally intensive, and probably not feasible on a user's phone, which would require the server to not only generate the arrival time distributions, but to process individual journey planning queries too.
 
 To consider a simpler approximation, we start by noting that arrival times are generally displayed to the user in one-minute accuracy. Therefore, we can consider the concept of discretizing arrival times at the one-minute level and obtaining a CDF which for the probability that the bus arrives within $a$\ minutes.
 
 Computing a CDF approximation using particles is in fact a trivial exercise, and can be done in real-time without any negative affect on performance. This is because the method described below *does not* require sorting of the particles, which we would need to do to compute, for example, quantiles (median, or a prediction interval). This essentially consists of counting the number of particles in each one-minute interval and expressing it as a probability. Here, the particle arrival time $\alpha\vi$ is in seconds, is transformed to minutes and rounded down using the floor operator, while the discrete CDF is reported in $a$\ minutes.
 \begin{equation}
    \label{eq:eta_count}
-   \Pr(A \in [a, a+1]) = 
+   \Pr{A \in [a, a+1]} =
    \frac{1}{\tilde N} \sum_{i=1}^{\tilde N} I\left\{ \lfloor\frac{\alpha\vi}{60}\rfloor = a \right\},
 \end{equation}
 where the indicator $I\{a=b\}$ is 1 if $a$ equals $b$, and zero otherwise.
@@ -25,7 +30,7 @@ Using @cref:eq:eta_count; the CDF for bus arrival at a given stop is
 \]
 and is demonsrated graphically in @cref:fig:pf_cdf;.
 
-```{r pf_cdf,echo=FALSE,fig.width=6,fig.height=4,message=FALSE,warning=FALSE,cache=TRUE,fig.cap="\\label{fig:pf_cdf}Particle filter estimates of arrival time and the process to obtain a discretized CDF approximation."}
+```{r pf_cdf,echo=FALSE,fig.width=6,fig.height=4,out.width="\\textwidth",message=FALSE,warning=FALSE,cache=TRUE,fig.cap="Particle filter estimates of arrival time and the process to obtain a discretized CDF approximation."}
 library(tidyverse)
 set.seed(346)
 N <- 2e3
@@ -43,7 +48,7 @@ d2 <- data.frame(a = as.integer(names(cdf)), n = as.integer(cdf)) %>%
 p1 <- ggplot(d, aes(x)) +
    geom_dotplot(dotsize = 1, binwidth = 0.09, fill = "#333333", colour = "white") +
    geom_histogram(
-      fill = "transparent", 
+      fill = "transparent",
       colour = "black",
       binwidth = 1,
       boundary = 10
@@ -68,7 +73,7 @@ The CDF can easily be distributed to users' phones, since the data structure is 
 
 Of course, we can obtain simple summary statistics for the distribution, such as the median or other quantiles. For a quantile $q\in(0,1)$, we calculate
 \[
-   \hat A_q = \max\{a\in\{0,1,\ldots\} : \Pr(A < a) \leq q\}
+   \hat A_q = \max\{a\in\{0,1,\ldots\} : \Pr{A < a} \leq q\}
 \]
 which provides the smallest arrival time, in minutes, with a probability of no more than $q$ of the bus arriving before that time.
 
@@ -77,16 +82,276 @@ Another question, however, is to compute probabilities of events. The simplest i
 * what is the probability of catching the bus if I arrive by 9:30am?
 * what is the probability the bus will arrive before 1pm for my meeting?
 
-Calculating these events is straighforward given the CDF, and can be performed on a user's phone or quickly on the server. We performed a journey planning exercise to assess the reliability of these results by computing the probablity of a bus arriving before a specific time and assessing the outcome. Due to restrains on the current implementation, we only have arrival time distributions for buses which have begun the route. The journey planning problem is this: *given two alternative bus stop options requiring walking in opposite directions, which is the best to take?* We account for the walking time to both stops A and B, and compute the probabilities of catching the next few buses. 
+Calculating these events is straighforward given the CDF, and can be performed on a user's phone or quickly on the server. We performed a journey planning exercise to assess the reliability of these results by computing the probablity of a bus arriving before a specific time and assessing the outcome. Due to restrains on the current implementation, we only have arrival time distributions for buses which have begun the route. The journey planning problem is this: *given two alternative bus stop options requiring walking in opposite directions, which is the best to take?* We account for the walking time $W_1$ and $W_2$ to both stops $R_1$ and $R_2$, respectively, and compute the probabilities of catching the next few buses. The probability of catching $R_j$, $j=1,2$, if leaving now at time $T$, is given by
+\[
+   \Pr{\text{catch} | \text{choose } R_j} =
+   \Pr{A_j \geq T + W_j} =
+   1 - \Pr{A_j < T + W_j}
+\]
+which is easily obtained from the CDF. To simulate, we chose a sequence of times from 9\ am til 3\ pm in 15\ minute intervals, and for each calculated the probability of catching upcoming buses at the two alternative stops. This was compared to the outcome, and the GTFS binary prediction. The results are shown in @cref:fig:jp_catch;.
+
+```{r jp_prep,echo=FALSE,message=FALSE,cache=TRUE}
+library(tidyverse)
+library(patchwork)
+load("../data/all_results.rda")
+```
+
+
+```{r jp_catch,cache=TRUE,dependson="jp_prep",echo=FALSE,fig.width=8,fig.height=2.5,out.width="\\textwidth",message=FALSE,warning=FALSE,fig.cap="Predicted outcomes of journey planning process."}
+## Now plot p-catch versus did_catch
+mdata <- map(all_results, "summary") %>%
+  bind_rows %>%
+  mutate(
+    did_catch = as.integer(did_catch),
+    did_arrive = as.integer(did_arrive),
+    gtfs_catch = ifelse(gtfs_catch == 1, "Yes", "No"),
+    gtfs_arrive = ifelse(gtfs_arrive == 1, "Yes", "No")
+  )
+
+mdata %>%
+   mutate(did_catch = ifelse(did_catch, "Bus was caught", "Bus was missed")) %>%
+   ggplot(aes(p_catch + rnorm(length(p_catch), 0, 0.01), gtfs_catch)) +
+      ggbeeswarm::geom_beeswarm(
+         groupOnX = FALSE,
+         priority = "random"
+      ) +
+      theme_classic() +
+      scale_x_continuous("Predicted probabilty of catching the bus") +
+      scale_y_discrete("GTFS prediction") +
+      facet_grid(~did_catch) +
+      theme(
+         strip.background = element_blank(),
+         strip.text = element_text(hjust = 0)
+      )
+
+gtfs_catch_tab <- table(
+  gtfs = mdata$gtfs_catch,
+  outcome = ifelse(mdata$did_catch, "Yes", "No")
+)
+gtfs_catch_pc <-
+  round(sweep(gtfs_catch_tab, 1, rowSums(gtfs_catch_tab), "/"), 2)
+
+pf_catch_tab50 <- table(
+   pf = ifelse(mdata$p_catch > 0.5, "Yes", "No"),
+   outcome = ifelse(mdata$did_catch, "Yes", "No")
+)
+pf_catch_pc50 <-
+   round(sweep(pf_catch_tab50, 1, rowSums(pf_catch_tab50), "/"), 2)
+
+pf_catch_tab80 <- table(
+   pf = ifelse(mdata$p_catch > 0.8, "Yes", "No"),
+   outcome = ifelse(mdata$did_catch, "Yes", "No")
+)
+pf_catch_pc80 <-
+   round(sweep(pf_catch_tab80, 1, rowSums(pf_catch_tab80), "/"), 2)
+
+tab <- cbind(
+  "Predicted outcome" = c("No", "Yes"),
+  format(gtfs_catch_pc, nsmall = 2L, digits = 2L),
+  NA,
+  format(pf_catch_pc50, nsmall = 2L, digits = 2L),
+  NA,
+  format(pf_catch_pc80, nsmall = 2L, digits = 2L)
+)
+
+# roc curve?
+pc <- seq(0, 1, by = 0.05)
+roc <- lapply(pc,
+   function(p) {
+      tab <- table(
+         pf = factor(ifelse(mdata$p_catch > p, "Yes", "No"), levels = c("No", "Yes")),
+         outcome = factor(ifelse(mdata$did_catch, "Yes", "No"), levels = c("No", "Yes"))
+      )
+      P <- sum(tab[,2])
+      N <- sum(tab[,1])
+      TP <- tab[2,2]
+      TN <- tab[1,1]
+      FP <- tab[2,1]
+      FN <- tab[1,2]
+      c(
+         p = p,
+         tpr = TP / P,
+         tnr = TN / N,
+         ppv = TP / (TP + FP),
+         fnr = FN / P,
+         fpr = FP / N
+      )
+   }
+) %>% bind_rows
+
+gtfs_roc <- data.frame(
+   fpr = gtfs_catch_tab[2,1] / sum(gtfs_catch_tab[,1]),
+   tpr = gtfs_catch_tab[2,2] / sum(gtfs_catch_tab[,2])
+)
+```
+
+```{r jp_catch_dec,cache=TRUE,dependson="jp_catch",echo=FALSE,fig.width=5,fig.height=2.5,out.width="0.5\\textwidth",fig.align="center",message=FALSE,warning=FALSE,fig.cap="False positive rate for varying decision level. Increasing the threshold for predicting a positive outcome reduces the *miss rate*, at the cost of not trying to catch potential buses."}
+gp <- 0.175
+ggplot(roc, aes(p, fpr)) +
+   geom_path(lwd = 1.2) +
+   coord_cartesian(expand = FALSE) +
+   geom_segment(aes(x = gp, xend = 0, yend = fpr),
+      data = gtfs_roc, colour = "red", lty = 2
+   ) +
+   geom_segment(aes(x = gp, xend = gp, yend = 0),
+      data = gtfs_roc, colour = "red", lty = 2) +
+   xlab("Decision threshold") +
+   ylab("False positive / miss rate") +
+   theme_classic()
+```
+
+```{r jp_catch_tab,cache=TRUE,dependson="jp_catch",echo=FALSE,results='asis'}
+options(knitr.kable.NA = "")
+knitr::kable(
+  tab,
+  row.names = FALSE,
+  format = "latex",
+  booktabs = TRUE,
+#   label = "pf_catch_tab",
+  caption = "Prediction results for all journeys, with the displayed values representing the proportion of outcomes in each cell (rows are conditioned by the prediction).",
+  caption.short = "Prediction results for all journeys",
+  escape = FALSE,
+  linesep = ""
+) %>%
+  kableExtra::add_header_above(
+    c(" ", "Schedule-delay" = 2, " ", "P > 0.5" = 2, " ", "P > 0.8" = 2)
+  ) %>%
+  kableExtra::add_header_above(
+    c("", "Observed outcome" = 8)
+  ) %>%
+  kableExtra::kable_styling(font_size = 8)
+```
+
+Discussion of results!!
+
+* we can adjust decision to fit the situation - coffee with friend vs job interview
+* doesn't account for *wait time* (i.e., if you miss the bus, how long till the next one)
+
+The second journey planning scenario is *arriving before a specified time*, which requires forecasting further into the future. Such a decision might be important for someone, allowing them to either inform their friend they'll be late for that coffee, or catching a taxi to get to the interview. As before, we selected a stop and this time asked if the bus would arrive on-time (where on time was 15--45\ minutes in the future). The results, as before, are displayed in, where the successfull event is now that the bus arrived before the specified time $A$.
+
+
+```{r jp_arrive,cache=TRUE,dependson="jp_catch",echo=FALSE,fig.width=8,fig.height=2.5,out.width="\\textwidth",message=FALSE,warning=FALSE,fig.cap="Predicted outcomes of journey planning process - arrive on time."}
+## Now plot p-catch versus did_catch
+
+mdata %>%
+   mutate(did_arrive = ifelse(did_arrive, "Arrived on time", "Arrived late")) %>%
+   ggplot(aes(p_arrive + rnorm(length(p_arrive), 0, 0.01), gtfs_arrive)) +
+      ggbeeswarm::geom_beeswarm(
+         groupOnX = FALSE,
+         priority = "random"
+      ) +
+      theme_classic() +
+      scale_x_continuous("Predicted probabilty of bus arriving on time") +
+      scale_y_discrete("GTFS prediction") +
+      facet_grid(~did_arrive) +
+      theme(
+         strip.background = element_blank(),
+         strip.text = element_text(hjust = 0)
+      )
+
+gtfs_arrive_tab <- table(
+  gtfs = mdata$gtfs_arrive,
+  outcome = ifelse(mdata$did_arrive, "Yes", "No")
+)
+gtfs_arrive_pc <-
+  round(sweep(gtfs_arrive_tab, 1, rowSums(gtfs_arrive_tab), "/"), 2)
+
+pf_arrive_tab50 <- table(
+   pf = ifelse(mdata$p_arrive > 0.5, "Yes", "No"),
+   outcome = ifelse(mdata$did_arrive, "Yes", "No")
+)
+pf_arrive_pc50 <-
+   round(sweep(pf_arrive_tab50, 1, rowSums(pf_arrive_tab50), "/"), 2)
+
+pf_arrive_tab80 <- table(
+   pf = ifelse(mdata$p_arrive > 0.8, "Yes", "No"),
+   outcome = ifelse(mdata$did_arrive, "Yes", "No")
+)
+pf_arrive_pc80 <-
+   round(sweep(pf_arrive_tab80, 1, rowSums(pf_arrive_tab80), "/"), 2)
+
+tab <- cbind(
+  "Predicted outcome" = c("No", "Yes"),
+  format(gtfs_arrive_pc, nsmall = 2L, digits = 2L),
+  NA,
+  format(pf_arrive_pc50, nsmall = 2L, digits = 2L),
+  NA,
+  format(pf_arrive_pc80, nsmall = 2L, digits = 2L)
+)
+
+# roc curve?
+pc <- seq(0, 1, by = 0.05)
+roc <- lapply(pc,
+   function(p) {
+      tab <- table(
+         pf = factor(ifelse(mdata$p_arrive > p, "Yes", "No"), levels = c("No", "Yes")),
+         outcome = factor(ifelse(mdata$did_arrive, "Yes", "No"), levels = c("No", "Yes"))
+      )
+      P <- sum(tab[,2])
+      N <- sum(tab[,1])
+      TP <- tab[2,2]
+      TN <- tab[1,1]
+      FP <- tab[2,1]
+      FN <- tab[1,2]
+      c(
+         p = p,
+         tpr = TP / P,
+         tnr = TN / N,
+         ppv = TP / (TP + FP),
+         fnr = FN / P,
+         fpr = FP / N
+      )
+   }
+) %>% bind_rows
+
+gtfs_roc <- data.frame(
+   fpr = gtfs_arrive_tab[2,1] / sum(gtfs_arrive_tab[,1]),
+   tpr = gtfs_arrive_tab[2,2] / sum(gtfs_arrive_tab[,2])
+)
+```
+
+```{r jp_arrive_dec,cache=TRUE,dependson="jp_arrive",echo=FALSE,fig.width=5,fig.height=2.5,out.width="0.5\\textwidth",fig.align="center",message=FALSE,warning=FALSE,fig.cap="False positive rate for varying decision level. Increasing the threshold for predicting a positive outcome reduces the arrival late rate, at the cost of not trying to catch potential buses."}
+gp <- 0.175
+ggplot(roc, aes(p, fpr)) +
+   geom_path(lwd = 1.2) +
+   coord_cartesian(expand = FALSE) +
+   # geom_segment(aes(x = gp, xend = 0, yend = fpr),
+   #    data = gtfs_roc, colour = "red", lty = 2
+   # ) +
+   # geom_segment(aes(x = gp, xend = gp, yend = 0),
+   #    data = gtfs_roc, colour = "red", lty = 2) +
+   xlab("Decision threshold") +
+   ylab("False positive") +
+   theme_classic()
+```
+
+```{r jp_arrive_tab,cache=TRUE,dependson="jp_arrive",echo=FALSE,results='asis'}
+options(knitr.kable.NA = "")
+knitr::kable(
+  tab,
+  row.names = FALSE,
+  format = "latex",
+  booktabs = TRUE,
+#   label = "pf_catch_tab",
+  caption = "Prediction results for all journeys 2, with the displayed values representing the proportion of outcomes in each cell (rows are conditioned by the prediction).",
+  caption.short = "Prediction results for all journeys 2",
+  escape = FALSE,
+  linesep = ""
+) %>%
+  kableExtra::add_header_above(
+    c(" ", "Schedule-delay" = 2, " ", "P > 0.5" = 2, " ", "P > 0.8" = 2)
+  ) %>%
+  kableExtra::add_header_above(
+    c("", "Observed outcome" = 8)
+  ) %>%
+  kableExtra::kable_styling(font_size = 8)
+```
+
+
+The final scenario is for a journey which requires transfering between two services, in which case we want to predict the probability that a transfer between two particular trips at the transfer stop will be successful (that is, the first bus arrives before the second).
 
 * CDF makes it possible to answer many (often complex) jouney planning questions
 * P(catch)
 * P(arrive on time)
 * P(transfer)
 * this is a simple computation - can be done client side (i.e., on a user's phone) by passing CDF (small size, as e.g., JSON)
-
-## Simplified ETA CDF
-@label:eta_cdf;
-
-* round to minutes
-* compute the CDF by definition ``number of particles arriving within $x$ minutes''
