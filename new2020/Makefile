@@ -11,7 +11,7 @@ install:
 
 $(TARGET): $(FILE).tex $(TEX_FILES) allrefs.bib
 	@echo "Building $@"
-	@latexmk -pdf -silent $<
+	@latexmk -f -pdf -silent $<
 	@echo Done!
 
 $(FILE).tex: $(FILE).Rnw $(TEX_FILES)
