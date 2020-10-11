@@ -350,6 +350,14 @@ knitr::kable(
 
 The final scenario is for a journey which requires transfering between two services, in which case we want to predict the probability that a transfer between two particular trips at the transfer stop will be successful (that is, the first bus arrives before the second).
 
+```{r jp_transfer_prep,echo=FALSE,message=FALSE,cache=TRUE}
+library(tidyverse)
+library(patchwork)
+load("../data/all_results_transfer.rda")
+```
+
+
+
 * CDF makes it possible to answer many (often complex) jouney planning questions
 * P(catch)
 * P(arrive on time)
