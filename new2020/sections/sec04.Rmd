@@ -348,7 +348,18 @@ knitr::kable(
 ```
 
 
-The final scenario is for a journey which requires transfering between two services, in which case we want to predict the probability that a transfer between two particular trips at the transfer stop will be successful (that is, the first bus arrives before the second).
+The final scenario is for a journey which requires transfering between two services, in which case we want to predict the probability that a transfer between two particular trips at the transfer stop will be successful (that is, the first bus arrives before the second). Given two CDFs for the arrival time of the first and second trips, $\Pr{L_1 < x}$ and $\Pr{L2 < y}$, respectively, the probability of a successfull transfer between them is
+\[
+\begin{split}
+   \mathbb{P}_{\text{transfer}} =
+   \Pr{L_1 < L_2} &=
+   \sum_{x=1}^\infty \Pr{L_1 < L_2 | L_2 = x} \Pr{L_2 = x}\\
+   &= \sum_{x=1}^\infty \Pr{L_1 < x} \Pr{L_2 = x}\\
+   &= \sum_{x=1}^\infty \Pr{L_1 < x}
+      \left[ \Pr{L_2 < x+1} - \Pr{L_2 < x} \right].
+\end{split}
+\]
+This is easily obtained from the CDFs and is a simple enough computation which could be done on a user's device.
 
 ```{r jp_transfer_prep,echo=FALSE,message=FALSE,cache=TRUE}
 library(tidyverse)
@@ -357,9 +368,175 @@ load("../data/all_results_transfer.rda")
 ```
 
 
+```{r jp_transfer,cache=TRUE,dependson="jp_transfer_prep",echo=FALSE,fig.width=8,fig.height=2.5,out.width="\\textwidth",message=FALSE,warning=FALSE,fig.cap="Predicted outcomes of journey planning process for a transfer between services."}
 
-* CDF makes it possible to answer many (often complex) jouney planning questions
-* P(catch)
-* P(arrive on time)
-* P(transfer)
-* this is a simple computation - can be done client side (i.e., on a user's phone) by passing CDF (small size, as e.g., JSON)
+mdata <- map(all_results, "tab") %>% bind_rows
+mdata %>%
+   mutate(
+      did_catch = ifelse(did_catch == "Y", "Transfer made", "Transfer missed"),
+      gtfs_catch = ifelse(gtfs_eta == "Y", "Yes", "No")
+   ) %>%
+   ggplot(aes(p_catch + rnorm(length(p_catch), 0, 0.01), gtfs_catch)) +
+      ggbeeswarm::geom_beeswarm(
+         groupOnX = FALSE,
+         priority = "random"
+      ) +
+      theme_classic() +
+      scale_x_continuous("Predictive probabilty of making transfer") +
+      scale_y_discrete("GTFS prediction") +
+      facet_grid(~did_catch) +
+      theme(
+         strip.background = element_blank(),
+         strip.text = element_text(hjust = 0)
+      )
+
+
+gtfs_catch_tab <- table(
+  gtfs = ifelse(mdata$gtfs_eta == "Y", "Yes", "No"),
+  outcome = ifelse(mdata$did_catch == "Y", "Yes", "No")
+)
+gtfs_catch_pc <-
+  round(sweep(gtfs_catch_tab, 1, rowSums(gtfs_catch_tab), "/"), 2)
+
+pf_catch_tab50 <- table(
+   pf = ifelse(mdata$p_catch > 0.5, "Yes", "No"),
+   outcome = ifelse(mdata$did_catch == "Y", "Yes", "No")
+)
+pf_catch_pc50 <-
+   round(sweep(pf_catch_tab50, 1, rowSums(pf_catch_tab50), "/"), 2)
+
+pf_catch_tab80 <- table(
+   pf = ifelse(mdata$p_catch > 0.8, "Yes", "No"),
+   outcome = ifelse(mdata$did_catch == "Y", "Yes", "No")
+)
+pf_catch_pc80 <-
+   round(sweep(pf_catch_tab80, 1, rowSums(pf_catch_tab80), "/"), 2)
+
+tab <- cbind(
+  "Predicted outcome" = c("No", "Yes"),
+  format(gtfs_catch_pc, nsmall = 2L, digits = 2L),
+  NA,
+  format(pf_catch_pc50, nsmall = 2L, digits = 2L),
+  NA,
+  format(pf_catch_pc80, nsmall = 2L, digits = 2L)
+)
+
+# roc curve?
+pc <- seq(0, 1, by = 0.05)
+roc <- lapply(pc,
+   function(p) {
+      tab <- table(
+         pf = factor(
+            ifelse(mdata$p_catch > p, "Yes", "No"),
+            levels = c("No", "Yes")),
+         outcome = factor(
+            ifelse(mdata$did_catch == "Y", "Yes", "No"),
+            levels = c("No", "Yes")
+         )
+      )
+      P <- sum(tab[,2])
+      N <- sum(tab[,1])
+      TP <- tab[2,2]
+      TN <- tab[1,1]
+      FP <- tab[2,1]
+      FN <- tab[1,2]
+      c(
+         p = p,
+         tpr = TP / P,
+         tnr = TN / N,
+         ppv = TP / (TP + FP),
+         fnr = FN / P,
+         fpr = FP / N
+      )
+   }
+) %>% bind_rows
+
+gtfs_roc <- data.frame(
+   fpr = gtfs_catch_tab[2,1] / sum(gtfs_catch_tab[,1]),
+   tpr = gtfs_catch_tab[2,2] / sum(gtfs_catch_tab[,2])
+)
+
+```
+
+
+
+```{r jp_transfer_dec,cache=TRUE,dependson="jp_transfer",echo=FALSE,fig.width=5,fig.height=2.5,out.width="0.5\\textwidth",fig.align="center",message=FALSE,warning=FALSE,fig.cap="False positive rate for varying decision level of transfer. Increasing the threshold for ... . The GTFS rate is fixed at about 10\\%, which corresponds to using a 37.5\\% decision threshold."}
+gp <- 0.375
+ggplot(roc, aes(p, fpr)) +
+   geom_path(lwd = 1.2) +
+   coord_cartesian(expand = FALSE) +
+   geom_segment(aes(x = gp, xend = 0, yend = fpr),
+      data = gtfs_roc, colour = "red", lty = 2
+   ) +
+   geom_segment(aes(x = gp, xend = gp, yend = 0),
+      data = gtfs_roc, colour = "red", lty = 2) +
+   xlab("Decision threshold") +
+   ylab("False positive / miss rate") +
+   theme_classic()
+```
+
+
+```{r jp_transfer_tab,cache=TRUE,dependson="jp_transfer",echo=FALSE,results='asis'}
+options(knitr.kable.NA = "")
+knitr::kable(
+  tab,
+  row.names = FALSE,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Prediction results for all transfer journeys, with the displayed values representing the proportion of outcomes in each cell (rows are conditioned by the prediction).",
+  caption.short = "Prediction results for all journeys",
+  escape = FALSE,
+  linesep = ""
+) %>%
+  kableExtra::add_header_above(
+    c(" ", "Schedule-delay" = 2, " ", "P > 0.5" = 2, " ", "P > 0.8" = 2)
+  ) %>%
+  kableExtra::add_header_above(
+    c("", "Observed outcome" = 8)
+  ) %>%
+  kableExtra::kable_styling(font_size = 8)
+```
+
+
+
+* PF methods allows decision making to include risk
+* GTFS is a fixed rate; cannot adapt to specifications of the journey planning application (i.e., when it's pouring with rain, want high chance of successful transfer)
+* Of course, the wait time is also important (i.e., how long waiting for the transfer?) which can be calculated as well... ?
+
+\[
+\begin{split}
+   \mathbb{E}_{\text{wait}} &= \E{L_2 - L_1 \cond L_1 < L_2} \\
+   &= \sum_{y=1}^\infty \sum_{x=0}^{y-1} \left(y - x\right)
+      \Pr{L_1 = x \cap L_2 = y} \\
+   &= \sum_{y=1}^\infty \sum_{x=0}^{y-1} \left(y - x\right)
+      \Pr{L_1 = x} \Pr{L_2 = y}
+\end{split}
+\]
+where $\Pr{A = a} = \Pr{A < a + 1} - \Pr{A < a}$. This lets us calculate the expected waiting time given the transfer is successful, and accounts for uncertainties in both vehicle's arrival times. A similar formula could be used to calcualte, for example, the variance of waiting time---again, all on a user's phone, which removes compuational demand from the server.
+
+```{r, echo=FALSE, eval = FALSE}
+N <- 1000L
+x <- pmax(1, rnorm(N, 15, 2))
+y <- pmax(1, rnorm(N, 25, 2))
+
+xr <- floor(x)
+yr <- floor(y)
+xcdf <- cumsum(table(xr)) / N
+ycdf <- cumsum(table(yr)) / N
+
+Fx <- numeric(max(xr))
+Fx[as.integer(names(xcdf))] <- xcdf
+Fy <- numeric(max(yr))
+Fy[as.integer(names(ycdf))] <- ycdf
+
+plot(Fx, type = "S", xlim = range(c(xr, yr)))
+lines(Fy, type = "S", col = "red")
+
+Px <- 0
+for (j in 2:(max(yr)-1))
+   for (i in 1:min(j-1, max(xr)-1))
+      Px <- Px + (j - i) * (Fx[i+1] - Fx[i]) * (Fy[j+1] - Fy[j])
+Px
+
+mean(ifelse(y >= x, y - x, NA), na.rm = TRUE)
+```

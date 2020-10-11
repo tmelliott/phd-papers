@@ -143,9 +143,6 @@ res_overall <- eta_talk %>%
       pf_mae = mean(abs(pf_error)),
       pf_mape = mean(abs(pf_error / time_until_arrival)) * 100,
       pf_cicov = mean(pf_ci) * 100,
-   #   pf_ci_width = mean(pf_upper - pf_lower),
-   #   pf_ci_lower = quantile(pf_upper - pf_lower, 0.025),
-   #   pf_ci_upper = quantile(pf_upper - pf_lower, 0.975),
       gtfs_rmse = sqrt(mean(gtfs_error^2)),
       gtfs_mae = mean(abs(gtfs_error)),
       gtfs_mape = mean(abs(gtfs_error / time_until_arrival)) * 100
@@ -175,4 +172,76 @@ knitr::kable(res_overall, #"latex",
    caption.short = "Short cap"
 )
 options(opts)
+```
+
+```{r time_results,echo=FALSE,message=FALSE,warning=FALSE,cache=TRUE,dependson="overall_results",fig.width=8,fig.height=5,out.width="\\textwidth",fig.align="center",fig.cap="Results by time of day."}
+res_timeofday <- eta_talk %>%
+    mutate(
+        hour = timestamp %>% format("%H") %>% as.integer,
+        minute = timestamp %>% format("%M") %>% as.integer,
+        hour = hour + (floor(minute / 15) * 15 / 60)
+    ) %>%
+    filter(time_until_arrival > 0) %>%
+    group_by(hour) %>%
+    summarize(
+        pf_rmse = sqrt(mean(pf_error^2)),
+        pf_mae = mean(abs(pf_error)),
+        pf_mape = mean(abs(pf_error / time_until_arrival)),
+        pf_ci_cov = mean(pf_ci),
+        gtfs_rmse = sqrt(mean(gtfs_error^2)),
+        gtfs_mae = mean(abs(gtfs_error)),
+        gtfs_mape = mean(abs(gtfs_error / time_until_arrival))
+    ) %>% arrange(hour)
+
+pal <- viridis::magma(3)[2:1]
+names(pal) <- c("Particle filter", "GTFS")
+
+plot_base <- ggplot(res_timeofday, aes(hour)) +
+    theme_classic() +
+    theme(legend.position = "none") +
+    scale_colour_manual(values = pal, name = "") +
+    xlab("Time of day (hour)")
+
+plot_rmse <- plot_base +
+    geom_path(aes(y = pf_rmse, colour = "Particle filter")) +
+    geom_path(aes(y = gtfs_rmse, colour = "GTFS"), alpha = 0.5) +
+    scale_y_continuous(
+        "RMSE (s)"
+    ) +
+    theme(legend.position = "bottom")
+
+plot_mae <- plot_base +
+    geom_path(aes(y = pf_mae, colour = "Particle filter")) +
+    geom_path(aes(y = gtfs_mae, colour = "GTFS"), alpha = 0.5) +
+    scale_y_continuous(
+        "MAE (s)"
+    )
+
+plot_mape <- plot_base +
+    geom_path(aes(y = 100 * pf_mape, colour = "Particle filter")) +
+    geom_path(aes(y = 100 * gtfs_mape, colour = "GTFS"), alpha = 0.5) +
+    scale_y_continuous(
+        "MAPE (%)"
+    )
+
+plot_ci <- plot_base +
+    geom_hline(aes(yintercept = 85), lty = 2) +
+    geom_path(aes(y = 100 * pf_ci_cov, colour = "Particle filter")) +
+    scale_y_continuous(
+        name = "PICP (%)"
+    )
+
+plot_rmse + plot_mae +
+    plot_mape + plot_ci +
+    guide_area() +
+    plot_layout(
+        guides = "collect",
+        design = "
+            13
+            24
+            55
+        ",
+        heights = c(1, 1, 0.1)
+    )
+
 ```
