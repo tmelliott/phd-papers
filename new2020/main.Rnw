@@ -19,14 +19,14 @@
 \email{t.lumley@auckland.ac.nz}
 
 %%%% FIX FOR TABLES
-% \usepackage{etoolbox}
+\usepackage{etoolbox}
 
-% \makeatletter
-% \patchcmd{\@makecaption}
-%   {\parbox}
-%   {\advance\@tempdima-\fontdimen2\font\parbox} % decrease the width!
-%   {}{}
-% \makeatother
+\makeatletter
+\patchcmd{\@makecaption}
+  {\parbox}
+  {\advance\@tempdima-\fontdimen2\font\parbox} % decrease the width!
+  {}{}
+\makeatother
 %%%% END FIX
 
 
