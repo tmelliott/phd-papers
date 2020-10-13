@@ -30,9 +30,65 @@ The main downside of the particle filter is the computational demand of it, ofte
 
 Our implementation is described in @cref:pf_etas;. To examine the effectiveness of our approach, we run our method on a full day and compared the predictions with the actual arrivals, as well as the currently used "GTFS" predictions. These are discussed in @cref:pf_results;.
 
+## Trip state
+
+The state of a trip at time $t_k$, $\Tripr_k$, includes the necessary information to input into the arrival time prediction algorithm. The state includes: 
+
+* $t_k$, the time of the most recent observation associated with the trip; 
+* $\Vspeed_k$, the speed of the vehicle servicing the trip;
+* $\TripStop_k$, the index of the current or most recently stop visited;
+* $\TripDep_k$, an indicator taking the value 1 if the vehicle has departed stop $\TripStop_k$, or zero otherwise;
+* $\TripSeg_k$, the index of the current road segment; and
+* $\SegProg_k$, the proportion of the current segment travelled so far.
+
+Together these are expressed in the vector
+\[
+   \Tripr_k = \tvec{\Tript_k, \TripStop_k, \TripDep_k, \TripSeg_k, \SegProg_k}.
+\]
+
+To predict bus arrival using a particle filter, the trip state needs expressing via a sample of individual particles,
+\begin{equation}\label{eq:pf_trip_state}
+   p(\Tripr_k | \Vobs_{1:k}) \approx
+   \frac{1}{\tilde N} \sum_{i=1}^{\tilde N} \DiracMeasure{\Tripr_k\vi}{\Tripr_k}.
+\end{equation}
+In this work, we are using a particle filter to estimate vehicle state @citep:Elliott_2020;. However, if vehicle state was available in some other way, the first step would be to sample $N$\ particles from the posterior. We assume vehicle state includes at least *distance travelled*, $x_k$, and *speed*, $\dot x_k$. Each particle's state is easily converted into a trip state: the speed $\dot x_k\vi$ is used directly; $\TripStop_k$, $\TripSeg_k$, and $\SegProg_k$ can be calculated based on the particle's distance and static route information (node distances $\Tsegd$ and lengths $\Tseglen$); and $\TripDep_k$ is unity if the most recent observation was a departure, and zero otherwise.
+
+
 
 ## Particle filter ETAs
 
+Given a sample of $N$ particles represent a trip's state, as shown in @cref:eq:pf_trip_state;, road network state $\NWstate_c$, and optionally a travel time forecast function $\mathcal{F}(b;t,\Theta)$ [[section 2]], we can begin to iteratively predict a vehicle's arrival time at upcoming stops. To simplify notation, we only consider a single trip, and assume that the network state $\NWstate_c$ is a subset of the full network state containing only the segments used by the trip. The following iterative steps are applied independently to each particle, each of which is initialized with a *travel-time-so-far* parameter $\ttsofar\vi=0$\ seconds.
+
+#### **Step one: complete the current segment**
+
+Perhaps the most complicated step, it involves calculating the time taken to reach the next node, and depends on how far along the segment the particle is. If the particle is at a node ($\SegProg_k\vi = 0$), then we must allow it to remain there for a short time before continuing (using model definitions from [[section 3]]):
+
+* if the particle is at a stop node (stop index $j$),
+    * if $\TripDep_k = 1$, do nothing,
+    * else wait time is simulated from a modified dwell time distribution, \[\ttsofar\vi = \ttsofar\vi + \Istop_j\vi \left( \frac{\gamma}{2} + \pdwell_j\vi \right);\]
+* if the particle is at an intersection node (index $m$), 
+    * wait time is simulated from the intersection model, \[\ttsofar\vi = \ttsofar\vi + \Iint\vi_m\pwait\vi_m.\]
+
+However, if the particle is not at a node, then we calculate the remaining travel time along the segment. This depends on the speed of the particle, $\Vspeed_k\vi$, the remaining distance along the segment, and the road state. If the particle is nearing the end of a road segment of length $\Tseglen_m$ (less than 200\ meters remaining) we assume the particle will retain approximately the same speed until it reaches the next node. Conversely, if the particle is not near the end, we expect the particle will adhere more to the average speed along the road segment with average speed $\NWstate_m$, uncertainty $\NWstatevar_{mm}$, and between-vehicle variance $\NWvar_m$. Thus, the average speed of the particle for the remainder of segment $m = \TripSeg_k\vi$ with maximum speed $\MaxSpeed_m$ is
+\begin{equation*}
+v\vi \sim
+\begin{cases}
+   \TNormal{\Vspeed_k\vi}{\Vnoise}{0}{\MaxSpeed_m},
+      & (1-\SegProg_k)\Tseglen_m < 200, \\
+   \TNormal{\NWstate_m}{\NWstatevar_{mm}^2 + \NWvar_m^2}{0}{\MaxSpeed_m}, 
+      & \text{otherwise}.
+\end{cases}
+\end{equation*}
+
+The travel time to the end of the current segment is now added to travel-time-so-far,
+\[
+\ttsofar\vi = \ttsofar\vi + 
+   \frac{(1-\SegProg_k\vi)\Tseglen_m}{v\vi}.
+\]
+In [[figure:X]], this is the time until arrival at the node marked I.
+
+
+<!-- 
 In our application, the vehicle state is already represented by a set of $\Np$\ particles,
 \[
 p(\Vstate_{k|k}\cond{}\Vobs_k) \approx \sum_{i=1}^\Np \Pwt_k \DiracMeasure{\Vstate_k\vi}{\Vstate_k}
@@ -59,9 +115,9 @@ Assuming I can rewrite the above to make sense ...
 
 Now we iterate each trip particle to the end of the route, storing the arrival times at all stops along the way. This is a five-step process.
 
-Note: need to add current speed to trip state ???
+Note: need to add current speed to trip state ??? -->
 
-**Step 1: complete the current segment**
+<!-- **Step 1: complete the current segment**
 
 Each particle has completed 100$p_\ell\vi$% of the segment. If the vehicle is nearing the end of the segment (less than 200\ meters remaining), we keep the particle's initial speed $\Vspeed_k\vi$. Otherwise, we simulate a speed from the network state with mean $\NWstate_\ell$, uncertainty $\NWstatevar_\ell$, and between-vehicle variability $\NWvar_\ell$, as follows:
 \begin{equation*}
@@ -76,7 +132,7 @@ Now the travel time to the end of the current segment can simply be obtained as
 \[
    \tilde z\vi = \frac{(1-\SegProg_k\vi)\Tseglen_\ell}{\Vspeed_\ell{\vi}^\star}.
 \]
-We now store an iterative variable *travel-time-so-far* with the time taken to reach the end of the current segment, $\ttsofar\vi = \tilde z\vi$.
+We now store an iterative variable *travel-time-so-far* with the time taken to reach the end of the current segment, $\ttsofar\vi = \tilde z\vi$. -->
 
 **Step 2: compute arrival time at next stop**
 
