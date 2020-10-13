@@ -32,9 +32,9 @@ Our implementation is described in @cref:pf_etas;. To examine the effectiveness 
 
 ## Trip state
 
-The state of a trip at time $t_k$, $\Tripr_k$, includes the necessary information to input into the arrival time prediction algorithm. The state includes: 
+The state of a trip at time $t_k$, $\Tripr_k$, includes the necessary information to input into the arrival time prediction algorithm. The state includes:
 
-* $t_k$, the time of the most recent observation associated with the trip; 
+* $t_k$, the time of the most recent observation associated with the trip;
 * $\Vspeed_k$, the speed of the vehicle servicing the trip;
 * $\TripStop_k$, the index of the current or most recently stop visited;
 * $\TripDep_k$, an indicator taking the value 1 if the vehicle has departed stop $\TripStop_k$, or zero otherwise;
@@ -66,7 +66,7 @@ Perhaps the most complicated step, it involves calculating the time taken to rea
 * if the particle is at a stop node (stop index $j$),
     * if $\TripDep_k = 1$, do nothing,
     * else wait time is simulated from a modified dwell time distribution, \[\ttsofar\vi = \ttsofar\vi + \Istop_j\vi \left( \frac{\gamma}{2} + \pdwell_j\vi \right);\]
-* if the particle is at an intersection node (index $m$), 
+* if the particle is at an intersection node (index $m$),
     * wait time is simulated from the intersection model, \[\ttsofar\vi = \ttsofar\vi + \Iint\vi_m\pwait\vi_m.\]
 
 However, if the particle is not at a node, then we calculate the remaining travel time along the segment. This depends on the speed of the particle, $\Vspeed_k\vi$, the remaining distance along the segment, and the road state. If the particle is nearing the end of a road segment of length $\Tseglen_m$ (less than 200\ meters remaining) we assume the particle will retain approximately the same speed until it reaches the next node. Conversely, if the particle is not near the end, we expect the particle will adhere more to the average speed along the road segment with average speed $\NWstate_m$, uncertainty $\NWstatevar_{mm}$, and between-vehicle variance $\NWvar_m$. Thus, the average speed of the particle for the remainder of segment $m = \TripSeg_k\vi$ with maximum speed $\MaxSpeed_m$ is
@@ -75,20 +75,20 @@ v\vi \sim
 \begin{cases}
    \TNormal{\Vspeed_k\vi}{\Vnoise}{0}{\MaxSpeed_m},
       & (1-\SegProg_k)\Tseglen_m < 200, \\
-   \TNormal{\NWstate_m}{\NWstatevar_{mm}^2 + \NWvar_m^2}{0}{\MaxSpeed_m}, 
+   \TNormal{\NWstate_m}{\NWstatevar_{mm}^2 + \NWvar_m^2}{0}{\MaxSpeed_m},
       & \text{otherwise}.
 \end{cases}
 \end{equation*}
 
 The travel time to the end of the current segment is now added to travel-time-so-far,
 \[
-\ttsofar\vi = \ttsofar\vi + 
+\ttsofar\vi = \ttsofar\vi +
    \frac{(1-\SegProg_k\vi)\Tseglen_m}{v\vi}.
 \]
 In [[figure:X]], this is the time until arrival at the node marked I.
 
 
-<!-- 
+<!--
 In our application, the vehicle state is already represented by a set of $\Np$\ particles,
 \[
 p(\Vstate_{k|k}\cond{}\Vobs_k) \approx \sum_{i=1}^\Np \Pwt_k \DiracMeasure{\Vstate_k\vi}{\Vstate_k}
@@ -134,46 +134,68 @@ Now the travel time to the end of the current segment can simply be obtained as
 \]
 We now store an iterative variable *travel-time-so-far* with the time taken to reach the end of the current segment, $\ttsofar\vi = \tilde z\vi$. -->
 
-**Step 2: compute arrival time at next stop**
+#### **Step 2: compute arrival time at next stop**
 
-If there are any remaining segments between the current segment $\TripSeg_k\vi$ and the next stop $j_k\vi + 1$, their travel times are sampled from the network state with variance increased by network system noise to account for forecasting changes.
+If the next node is an intersection, as is the case in [[figure X]], we iteratively calculate travel time along each segment until the particle arrives at a stop. As before we simulate vehicle speed from the network state, but now allowing for increased variability over time. Here, a forecast function could be used if available, otherwise a simpler approach can be used, as we have here. We use a similar distribution as in step\ 1, but allow speed to increase over time with a rate of $q$\ m/s$^2$, up to a maximum of $P_\text{max}$, which is the overall variance of vehicle speeds based on historical data. The predicted particle speed is thus
 \[
-   v_j\vi \sim
-   \TNormal{\hat \NWstate_j}{\left[(\RouteNWstatevarseg_j + \ttsofar\vi\NWnoise)^2 + \NWvar_j^2\right]\wedge P_{\text{max}}}{0}{\MaxSpeed_j},
+   v_m\vi \sim
+   \TNormal{\hat \NWstate_m}{\left[(\NWstatevar_{mm} + \ttsofar\vi\NWnoise)^2 + \NWvar_m^2\right]\wedge P_{\text{max}}}{0}{\MaxSpeed_m}.
 \]
-allowing uncertainty to increase up to a maximum $P_\text{max}$ which is the overall variance of all speeds along all segments estimated from historical data. The travel time along each segment is added to the travel-time-so-far,
+Travel-time-so-far is increased by the particle's travel time,
 \[
-   \ttsofar\vi = \ttsofar\vi + \frac{\Tseglen_j}{v_j\vi}.
+   \ttsofar\vi = \ttsofar\vi + \frac{\Tseglen_m}{v_m\vi}.
 \]
 
-Now, arrival time at stop $j$ is the sum of travel time along all segments up to the next stop. In the iterative process, this is simply $\Tarr_j\vi = t_k + \ttsofar\vi$.
+This process is repeated until the particle arrives at a stop, as is indicated by III in [[figureX]]. The arrival time at the stop is then stored as
+\[
+\Tarr_m = t_k + \ttsofar\vi.
+\]
 
 
-**Step 3: compute stop dwell time**
+#### **Step 3: stop dwell time**
 
-Once at a stop, a bus either stops and waits while passengers board and disembark, or travels past without stopping. This *dwell time* needs to be modelled @citep:cn;, but adds multimodality to the arrival time distribution.
+When at a stop, the particle first determines its dwell time. Using the model parameters described in \cref{particle-filters-estimating-vehicle-state}, the dwell time at stop $j$ is added to the travel-time-so-far,
+\begin{equation*}
+\begin{split}
+   p_j\vi &\sim \Bern{\pi_j},\\
+   d_j\vi &\sim \TNormal{\dwell_j}{\dwellvar_j}{0}{\MaxSpeed_j},\\
+   \ttsofar\vi &= \ttsofar\vi + p_j\vi(\gamma + d_j\vi).
+\end{split}
+\end{equation*}
+
+However, we also need to consider *layovers*, which are stops at which the bus is expected to wait if it is running early. Adherence is shown in [[figureY]], which shows about 60% driver compliance. So, with probability 0.6, the particle will wait until at least the scheduled departure time at stop $j$, $D_j$:
+\[
+   \ttsofar\vi =
+   \begin{cases}
+      \max\{\ttsofar\vi, D_j - t_k\} & \text{w.p. } 0.6,\\
+      \ttsofar\vi & \text{otherwise}.
+   \end{cases}
+\]
+
+
+<!-- Once at a stop, a bus either stops and waits while passengers board and disembark, or travels past without stopping. This *dwell time* needs to be modelled @citep:cn;, but adds multimodality to the arrival time distribution.
 
 The dwell time model is ... [from chapter 3], as used by @citet:Hans_2015,Elliott_2020;. This now gets added to the travel-time-so-far,
 \[
    \ttsofar\vi = \ttsofar\vi + \pdwell_j\vi
 \]
-unless the stop is a layover. In that case, we allow the particle---with some probability---to remain at the stop until the end of the dwell time, or the scheduled departure time, whichever is later.
+unless the stop is a layover. In that case, we allow the particle---with some probability---to remain at the stop until the end of the dwell time, or the scheduled departure time, whichever is later. -->
 
 
-**Step 4: repeat steps 2--3**
+#### **Step 4: repeat steps 2--3**
 
-We now repeat each of the steps, sampling travel times for intermediary road segments as the particle arrives, and storing stop arrival times, until the particle reaches the end of the route.
+Next, the particle continues along the route, sampling travel times (step 2) for each road segment, and dwell times (step 3) for each stop, while recording its arrival time at each stop along the way until it reaches the end of the route.
 
 
-**Step 5: obtain arrival time distributions**
+#### **Step 5: obtain arrival time distributions**
 
-Since each particle stores its arrival at all stops, we can very easily obtain the predictive distribution of arrival time for the bus using the delta measure,
+The predictive distribution of arrival time at stop $j$, given trip and network states at time $t_k$, is easily obtained using the delta measure (section XX),
 \[
-   p(\Tarr_j | \Vstate_k, \vec\NWstate_k) \approx
+   p(\Tarr_j | \Tripr_k, \vec\NWstate_k) \approx
    \frac{1}{\tilde N}\sum_{i=1}^{\tilde N}
       \DiracMeasure{\Tarr_j\vi}{\Tarr_j}.
 \]
-We may obtain any summary statistics from this distribution, including the mean and prediction intervals.
+Means, quantiles, and other summary statistics can easily be obtained from the sample; however, some, such as quantiles, require sorting all $\tilde N$ particles. In \cref{chapter4} I present an approximation which avoids sorting the particles which is a computationally intensive procedure.
 
 
 ## Results
