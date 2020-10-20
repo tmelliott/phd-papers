@@ -270,6 +270,10 @@ knitr::kable(res_overall, #"latex",
 options(opts)
 ```
 
+The overall results are shown in @cref:tab:overall_results;. This shows that the particle filter estimates have smaller error on average, but only slightly; with the biggest difference being in MAPE, suggesting that the particle filter is more accurate in proportion to the actual time-until-arrival. That is, when the bus is 10\ minutes away, the error is about 2\ minutes versus the schedule-delay's 3\ minute error; when the bus is 30\ minutes away these errors are 6\ minutes and 9\ minutes, respectively. The particle filter does appear to be underestimating uncertainty, as the 85% prediction interval has a coverage of only 77%.
+
+
+
 ```{r time_results,echo=FALSE,message=FALSE,warning=FALSE,cache=TRUE,dependson="overall_results",fig.width=8,fig.height=5,out.width="\\textwidth",fig.align="center",fig.cap="Results by time of day."}
 library(patchwork)
 
@@ -343,3 +347,7 @@ plot_rmse + plot_mae +
     )
 
 ```
+
+We now calculate the four summary statistics by time of day in 15\ minute intervals, shown in @cref:fig:time_results;, where we see a different pattern. During peak-time, the particle filter has a larger error than the schedule-delay predictions according to RMSE and MAE, but consistently performs better in relative terms (MAPE). This implies that, during peak times when traffic congestion changes quickly, the particle filter has trouble forecasting arrival time accurately (our model does not yet account for peak time effects). The schedule-delay errors are proportionally about the same throughout the day. During daytime off-peak, however, the particle filter is consistently better at prediction arrival times under all metrics.
+
+The most poignant feature is, however, PICP: during daytime off-peak, traffic conditions are stable and uncertainty is modelled well by the particle filter, with the 85% prediction interval having very close to 85% coverage. This suggests that the underlying model is accurately modelling traffic conditions, allowing it to provide a useful prediction interval for the bus's arrival time. Since we have not yet implemented a forecast function, it is not surprising that the model fails under peak time when traffic conditions generally get worse and better in a short time frame.
