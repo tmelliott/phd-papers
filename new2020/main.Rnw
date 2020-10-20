@@ -19,7 +19,7 @@
 \email{t.lumley@auckland.ac.nz}
 
 <<echo=FALSE,results='asis'>>=
-if (Sys.getenv("CI") == "") {
+if (Sys.getenv("CI") == 1) {
 cat("
 %%%% FIX FOR TABLES
 \\usepackage{etoolbox}
