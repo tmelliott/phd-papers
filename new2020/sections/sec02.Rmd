@@ -9,17 +9,24 @@ header-includes:
 
 Before describing the process of obtaining arrival time distributions, we must first define the framework with which we obtain vehicle and network state estimates. @cite:Elliott_2020; present a process for constructing a transit road network from raw GTFS data.
 
-**most of this section will be removed/cut-down to just the basic concepts**
 
-## GTFS static and real-times
+## Transit data, GTFS, and a road network
 
+The general structure of transit data has remained fairly standard, tracing back to an initial prescription by @citet:Cathey_2003;. This work introduced terms such as *trip* and *route*, which are continually used today. However, the stucture of the data was massively formalised in 2006 when Google released their first version of *General Transit Feed Specification (GTFS)* @citep:GoogleDevelopers_2006;.
+
+Transit data requires information about *routes*, journeys from an origin to a destination servicing a sequence of *stops* where passengers may board or disembark, and *trips* which are time-specific instances of a route. The path or *shape* travelled by the vehicle is described by a sequence of GPS coordinates. This information is contained within *GTFS static* along with other information one might find on a printed timetable, such as scheduled arrival and departures.
+
+Real-time transit data, on the other hand, includes information about the position of a vehicle. This might be in the form of a *distance travelled* along the route @citep:Wall_1999,Dailey_2001; or, more commonly in modern systems, as GPS coordinates (latitude and longitude) @citep:Cathey_2003,Hans_2015;. The structure and format of this information is described by *GTFS-realtime*.
+
+
+<!--
 The structure of public transport systems is very similar across the globe, so much so that Google developed GTFS @citep:GoogleDevelopers_2006; to standardise the way transport agencies organise and distribute transit data. GTFS consists of two core components: *static*, which contains pre-defined information, such as routes and stops, and *real-time*, which contains vehicle location and other data collected in real-time.
 
 Static GTFS contains *structural* data, descibing information one might observe on a printed timetable. This includes route information about trips (instances of a route at a specific time), the geographical path the vehicle takes, and the stops it services. This provides the basis of transit data, and plays a key role in developing the aforementioned *transit network*.
 
 Real-time GTFS descibes how live data, such as the location of a bus, or its time of arrival at or departure from a bus stop, is formatted. Vehicle locations allow users to track the progress of the vehicle along its route, and are often updated every 10--30\ seconds. In some implementations, such as in Auckland, they are also triggered by events such as arrival at a bus stop or (major) intersection. Arrival and departure events, on the other hand, are triggered whenever the bus arrives at or departs from a bus stop (or at least thinks it does), and include the time of the event and, if scheduled arrival times are available, the *delay* between scheduled and actual arrival (or departure).
 
-A huge benefit of GTFS being adopted widely around the world is that developers can easily access transit feeds for different providers in different cities and countries using the same structure. Any application developed using (only) GTFS information can, technically, be redeployed to any other system also using GTFS. For this reason, we opted to develop our application framework based solely on GTFS data, as described next.
+A huge benefit of GTFS being adopted widely around the world is that developers can easily access transit feeds for different providers in different cities and countries using the same structure. Any application developed using (only) GTFS information can, technically, be redeployed to any other system also using GTFS. For this reason, we opted to develop our application framework based solely on GTFS data, as described next. -->
 
 ## A transit road network
 
