@@ -18,6 +18,13 @@ Transit data requires information about *routes*, journeys from an origin to a d
 
 Real-time transit data, on the other hand, includes information about the position of a vehicle. This might be in the form of a *distance travelled* along the route @citep:Wall_1999,Dailey_2001; or, more commonly in modern systems, as GPS coordinates (latitude and longitude) @citep:Cathey_2003,Hans_2015;. The structure and format of this information is described by *GTFS-realtime*.
 
+An important aspect missing from the setup, however, is information about *physical interactions* between separate routes (which may share common roads) which is critical to accurate prediction @citep:Jeong_2005,;. @citet:Elliott_2020; describe a simple process for combining route information from static GTFS data to obtain a *transit road network*, expressing each route as a sequence of physical roads. The benefit of this is that vehicles servicing different routes but using the same road(s) can share information about their speed. This greatly enhances the amount of data available for forecasting arrival times.
+
+```{r road_nw,echo=FALSE}
+# figure for the network
+```
+
+In the approach, stops are considered *nodes* in the network, while the roads between them are *edges*. Any buses travelling between the same two (or more) stops share the road between them, thus providing information about the speeds. This increases the rate of update and is particularly beneficial for predicting arrival times for low-frequency routes (see \cref{predicting-arrival-time}).
 
 <!--
 The structure of public transport systems is very similar across the globe, so much so that Google developed GTFS @citep:GoogleDevelopers_2006; to standardise the way transport agencies organise and distribute transit data. GTFS consists of two core components: *static*, which contains pre-defined information, such as routes and stops, and *real-time*, which contains vehicle location and other data collected in real-time.
@@ -28,16 +35,67 @@ Real-time GTFS descibes how live data, such as the location of a bus, or its tim
 
 A huge benefit of GTFS being adopted widely around the world is that developers can easily access transit feeds for different providers in different cities and countries using the same structure. Any application developed using (only) GTFS information can, technically, be redeployed to any other system also using GTFS. For this reason, we opted to develop our application framework based solely on GTFS data, as described next. -->
 
-## A transit road network
+<!-- ## A transit road network
 
 One important predictor of bus arrival is travel time @citep:Shalaby_2004;. However, previous research has focused on situations where either only a single route is considered, or else different routes and combined by manually locating common road segments. This is, of course, not easy or even possible to automate. @cite:Elliott_2020; proposed a method of developing a transit road network from only GTFS data by identifying *nodes* (bus stops and intersections) and the *edges* (roads) between them.
 
 Here, we use the simplest version of this method, which places nodes at bus stops. Thus, any two routes that share the same sub-sequence of bus stops are assumed to follow the same path between them (this is almost always the case). By expressing the route as a series of nodes and road segments, we can begin to share information across routes.
 
-The goal is to model vehicles as they travel along their respective routes, estimating their average speed along each road segment. Having traversed a road segment, the data is passed to the network to update the real-time traffic state. This can in turn be used, optionally with a forecasting function, to predict a future travel time of a bus along the road, which is used in arrival time prediction.
+The goal is to model vehicles as they travel along their respective routes, estimating their average speed along each road segment. Having traversed a road segment, the data is passed to the network to update the real-time traffic state. This can in turn be used, optionally with a forecasting function, to predict a future travel time of a bus along the road, which is used in arrival time prediction. -->
 
 
-## Particle filters estimating vehicle state
+## Recursive Bayes and particle filtering
+
+In a real-time application, performing a full update of the posterior distribution of some parameters becomes hugely inefficient. It is possible to recursively update the posterior, however, by way of recursive Bayesian filtering (alternatively called sequential Monte Carlo). Given a random variable $\vec x = \vec x_{0:k} = \tvec{\vec x_0,\vec x_1,\ldots\,\vec x_k}$ at time $t_k$ following a Markov process with associated observation $\vec y = \vec y_{1:k} = \tvec{\vec y_1,\ldots,\vec y_k}$, the posterior distribution at time $t_k$ is expressed via the recursive formula
+\[
+p(\vec x_{0:k}\cond{} \vec y_{1:k}) \propto
+   p(\vec x_{0:k-1}\cond{} \vec y_{1:k-1})
+   p(\vec x_k\cond{}\vec x_{k-1})
+   p(\vec y_k\cond{}\vec x_k)
+\]
+which involves the previous state, next state prediction, and the likelihood, respectively. We therefore need to compute $p(\vec x_k\cond{}\vec x_{k-1})$, which involves the *transition function* between consecutive states, and the likelihood $p(\vec y_k\cond{}\vec x_k)$. The specific details of each of these depends on the model, which is discussed in \cref{estimating-road-state-from-vehicle-observations}.
+
+
+Estimation of recursive Bayesian models takes many forms, most notably the Kalman filter @citep:; which has been widely used in transit modelling @citep:Wall_1999,Dailey_2001,Cathey_2003,Jeong_2005;. However, as discussed by @citet:Hans_2015,Elliott_2020;, it makes several assumptions which do not work so well with transit vehicles, namely that the errors are normal with a single mode. The particle filter @citep:Gordon_1993; provides a numerical approach to solving recursive Bayesian models, much the same as Markov chain Monte Carlo provides estimates of standard posterior distributions. In a particle filter, the state $\vec x_k$ is represented by a sample of $N$\ particles $\{\vec x_k\vi\}_{i=1}^N$ with associated weights $\{w_k\vi\}_{i=1}^N$. We use the delta measure $\delta$ to express the approximated state
+\[
+   p(\vec x_{k-1} | \vec y_{0:k-1}) \approx \sum_{i=1}^N w_{k-1}^{(i)} \DiracMeasure{\vec x_{k-1}^{(i)}}{\vec x_{k-1}}.
+\]
+
+Particle filter estimates are updated in two steps. First the state prediction of $p(\vec x_k\cond{}\vec x_{k-1})$ is made using the transition function $f$, which implements the vehicle model (\cref{vehicle-model}):
+\[
+   p(\vec x_{k} | \vec x_{k-1}) \approx
+      \sum_{i=1}^N w_{k-1}^{(i)}
+         \DiracMeasure{\vec x_{k}^{(i)}}{\vec x_{k}},\quad
+   \vec x_k\vi = f(\vec x_{k-1}\vi, \Delta_k, \sigma).
+\]
+
+Second is the likelihood update, which quantifies the probability of the observed vehicle position given each of the particle predictions. The particle weights are updated according to their likelihood,
+\[
+w_k\vi =
+   \frac{w_{k-1}\vi p(\vec y_k\cond{}\vec x_k\vi)}{
+      \sum_{j=1}^N w_{k-1}\vi[j] p(\vec y_k\cond{}\vec x_k\vi[j])
+   }.
+\]
+For the likelihood function itself, we use an exponential distribution on the geographic distance between the particle and the observed location, as proposed by @citet:Elliott_2020;.
+
+To ensure the *effective sample size* remains adequately large (greater than $\frac{1}{4}N)$, importance resampling of the particles, with replacemnet, is performed whenever the effective sample size $N_{\text{eff}} = \frac{1}{\sum_{i=1}^N (w_k\vi)^2}$ drops below the threshold. The particle filter was for this reason originally called the *bootstrap filter* @citep:Gordon_1993;.
+
+
+## Estimating road state from vehicle observations
+
+In a transit setup, we observe vehicle locations $\vec y_k$ consisting of the vehicle's latitude and longitude at time $t_k$. The goal is to estimate the vehicle's distance travelled $x$ and speed $\dot x$, from which we can calculate its average speed along individual road segments. The underlying, unobservable state of the vehicle is $\vec x_k = \tvec{x_k,\dots x_k}$.
+
+Estimation of network state involves three steps: vehicle state estimation, estimation of average speed along roads, and updating the network state model.
+
+
+### Vehicle model
+
+Estimating vehicle state requires a vehicle model consisting of several key behaviours. @cite:Elliott_2020; give details, however of particular importance to arrival time prediction is the *dwell time* model for stop behaviour. When the bus arrives at a stop, it can either drive past, or stop and allow passengers to board and disembark.
+
+
+
+
+<!--
 
 Estimation of vehicle state in real-time commonly uses *recursive Bayesian estimation*, in which the posterior becomes the prior for the next iteration. Particle filters are a powerful method of estimating successive states, as they make few assumptions and, most importantly, cover a large range of possible trajectories, even when there is a high degree of multimodality as is the case with transit data (e.g., around bus stops). Here, I give a brief overview of the particle filter which was used by @citet:Elliott_2020; to estimate vehicle state.
 
@@ -56,9 +114,9 @@ The particle filter allows us to estimate the state of a vehicle and, most impor
 \[
    p(b_\ell | \vec y_{1:k}) \approx
    \sum_{i=1}^N w_{k}^{(i)} \DiracMeasure{b_{\ell}^{(i)}}{b_{\ell}}.
-\]
+\] -->
 
-
+<!--
 ## Estimating network state
 
 Having obtained a estimate of the speed of each vehicle along a road, we can proceed to updating the state of the road network itself. This uses a Kalman filter to update the state, $\vec \beta_c$, using the estimated vehicle speeds.
@@ -78,4 +136,4 @@ The result is an estimate of the state of the network at time $t_c$,
 \]
 This can be used to predict the travel time of buses.
 
-If a forecast function is available, we could also forecast future travel time based on current state and historical trends, and this would be incorporated.
+If a forecast function is available, we could also forecast future travel time based on current state and historical trends, and this would be incorporated. -->
