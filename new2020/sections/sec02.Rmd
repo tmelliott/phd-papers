@@ -91,6 +91,54 @@ p\vi \sim \Bern{\pi}.
 The dwell time model will be used in the arrival time prediction framework described in [[section 3]].
 
 
+### Travel time estimation
+
+The goal of the vehicle model is to estimate not only their real-time state (including speed), but also to estimate their *average speed along individual road segments*. How this is done will depend upon the estimation technique being used, and in some cases will not be possible. The particle filter, however, enables easy estimation of many additional parameters, including average speed along roads @citep:Elliott_2020;.
+
+For each particle, the average speed (m/s) is calculated by first computing the *travel time* (seconds) along each road segment. To do so, the application stores each particle's start and end times, $T_{\ell}$ and $T'_{\ell}$, respectively, along segment $\ell$ of the route. This is easily accomplished due to the particle filter's iterative nature. The average speed of a particle along a road segment of length $\Tseglen_\ell$ is simply
+\[
+\Vttobs_\ell\vi =
+   \frac{\Tseglen_\ell}{{T'}_\ell\vi - T_\ell\vi}.
+\]
+
+As with the vehicle state, the vehicle's posterior distribution of average speed is estimated from the particles using the delta measure,
+\[
+p(\Vttobs_\ell\cond{}\Vstate_{0:k},\Vobs_{1:k}) \approx
+   \sum_{i=1}^N w_k\vi \DiracMeasure{\Vttobs_\ell}{\Vttobs_\ell\vi},
+\]
+from which the mean $\bar\NWobs_\ell$ and variance $\NWerr_\ell^2$ may be computed:
+\begin{equation*}
+\begin{split}
+\bar\NWobs_\ell &=
+   \E{\Vttobs_\ell\cond{}\Vstate_{0:k},\Vobs_{1:k}} =
+   \sum_{i=1}^N w_k\vi \Vttobs_\ell\vi,\\
+\NWerr_\ell^2 &=
+   \Var{\Vttobs_\ell\cond{}\Vstate_{0:k},\Vobs_{1:k}} =
+   \sum_{i=1}^N w_k\vi \left(\Vttobs_\ell - \bar\NWobs_\ell\vi\right)^2.
+\end{split}
+\end{equation*}
+These can be used in the next step to update the network state.
+
+
+### Network state update
+
+The network state model described by @citet:Elliott_2020; expresses the vehicle speed along roads using a hierarchical structure consisting of: the underlying, average speed $\RouteNWstateseg_{\ellc}$ of vehicles travelling along a road $\ell$ at time $c$ with uncertainty $\NWstatevar_{\ellc}$; the variance $\NWvar_\ell$ between individual vehicles $m\in V_m$ with speed $\Vtt_{\ellc}^m$; and the measurement error $\NWerr_\ell^m$ of each observation $\bar\NWobs_\ell^m$. Thus, for a road segment with maximum speed $\MaxSpeed_\ell$,
+\begin{equation*}
+\begin{split}
+\Vtt_{\ellc}^m &\sim
+   \TNormal{\NWstate_{\ellc}}{\NWstatevar_{\ellc} + \NWvar_\ell^2}{0}{\MaxSpeed_\ell}, \\
+\Vttobs_{\ellc}^m &\sim
+   \Normal{\Vtt_{\ellc}^m}{\NWerr_\ell^m}.
+\end{split}
+\end{equation*}
+
+The network state update need therefore account for multiple observations during any single update, due to the possiblility of multiple buses completing travel along a road segment at approximately the same time. @citet:Elliott_2020; used the information filter variant of the Kalman filter to update the network state, making the inclusion of multiple sources of information a simple addition of information to the current state. The end result is an estimate of real-time traffic conditions along every road within the network, updated whenever a vehicle servicing *any* route travels along it.
+
+The important component here is the multiple sources of error: namely the uncertainty of the state at time $t_c$, $\NWstatevar$, which increases over time with a rate of $\NWnoise$\ m/s/s; and the between-vehicle uncertainty $\NWvar_\ell$. The additional noise parameters $\NWnoise$ and $\NWvar_\ell$ are calculated from historical data using JAGS @citep:jags;.
+
+We now have everything we need to predict arrival times based on real-time vehicle and network states, accounting for uncertainties from traffic and bus stop dwell times.
+
+
 <!--
 
 <!--
