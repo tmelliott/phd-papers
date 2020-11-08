@@ -138,27 +138,3 @@ The important component here is the multiple sources of error: namely the uncert
 
 We now have everything we need to predict arrival times based on real-time vehicle and network states, accounting for uncertainties from traffic and bus stop dwell times.
 
-
-<!--
-
-<!--
-## Estimating network state
-
-Having obtained a estimate of the speed of each vehicle along a road, we can proceed to updating the state of the road network itself. This uses a Kalman filter to update the state, $\vec \beta_c$, using the estimated vehicle speeds.
-
-This all provides a flexible method for modelling real-time traffic conditions in any network using only GTFS, and not rely on other data sources (for example taxis or video cameras).
-
-We use a hierarchical model on vehicle travel times, as individual vehicles have different average speeds, even if they travel at the same time, due to different driver behavior and other factors. The between-vehicle noise parameter $\NWvar_\ell$ describes this, and is estimated from historical data.
-
-The observations are also uncertain, as they are estimated from the particle filter. We can assume between-vehicle and measurement uncertainties are independent, so the total variance of observations is
-\[ \Var{b_\ell | \vec y_{1:k}} = \NWerr_\ell^2 + \NWvar_\ell^2. \]
-The system noise $\NWnoise$ is also estimated from historical data. Together we can quickly update the network state using the information variance of the Kalman filter (since this allows data from multiple sources simultaneously, which can happen when two or more buses are travelling one behind the other).
-
-The result is an estimate of the state of the network at time $t_c$,
-\[
-   p(\NWstate_c | \cup_m \cup_\ell\ \NWobs_{\ell,c,m}) \sim
-   \Normal{\vec\NWstate_\ell}{\NWstatevar^2}.
-\]
-This can be used to predict the travel time of buses.
-
-If a forecast function is available, we could also forecast future travel time based on current state and historical trends, and this would be incorporated. -->
