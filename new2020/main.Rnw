@@ -96,6 +96,8 @@ cat("
 \usepackage{cleveref}
 \usepackage{longtable}
 \usepackage{booktabs}
+\usepackage{setspace}
+\doublespacing
 
 \input{symbols.tex}
 
