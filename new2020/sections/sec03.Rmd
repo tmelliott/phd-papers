@@ -206,11 +206,29 @@ library(tidyselect)
 load("../data/etadata.rda")
 ```
 
-To assess the feasibility and reliability of this approach, we ran the full model on one day of data from DATE. This used the particle filter and network model described by @cite:Elliott_2020;, and the arrival time predictions described above. At the end of the day, we could compare the predicted with the actual arrival times. In addition, we compare to the GTFS-based predictions which are simply the scheduled arrival time plus the delay at the most recent stop.
+The particle filter vehicle model and Kalman filter network model described by @citet:Elliott_2020; were combined with the particle filter prediction model described in \cref{particle-filter-etas} and applied to a full day of data from [[date]]. For each prediction of arrival time at each stop along all routes, we stored the mean along with the 5 and 90% quantiles, which could be compared to the bus's actual arrival time at the end of the day. We also computed the schedule-delay prediction using the real-time trip updates to compare our results to the status quo.
+
+To assess and compare predictive performance, we use RMSE, MAE, MAPE, and PICP. For random variables $\{X_n: n=1,\ldots,M\}$ with estimates $\{\hat X_n: n=1,\ldots,M\}$,
+\begin{equation*}
+\begin{split}
+\text{RMSE} &= \sqrt{\frac{1}{M} \sum_{n=1}^M \left(\hat X_n - X_n\right)^2},\\
+\text{MAE} &= \frac{1}{M}\sum_{n=1}^M \left|\hat X_n - X_n\right|,\\
+\text{MAPE} &= \frac{1}{M}\sum_{n=1}^M \frac{\left|\hat X_n - X_n\right|}{X_n}.
+\end{split}
+\end{equation*}
+For prediction intervals $\{Q_n = (X_{na},X_{nb}):n=1,\ldots,M\}$, the indicator variable $I_n$ is 1 if $X\in Q_n$, and zero otherwise. Thus,
+\[
+\text{PICP} = \frac{1}{M} \sum_{i=1}^M I_n.
+\]
+[[ copy this definition from thesis ...]].
+
+RMSE and MAE each evaluate the accuracy of the predictor, with MAE using absolute error is less influenced by extreme prediction errors. MAPE evaluates the proportional error of the predictor, which is appropriate for arrival time prediction as we expect errors to increase for stops farther away. Finally, PICP examines how well the model incorporates the underlying arrival time uncertainty of the model: we expect the PICP for an 85% prediction interval to be approximately 0.85. This value is not available for the schedule-delay predictor which only provides point estimates of arrival time.
+
+<!-- To assess the feasibility and reliability of this approach, we ran the full model on one day of data from DATE. This used the particle filter and network model described by @cite:Elliott_2020;, and the arrival time predictions described above. At the end of the day, we could compare the predicted with the actual arrival times. In addition, we compare to the GTFS-based predictions which are simply the scheduled arrival time plus the delay at the most recent stop.
 
 To assess, we use RMSE, MAE, MAPE, and PICP. RMSE and MAE provide an assessment of the absolute prediction reliability, while MAPE scales predictions by the time-until-arrival; that is, it is more affected by short-term predictions when the bus is near, giving us a comparative measure of short-term reliability (which is useful when deciding between walking, jogging, or sprinting to the bus stop). PICP (which is only available for the particle filter estimates) assess how well the uncertainty is captured (we would expect a 95% prediction interval to capture the true value in 95% of cases).
 
-The overall values are shown in @cref:tab:overall_results;. The particle filter predictions are slightly more accurate than GTFS on average, and have about 20% error versus GTFS's 27%. However, only 77% of prediction intervals contain the actual arrival time, indicating that uncertainties are being under-predicted (the nominal coverage is 85%).
+The overall values are shown in @cref:tab:overall_results;. The particle filter predictions are slightly more accurate than GTFS on average, and have about 20% error versus GTFS's 27%. However, only 77% of prediction intervals contain the actual arrival time, indicating that uncertainties are being under-predicted (the nominal coverage is 85%). -->
 
 ```{r overall_results,echo=FALSE,cache=TRUE,results="asis",dependson="load_results"}
 
@@ -251,6 +269,10 @@ knitr::kable(res_overall, #"latex",
 )
 options(opts)
 ```
+
+The overall results are shown in @cref:tab:overall_results;. This shows that the particle filter estimates have smaller error on average, but only slightly; with the biggest difference being in MAPE, suggesting that the particle filter is more accurate in proportion to the actual time-until-arrival. That is, when the bus is 10\ minutes away, the error is about 2\ minutes versus the schedule-delay's 3\ minute error; when the bus is 30\ minutes away these errors are 6\ minutes and 9\ minutes, respectively. The particle filter does appear to be underestimating uncertainty, as the 85% prediction interval has a coverage of only 77%.
+
+
 
 ```{r time_results,echo=FALSE,message=FALSE,warning=FALSE,cache=TRUE,dependson="overall_results",fig.width=8,fig.height=5,out.width="\\textwidth",fig.align="center",fig.cap="Results by time of day."}
 library(patchwork)
@@ -325,3 +347,7 @@ plot_rmse + plot_mae +
     )
 
 ```
+
+We now calculate the four summary statistics by time of day in 15\ minute intervals, shown in @cref:fig:time_results;, where we see a different pattern. During peak-time, the particle filter has a larger error than the schedule-delay predictions according to RMSE and MAE, but consistently performs better in relative terms (MAPE). This implies that, during peak times when traffic congestion changes quickly, the particle filter has trouble forecasting arrival time accurately (our model does not yet account for peak time effects). The schedule-delay errors are proportionally about the same throughout the day. During daytime off-peak, however, the particle filter is consistently better at prediction arrival times under all metrics.
+
+The most poignant feature is, however, PICP: during daytime off-peak, traffic conditions are stable and uncertainty is modelled well by the particle filter, with the 85% prediction interval having very close to 85% coverage. This suggests that the underlying model is accurately modelling traffic conditions, allowing it to provide a useful prediction interval for the bus's arrival time. Since we have not yet implemented a forecast function, it is not surprising that the model fails under peak time when traffic conditions generally get worse and better in a short time frame.
