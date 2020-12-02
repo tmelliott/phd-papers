@@ -7,10 +7,21 @@ header-includes:
 
 # Background
 
-Before describing the process of obtaining arrival time distributions, we must first define the framework with which we obtain vehicle and network state estimates. @cite:Elliott_2020; present a process for constructing a transit road network from raw GTFS data.
+Reliable prediction of bus arrival times requires up-to-date or *real-time* information about current traffic conditions @citep:Jeong_2005,cn;. This is, however, rarely available in the context of public transport data. @citet:Elliott_2020; present a general method of using static and real-time GTFS data to estimate vehicle speeds along roads as a proxy for estimating traffic conditions. Their work provides the basic for this current work, which uses the real-time network state to make predictions of bus arrival which account for traffic conditions.
+
+In this section, we provide a review of the work by @cite:Elliott_2020;, and give some extra details on another major source of uncertainty: intermediary bus stops. Finally, we introduce the particle filter, describe its implementation, and discuss why it proves beneficial for predicting vehicle arrival times reliably.
 
 
-## Transit data, GTFS, and a road network
+## Estimating real-time road state
+
+It is well documented in the transit research literature that one of the key pieces of information requied for accurate arrival time prediction is *real-time traffic conditions* @citep:cn;. Unfortunately, this information is largely difficult or impossible to obtain, making globally applicable prediction methods hard to come by. However, there does exist a standard for transit data, GTFS @citep:GoogleDevelopers_2006;, wihch is used globally---a prediction system derived from GTFS would thus be useful on a worldwide scale.
+
+The general process implemented by @citet:Elliott_2020; consists of three components. The first involves using the available GTFS information to construct a *transit network* consisting of *nodes* (stops or intersections) and *edges* (the roads connecting them). The key point is that sections of each route can be mapped to their physical road, allowing traffic information to be obtained *independent* of the route. Next vehicles are modelled as they travel along their respective routes using real-time GTFS data, from which we estimate their *average speed along each road*. Finally the individual,likely noisy, speed 'observations' are used to update the underlying *road state*, which is what we will be using in \cref{predicting-arrival-time} to predict arrival time.
+
+
+### GTFS network
+
+TO DO: trim this down
 
 The general structure of transit data has remained fairly standard, tracing back to an initial prescription by @citet:Cathey_2003;. This work introduced terms such as *trip* and *route*, which are continually used today. However, the stucture of the data was massively formalised in 2006 when Google released their first version of *General Transit Feed Specification (GTFS)* @citep:GoogleDevelopers_2006;.
 
@@ -25,8 +36,44 @@ An important aspect missing from the setup, however, is information about *physi
 ```
 
 In the approach, stops are considered *nodes* in the network, while the roads between them are *edges*. Any buses travelling between the same two (or more) stops share the road between them, thus providing information about the speeds. This increases the rate of update and is particularly beneficial for predicting arrival times for low-frequency routes (see \cref{predicting-arrival-time}).
+[mentioned in subsection intro]
 
-## Recursive Bayes and particle filtering
+
+### Particle filter estimates of road speeds
+
+* introduce the recursive estimation of states in real-time
+* describe the basic model: predict state, compare to observation, update state
+* why the pf is well suited to buses (multimodality, etc)
+* how the pf works (very, very simply) -> details in section 2.3
+* added bonus: easy likelihood (Elliott & Lumley)
+* another bonus: each particle records its travel time along road of known length -> average speed *distribution* (according to particles)
+* can't really do this with, say, a Kalman filter
+
+
+### Real-time network state model
+
+* another recursive state estimation problem
+* this time a Gaussian makes sense (single mode, usually)
+* KF: proven way of estimating network state (Jeong? and some others ...?)
+* much simpler estimation procedure: just some matrix calculations
+* input: noisy 'observations' of vehicle speeds
+* complication: vehicles travel with different speeds, between-vehicle variance, but want to estimate this *separately* from uncertainty of the mean
+* B ~ Normal(beta, (Delta*q)^2 + Psi) (assume independence)
+* these estimated from historical data (see section 3)
+* since we're allowing multiple vehicles to travel simultaneously, Elliott & Lumley used Information filter - becomes a simple addition problem (add new information to current)
+
+
+## Modelling uncertainty at bus stops
+
+
+## Prediction using a particle filter
+
+* @citet:Hans_2015; paper
+* light details of how it works: how 'state' is pepresented
+
+## OLD
+
+## Recursive Bayes and particle filtering - skip?
 
 In a real-time application, performing a full update of the posterior distribution of some parameters becomes hugely inefficient. It is possible to recursively update the posterior, however, by way of recursive Bayesian filtering (alternatively called sequential Monte Carlo). Given a random variable $\vec x = \vec x_{0:k} = \tvec{\vec x_0,\vec x_1,\ldots\,\vec x_k}$ at time $t_k$ following a Markov process with associated observation $\vec y = \vec y_{1:k} = \tvec{\vec y_1,\ldots,\vec y_k}$, the posterior distribution at time $t_k$ is expressed via the recursive formula
 \[
