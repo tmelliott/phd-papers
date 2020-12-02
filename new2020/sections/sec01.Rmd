@@ -6,6 +6,18 @@ header-includes:
 
 # Introduction
 
+Public transport is an essential service for any large city, and key to making it successful is its reliability. While extreme and costly measures exist---such as building new infrastructure---a simpler, cost-effective approach is to simply provide reliable real-time information. This makes it easier for commuters to use and should hopefully improve ridership.
+
+Predicting bus arrival times is nothing new---indeed, many unique methods have been presented and deployed around the world. The difficulty remains, however, in accounting for real-time traffic conditions in a reliable and generalised way.
+
+@citet:Dailey_2001; used historical travel time data to predict a vehicle's arrival time based on its current location, while @citet:Jeong_2005; used a Kalman filter to model real-time travel times along links of a route. Other examples, such as @citet:Yu_2006,Yu_2010,Yu_2011; have used machine learning models and some *route pooling* to estimate traffic conditions along specific high-flow routes. Even more recently, taxi data was used by @citet:cn; to model real-time traffic, which was then used to predict arrival times. The concensus in the literature is that reliable predicts depend on real-time traffic estimates, however the methods used to do so have been varied and not generally applicable to services outside the target location.
+
+In many cities, including out test locatio of Auckland, New Zealand, only have access to real-time transit vehicle location data, but no means of observing traffic conditions in real-time. @citet:Elliott_2020; proposed a simple method of constructing a *transit network* from GTFS @citep:GoogleDevelopers_2006; data, and using this along with real-time data to estimate real-time traffic state. In their paper, @citeauthor:Elliott_2020; used a particle filter to model a transit vehicle, as this has been shown @citep:Hans_2015; to be an effective method of estimating vehicle states given a wide range of plausible trajectories.
+
+In this paper, we build on the work of @citet:Elliott_2020; and use the particle filter to estimate bus arrival times at stops using a real-time network state estimated from the buses themselves. Since the particle filter results in a large sample of estimates, we also propose a simplification of the CDF that can easily be distributed to users and used in journey planning applications.
+
+
+<!--
 * the problem of predicting bus arrival - it needs to use real-time traffic information @cite:cn;
 * however, many deployed methods are either specific to a provider/city, or don't make use of real-time data (only vehicle position and/or arrival delays, e.g., in Auckland)
 * since the only logical source of "traffic data" in this setting is the transit vehicles themselves, makes sense to develop framework that uses them to estimate real-time network state @cite:Elliott_2020;
@@ -18,3 +30,4 @@ Some of the references include:
 * @cite:Cathey_2003;
 * @cite:Yu_2006,Yu_2010,Yu_2011;
 * @cite:Hans_2015;
+-->
